@@ -1,0 +1,1 @@
+ALTER TABLE `handyman_profiles` MODIFY COLUMN `categories` text DEFAULT ('[]');
