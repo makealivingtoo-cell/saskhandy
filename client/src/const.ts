@@ -1,7 +1,8 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
-// Current deployment does not have a separate OAuth portal.
-// Route CTA and sign-in buttons to an internal app route instead of /app-auth.
+// Temporary deploy behavior:
+// send homepage CTA/sign-in buttons to a public internal page.
+// We will swap this back to real auth once OAuth is wired up.
 export const getLoginUrl = () => {
-  return `${window.location.origin}/role-select`;
+  return "/role-select";
 };
