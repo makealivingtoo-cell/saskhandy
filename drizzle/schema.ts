@@ -15,6 +15,7 @@ export const users = mysqlTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  passwordHash: varchar("passwordHash", { length: 255 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   userType: mysqlEnum("userType", ["homeowner", "handyman", "unset"]).default("unset").notNull(),
@@ -115,7 +116,7 @@ export const reviews = mysqlTable("reviews", {
   jobId: int("jobId").notNull(),
   reviewerId: int("reviewerId").notNull(),
   revieweeId: int("revieweeId").notNull(),
-  rating: int("rating").notNull(), // 1-5
+  rating: int("rating").notNull(),
   comment: text("comment"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -147,7 +148,7 @@ export const messages = mysqlTable("messages", {
   jobId: int("jobId").notNull(),
   senderId: int("senderId").notNull(),
   content: text("content").notNull(),
-  readBy: varchar("readBy", { length: 1000 }).default("[]"), // JSON array of user IDs
+  readBy: varchar("readBy", { length: 1000 }).default("[]"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

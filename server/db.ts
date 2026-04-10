@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   Bid,
@@ -14,6 +14,7 @@ import {
   Job,
   Payment,
   Review,
+  User,
   bids,
   disputes,
   handymanProfiles,
@@ -38,6 +39,10 @@ export async function getDb() {
   return _db;
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -48,7 +53,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   const values: InsertUser = { openId: user.openId };
   const updateSet: Record<string, unknown> = {};
 
-  const textFields = ["name", "email", "loginMethod"] as const;
+  const textFields = ["name", "email", "passwordHash", "loginMethod"] as const;
   for (const field of textFields) {
     const value = user[field];
     if (value === undefined) continue;
@@ -61,6 +66,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     values.lastSignedIn = user.lastSignedIn;
     updateSet.lastSignedIn = user.lastSignedIn;
   }
+
   if (user.role !== undefined) {
     values.role = user.role;
     updateSet.role = user.role;
@@ -69,16 +75,59 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     updateSet.role = "admin";
   }
 
+  if (user.userType !== undefined) {
+    values.userType = user.userType;
+    updateSet.userType = user.userType;
+  }
+
   if (!values.lastSignedIn) values.lastSignedIn = new Date();
   if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
 
   await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
+export async function createLocalUser(input: {
+  name: string;
+  email: string;
+  passwordHash: string;
+  userType: "homeowner" | "handyman";
+}): Promise<User> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+
+  const email = normalizeEmail(input.email);
+  const openId = `local:${email}`;
+
+  await db.insert(users).values({
+    openId,
+    name: input.name,
+    email,
+    passwordHash: input.passwordHash,
+    loginMethod: "email",
+    userType: input.userType,
+    lastSignedIn: new Date(),
+  });
+
+  const created = await getUserByOpenId(openId);
+  if (!created) throw new Error("Failed to create user");
+  return created;
+}
+
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, normalizeEmail(email)))
+    .limit(1);
   return result[0];
 }
 

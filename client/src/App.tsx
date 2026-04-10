@@ -9,6 +9,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
 
 // Homeowner
 import HomeownerDashboard from "./pages/homeowner/Dashboard";
@@ -32,6 +34,8 @@ function Router() {
     <Switch>
       {/* Public */}
       <Route path="/" component={Home} />
+      <Route path="/sign-in" component={SignIn} />
+      <Route path="/sign-up" component={SignUp} />
       <Route path="/role-select" component={RoleSelect} />
       <Route path="/onboarding" component={HandymanOnboarding} />
 

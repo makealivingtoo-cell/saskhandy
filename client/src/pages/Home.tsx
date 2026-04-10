@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,7 +10,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 
 const categories = [
   "Furniture Assembly",
@@ -78,7 +77,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="container flex h-18 items-center justify-between py-3">
+        <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white">
               <Hammer className="h-5 w-5" />
@@ -91,18 +90,18 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <a
-              href={getLoginUrl()}
+            <Link
+              href="/sign-in"
               className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
             >
               Sign in
-            </a>
+            </Link>
 
             <Button
               asChild
               className="rounded-full bg-emerald-700 px-6 text-sm font-semibold hover:bg-emerald-800"
             >
-              <a href={getLoginUrl()}>Get Started</a>
+              <Link href="/sign-up">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -132,10 +131,10 @@ export default function HomePage() {
                     size="lg"
                     className="rounded-full bg-emerald-700 px-8 text-base hover:bg-emerald-800"
                   >
-                    <a href={getLoginUrl()}>
+                    <Link href="/sign-up">
                       Post a Job
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
+                    </Link>
                   </Button>
 
                   <Button
@@ -144,7 +143,7 @@ export default function HomePage() {
                     variant="outline"
                     className="rounded-full border-slate-300 bg-white px-8 text-base text-slate-900 hover:bg-slate-50"
                   >
-                    <a href={getLoginUrl()}>Become a Handyman</a>
+                    <Link href="/sign-up">Become a Handyman</Link>
                   </Button>
                 </div>
               </div>
@@ -173,13 +172,13 @@ export default function HomePage() {
 
             <div className="flex flex-wrap gap-3">
               {categories.map((category) => (
-                <a
+                <Link
                   key={category}
-                  href={getLoginUrl()}
+                  href="/sign-up"
                   className="rounded-full border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
                 >
                   {category}
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -230,10 +229,10 @@ export default function HomePage() {
                     size="lg"
                     className="rounded-full bg-emerald-700 px-8 text-base hover:bg-emerald-800"
                   >
-                    <a href={getLoginUrl()}>
+                    <Link href="/sign-up">
                       Get Started
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -316,10 +315,10 @@ export default function HomePage() {
                   size="lg"
                   className="rounded-full bg-white px-8 text-base text-emerald-800 hover:bg-emerald-50"
                 >
-                  <a href={getLoginUrl()}>
+                  <Link href="/sign-up">
                     Post a Job
                     <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
+                  </Link>
                 </Button>
 
                 <Button
@@ -328,7 +327,7 @@ export default function HomePage() {
                   variant="outline"
                   className="rounded-full border-white/30 bg-transparent px-8 text-base text-white hover:bg-white/10"
                 >
-                  <a href={getLoginUrl()}>Join as a Handyman</a>
+                  <Link href="/sign-up">Join as a Handyman</Link>
                 </Button>
               </div>
             </div>

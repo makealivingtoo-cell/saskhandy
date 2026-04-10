@@ -3,7 +3,6 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -38,7 +37,6 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // ─── Stripe Webhook (MUST be before express.json) ───────────────────────────
   app.post(
     "/api/stripe/webhook",
     express.raw({ type: "application/json" }),
@@ -52,17 +50,14 @@ async function startServer() {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
-      // Test event passthrough
       if (event.id.startsWith("evt_test_")) {
-        console.log("[Webhook] Test event detected, returning verification response");
         return res.json({ verified: true });
       }
-
-      console.log(`[Webhook] Event: ${event.type} (${event.id})`);
 
       if (event.type === "payment_intent.succeeded") {
         const intent = event.data.object as any;
         const jobId = parseInt(intent.metadata?.jobId ?? "0");
+
         if (jobId) {
           const db = await getDb();
           if (db) {
@@ -70,11 +65,11 @@ async function startServer() {
               .update(payments)
               .set({ status: "pending", stripePaymentIntentId: intent.id })
               .where(eq(payments.jobId, jobId));
+
             await db
               .update(jobs)
               .set({ status: "in_progress" })
               .where(eq(jobs.id, jobId));
-            console.log(`[Webhook] Payment confirmed for job ${jobId}`);
           }
         }
       }
@@ -83,22 +78,26 @@ async function startServer() {
     }
   );
 
-  // ─── Body parsers ────────────────────────────────────────────────────────────
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // ─── File Upload Endpoint ────────────────────────────────────────────────────
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 },
   });
 
   app.post("/api/upload", upload.single("file"), async (req: any, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: "No file provided" });
+
       const ext = (req.file.originalname as string).split(".").pop() ?? "bin";
       const key = `uploads/${nanoid()}.${ext}`;
-      const { url } = await storagePut(key, req.file.buffer as Buffer, req.file.mimetype as string);
+      const { url } = await storagePut(
+        key,
+        req.file.buffer as Buffer,
+        req.file.mimetype as string
+      );
+
       res.json({ url, key });
     } catch (err: any) {
       console.error("[Upload] Error:", err.message);
@@ -106,10 +105,6 @@ async function startServer() {
     }
   });
 
-  // ─── OAuth callback ──────────────────────────────────────────────────────────
-  registerOAuthRoutes(app);
-
-  // ─── tRPC API ────────────────────────────────────────────────────────────────
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -118,7 +113,6 @@ async function startServer() {
     })
   );
 
-  // ─── Frontend ────────────────────────────────────────────────────────────────
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {

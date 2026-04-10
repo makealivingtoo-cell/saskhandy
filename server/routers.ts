@@ -4,10 +4,13 @@ import { stripe } from "./stripe";
 import { createMessage, getMessagesForJob, markMessageAsRead, getUnreadCount } from "./db-messages";
 import { sendNotification } from "./notifications";
 import { z } from "zod";
+import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
   createBid,
   createDispute,
+  createHandymanProfile,
   createJob,
+  createLocalUser,
   createPayment,
   createReview,
   getAllDisputes,
@@ -26,6 +29,7 @@ import {
   getPaymentsByHandyman,
   getReviewForJob,
   getReviewsForUser,
+  getUserByEmail,
   getUserById,
   recalculateHandymanRating,
   rejectOtherBids,
@@ -36,10 +40,11 @@ import {
   updatePayment,
   updateUserType,
 } from "./db";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { sdk } from "./_core/sdk";
 
 const JOB_CATEGORIES = [
   "General Helper",
@@ -54,18 +59,142 @@ const JOB_CATEGORIES = [
   "Roofing",
 ] as const;
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, stored: string) {
+  const [salt, hash] = stored.split(":");
+  if (!salt || !hash) return false;
+
+  const derived = scryptSync(password, salt, 64);
+  const hashBuffer = Buffer.from(hash, "hex");
+
+  if (derived.length !== hashBuffer.length) return false;
+
+  return timingSafeEqual(derived, hashBuffer);
+}
+
 // ─── Auth Router ──────────────────────────────────────────────────────────────
 const authRouter = router({
   me: publicProcedure.query((opts) => opts.ctx.user),
+
+  signUp: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2).max(120),
+        email: z.string().email(),
+        password: z.string().min(8).max(100),
+        userType: z.enum(["homeowner", "handyman"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const email = normalizeEmail(input.email);
+      const existing = await getUserByEmail(email);
+
+      if (existing) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "An account with this email already exists",
+        });
+      }
+
+      const user = await createLocalUser({
+        name: input.name,
+        email,
+        passwordHash: hashPassword(input.password),
+        userType: input.userType,
+      });
+
+      const sessionToken = await sdk.createSessionToken(user.openId, {
+        name: user.name ?? "",
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      if (input.userType === "handyman") {
+        await createHandymanProfile({
+          userId: user.id,
+          categories: "[]",
+        });
+      }
+
+      return {
+        success: true,
+        user,
+      };
+    }),
+
+  signIn: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        password: z.string().min(8).max(100),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const email = normalizeEmail(input.email);
+      const user = await getUserByEmail(email);
+
+      if (!user || !user.passwordHash) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
+        });
+      }
+
+      const validPassword = verifyPassword(input.password, user.passwordHash);
+
+      if (!validPassword) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
+        });
+      }
+
+      const sessionToken = await sdk.createSessionToken(user.openId, {
+        name: user.name ?? "",
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      return {
+        success: true,
+        user,
+      };
+    }),
+
   logout: publicProcedure.mutation(({ ctx }) => {
     const cookieOptions = getSessionCookieOptions(ctx.req);
     ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
     return { success: true } as const;
   }),
+
   setUserType: protectedProcedure
     .input(z.object({ userType: z.enum(["homeowner", "handyman"]) }))
     .mutation(async ({ ctx, input }) => {
       await updateUserType(ctx.user.id, input.userType);
+
+      if (input.userType === "handyman") {
+        const existing = await getHandymanProfile(ctx.user.id);
+        if (!existing) {
+          await createHandymanProfile({
+            userId: ctx.user.id,
+            categories: "[]",
+          });
+        }
+      }
+
       return { success: true };
     }),
 });
@@ -81,7 +210,7 @@ const handymanProfilesRouter = router({
       const profile = await getHandymanProfile(input.userId);
       const user = await getUserById(input.userId);
       if (!profile || !user) return null;
-      return { ...profile, userName: user.name, userEmail: user.email };
+      return { ...profile, userName: user?.name, userEmail: user?.email };
     }),
   getAll: publicProcedure.query(async () => {
     return getAllHandymanProfiles();
@@ -106,7 +235,6 @@ const handymanProfilesRouter = router({
           insuranceCertUrl: input.insuranceCertUrl,
         });
       } else {
-        const { createHandymanProfile } = await import("./db");
         await createHandymanProfile({
           userId: ctx.user.id,
           bio: input.bio,
@@ -179,12 +307,10 @@ const jobsRouter = router({
       }
       await updateJobStatus(input.jobId, input.status);
 
-      // On completion, update handyman stats and release payment
       if (input.status === "completed" && job.selectedHandymanId) {
         const payment = await getPaymentByJob(input.jobId);
         if (payment && payment.status === "pending") {
           await updatePayment(payment.id, { status: "completed" });
-          // Update handyman earnings and job count
           const profile = await getHandymanProfile(job.selectedHandymanId);
           if (profile) {
             const newEarnings = (parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)).toFixed(2);
@@ -229,7 +355,6 @@ const bidsRouter = router({
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
       if (job.status !== "open") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open for bids" });
 
-      // Check for existing bid
       const existingBids = await getBidsForJob(input.jobId);
       const alreadyBid = existingBids.find((b) => b.handymanId === ctx.user.id && b.status === "pending");
       if (alreadyBid) throw new TRPCError({ code: "BAD_REQUEST", message: "You already have a pending bid on this job" });
@@ -257,7 +382,6 @@ const bidsRouter = router({
     .input(z.object({ jobId: z.number() }))
     .query(async ({ input }) => {
       const bidList = await getBidsForJob(input.jobId);
-      // Enrich with handyman info
       const enriched = await Promise.all(
         bidList.map(async (bid) => {
           const user = await getUserById(bid.handymanId);
@@ -295,17 +419,14 @@ const bidsRouter = router({
       if (job.homeownerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
       if (job.status !== "open") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open" });
 
-      // Accept bid and reject others
       await updateBidStatus(input.bidId, "accepted");
       await rejectOtherBids(bid.jobId, input.bidId);
 
-      // Update job status
       await updateJobStatus(bid.jobId, "in_progress", {
         selectedHandymanId: bid.handymanId,
         selectedBidId: input.bidId,
       });
 
-      // Create escrow payment record (80/20 split)
       const amount = parseFloat(bid.bidAmount);
       const platformFee = parseFloat((amount * 0.2).toFixed(2));
       const handymanPayout = parseFloat((amount * 0.8).toFixed(2));
@@ -389,11 +510,9 @@ const reviewsRouter = router({
       if (job.status !== "completed") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Job must be completed before leaving a review" });
       }
-      // Verify reviewer is part of the job
       if (job.homeownerId !== ctx.user.id && job.selectedHandymanId !== ctx.user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-      // Check for duplicate review
       const existing = await getReviewForJob(input.jobId, ctx.user.id);
       if (existing) throw new TRPCError({ code: "BAD_REQUEST", message: "You already reviewed this job" });
 
@@ -405,7 +524,6 @@ const reviewsRouter = router({
         comment: input.comment,
       });
 
-      // Recalculate handyman rating if reviewee is handyman
       if (job.selectedHandymanId === input.revieweeId) {
         await recalculateHandymanRating(input.revieweeId);
       }
@@ -477,7 +595,6 @@ const disputesRouter = router({
       return getDisputeByJob(input.jobId);
     }),
 
-  // Admin only
   getAll: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     const disputeList = await getAllDisputes();
@@ -503,7 +620,6 @@ const disputesRouter = router({
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       await resolveDispute(input.disputeId, input.resolution, input.adminNotes);
 
-      // Get dispute to find job
       const allDisputes = await getAllDisputes();
       const dispute = allDisputes.find((d) => d.id === input.disputeId);
       if (dispute) {
@@ -514,7 +630,7 @@ const disputesRouter = router({
             if (input.resolution === "resolved_release") {
               await updatePayment(payment.id, { status: "completed" });
               await updateJobStatus(job.id, "completed");
-              // Update handyman stats
+
               if (job.selectedHandymanId) {
                 const profile = await getHandymanProfile(job.selectedHandymanId);
                 if (profile) {
@@ -526,14 +642,12 @@ const disputesRouter = router({
                 }
               }
             } else {
-              // Issue Stripe refund if payment was captured
               if (payment.stripePaymentIntentId) {
                 try {
                   await stripe.refunds.create({
                     payment_intent: payment.stripePaymentIntentId,
                     reason: "fraudulent",
                   });
-                  console.log(`[Dispute] Stripe refund issued for job ${job.id}`);
                 } catch (err: any) {
                   console.error(`[Dispute] Stripe refund failed: ${err.message}`);
                 }
@@ -561,7 +675,6 @@ const messagesRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // Only homeowner and accepted handyman can message
       const isHomeowner = job.homeownerId === ctx.user.id;
       const isHandyman = job.selectedHandymanId === ctx.user.id;
       if (!isHomeowner && !isHandyman) {
@@ -601,7 +714,6 @@ const messagesRouter = router({
         })
       );
 
-      // Mark all messages as read for current user
       for (const msg of jobMessages) {
         if (msg.senderId !== ctx.user.id) {
           await markMessageAsRead(msg.id, ctx.user.id);
