@@ -17,6 +17,7 @@ import HomeownerDashboard from "./pages/homeowner/Dashboard";
 import PostJob from "./pages/homeowner/PostJob";
 import JobDetails from "./pages/homeowner/JobDetails";
 import EditJob from "./pages/homeowner/EditJob";
+import MessagesPage from "./pages/Messages";
 
 // Handyman
 import HandymanDashboard from "./pages/handyman/Dashboard";
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/post-job" component={PostJob} />
       <Route path="/jobs/:id" component={JobDetails} />
       <Route path="/jobs/:id/edit" component={EditJob} />
+      <Route path="/messages" component={MessagesPage} />
 
       <Route path="/handyman/dashboard" component={HandymanDashboard} />
       <Route path="/handyman/browse" component={BrowseJobs} />
@@ -50,6 +52,7 @@ function Router() {
       <Route path="/handyman/bids" component={MyBids} />
       <Route path="/handyman/profile" component={HandymanProfile} />
       <Route path="/handyman/earnings" component={HandymanEarnings} />
+      <Route path="/handyman/messages" component={MessagesPage} />
 
       <Route path="/profile/:userId" component={PublicProfile} />
       <Route path="/admin" component={AdminPanel} />

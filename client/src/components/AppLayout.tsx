@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { trpc } from "@/lib/trpc";
 import {
   Briefcase,
   ChevronDown,
@@ -15,6 +16,7 @@ import {
   LayoutDashboard,
   Loader2,
   LogOut,
+  MessageSquare,
   Plus,
   Search,
   Shield,
@@ -22,8 +24,8 @@ import {
 } from "lucide-react";
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
   href: string;
@@ -34,12 +36,14 @@ interface NavItem {
 const HOMEOWNER_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/post-job", label: "Post a Job", icon: Plus },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
 ];
 
 const HANDYMAN_NAV: NavItem[] = [
   { href: "/handyman/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/handyman/browse", label: "Browse Jobs", icon: Search },
   { href: "/handyman/bids", label: "My Bids", icon: Briefcase },
+  { href: "/handyman/messages", label: "Messages", icon: MessageSquare },
   { href: "/handyman/earnings", label: "Earnings", icon: DollarSign },
   { href: "/handyman/profile", label: "Profile", icon: User },
 ];
@@ -47,6 +51,38 @@ const HANDYMAN_NAV: NavItem[] = [
 interface AppLayoutProps {
   children: ReactNode;
   title?: string;
+}
+
+function NavUnreadBadge({ href }: { href: string }) {
+  const isHandyman = href.startsWith("/handyman");
+  const jobsQuery = isHandyman
+    ? trpc.jobs.getForHandyman.useQuery(undefined)
+    : trpc.jobs.getByHomeowner.useQuery(undefined);
+
+  const jobs =
+    jobsQuery.data?.filter((job) =>
+      isHandyman ? true : !!job.selectedHandymanId
+    ) ?? [];
+
+  const totalUnreadQueries = jobs.map((job) =>
+    trpc.messages.getUnreadCount.useQuery(
+      { jobId: job.id },
+      { enabled: jobs.length > 0 }
+    )
+  );
+
+  const totalUnread = totalUnreadQueries.reduce(
+    (sum, query) => sum + (query.data ?? 0),
+    0
+  );
+
+  if (totalUnread <= 0) return null;
+
+  return (
+    <span className="ml-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold px-1.5">
+      {totalUnread > 99 ? "99+" : totalUnread}
+    </span>
+  );
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
@@ -59,7 +95,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
     try {
       await logout();
       window.location.href = "/";
-    } catch (error) {
+    } catch {
       toast.error("Failed to sign out");
     }
   };
@@ -92,6 +128,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   >
                     <item.icon className="w-3.5 h-3.5" />
                     {item.label}
+                    {item.label === "Messages" && <NavUnreadBadge href={item.href} />}
                   </div>
                 </Link>
               );
@@ -129,7 +166,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
               <div className="px-3 py-2">
                 <p className="text-sm font-medium truncate">{user?.name}</p>
                 <p className="text-xs text-muted-foreground capitalize">{user?.userType}</p>
