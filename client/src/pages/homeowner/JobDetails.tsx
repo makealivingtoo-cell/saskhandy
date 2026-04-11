@@ -13,22 +13,25 @@ import {
   ArrowLeft,
   CheckCircle,
   Clock,
-  DollarSign,
   Loader2,
   MapPin,
   MessageSquare,
+  Pencil,
   Shield,
   Star,
+  Trash2,
   User,
+  XCircle,
 } from "lucide-react";
-import { useState } from "react";
-import { Link, useParams } from "wouter";
+import { useMemo, useState } from "react";
+import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
 export default function JobDetails() {
   const { id } = useParams();
   const jobId = parseInt(id ?? "0");
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
   const [disputeReason, setDisputeReason] = useState("");
@@ -44,51 +47,66 @@ export default function JobDetails() {
   const { data: dispute } = trpc.disputes.getByJob.useQuery({ jobId }, { enabled: !!jobId && job?.status === "disputed" });
   const { data: myReview } = trpc.reviews.getMyReview.useQuery({ jobId }, { enabled: !!jobId && job?.status === "completed" });
 
-  const [pendingBidId, setPendingBidId] = useState<number | null>(null);
-
   const acceptBid = trpc.bids.accept.useMutation({
-    onSuccess: (data) => {
-      // After bid is accepted, open Stripe payment modal
+    onSuccess: async () => {
       setShowPaymentModal(true);
-      utils.jobs.getById.invalidate({ jobId });
-      utils.bids.getForJob.invalidate({ jobId });
-      utils.payments.getByJob.invalidate({ jobId });
+      await utils.jobs.getById.invalidate({ jobId });
+      await utils.bids.getForJob.invalidate({ jobId });
+      await utils.payments.getByJob.invalidate({ jobId });
     },
     onError: (err) => toast.error(err.message),
   });
 
   const rejectBid = trpc.bids.reject.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Bid rejected.");
-      utils.bids.getForJob.invalidate({ jobId });
+      await utils.bids.getForJob.invalidate({ jobId });
     },
     onError: (err) => toast.error(err.message),
   });
 
   const markComplete = trpc.jobs.updateStatus.useMutation({
-    onSuccess: () => {
-      toast.success("Job marked complete! Payment released to handyman.");
-      utils.jobs.getById.invalidate({ jobId });
-      utils.payments.getByJob.invalidate({ jobId });
+    onSuccess: async () => {
+      toast.success("Job marked complete. Payment released to handyman.");
+      await utils.jobs.getById.invalidate({ jobId });
+      await utils.payments.getByJob.invalidate({ jobId });
     },
     onError: (err) => toast.error(err.message),
   });
 
   const createDispute = trpc.disputes.create.useMutation({
-    onSuccess: () => {
-      toast.success("Dispute opened. Our team will review and resolve it.");
+    onSuccess: async () => {
+      toast.success("Dispute opened.");
       setShowDisputeForm(false);
-      utils.jobs.getById.invalidate({ jobId });
-      utils.disputes.getByJob.invalidate({ jobId });
+      await utils.jobs.getById.invalidate({ jobId });
+      await utils.disputes.getByJob.invalidate({ jobId });
     },
     onError: (err) => toast.error(err.message),
   });
 
   const createReview = trpc.reviews.create.useMutation({
-    onSuccess: () => {
-      toast.success("Review submitted!");
+    onSuccess: async () => {
+      toast.success("Review submitted.");
       setShowReviewForm(false);
-      utils.reviews.getMyReview.invalidate({ jobId });
+      await utils.reviews.getMyReview.invalidate({ jobId });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteJob = trpc.jobs.remove.useMutation({
+    onSuccess: async () => {
+      toast.success("Job deleted.");
+      await utils.jobs.getByHomeowner.invalidate();
+      navigate("/dashboard");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const cancelJob = trpc.jobs.cancel.useMutation({
+    onSuccess: async () => {
+      toast.success("Job cancelled.");
+      await utils.jobs.getById.invalidate({ jobId });
+      await utils.jobs.getByHomeowner.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -117,10 +135,13 @@ export default function JobDetails() {
   const pendingBids = bids?.filter((b) => b.status === "pending") ?? [];
   const acceptedBid = bids?.find((b) => b.status === "accepted");
 
+  const canEdit = isOwner && job.status === "open" && !job.selectedBidId && !job.selectedHandymanId;
+  const canDelete = canEdit && pendingBids.length === 0 && !payment;
+  const canCancel = canEdit && pendingBids.length > 0;
+
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto">
-        {/* Back */}
         <Link href="/dashboard">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer w-fit">
             <ArrowLeft className="w-4 h-4" />
@@ -128,7 +149,6 @@ export default function JobDetails() {
           </div>
         </Link>
 
-        {/* Job Header */}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 mb-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
@@ -163,7 +183,53 @@ export default function JobDetails() {
           </div>
         </div>
 
-        {/* Payment Escrow Status */}
+        {(canEdit || canDelete || canCancel) && (
+          <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3">
+              {canEdit && (
+                <Button asChild variant="outline" className="flex-1">
+                  <Link href={`/jobs/${jobId}/edit`}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Job
+                  </Link>
+                </Button>
+              )}
+
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => deleteJob.mutate({ jobId })}
+                  disabled={deleteJob.isPending}
+                >
+                  {deleteJob.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  Delete Job
+                </Button>
+              )}
+
+              {canCancel && (
+                <Button
+                  variant="outline"
+                  className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
+                  onClick={() => cancelJob.mutate({ jobId })}
+                  disabled={cancelJob.isPending}
+                >
+                  {cancelJob.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <XCircle className="w-4 h-4 mr-2" />
+                  )}
+                  Cancel Job
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {payment && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
@@ -188,7 +254,6 @@ export default function JobDetails() {
           </div>
         )}
 
-        {/* Actions for in_progress jobs */}
         {job.status === "in_progress" && isOwner && (
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6 flex flex-col sm:flex-row gap-3">
             <Button
@@ -210,12 +275,11 @@ export default function JobDetails() {
           </div>
         )}
 
-        {/* Dispute Form */}
         {showDisputeForm && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
             <h3 className="font-semibold text-red-800 mb-2">Open a Dispute</h3>
             <p className="text-xs text-red-700 mb-3">
-              Describe the issue. Our team will review and resolve the dispute within 48 hours.
+              Describe the issue. Our team will review and resolve it.
             </p>
             <Textarea
               placeholder="Explain what went wrong..."
@@ -241,7 +305,6 @@ export default function JobDetails() {
           </div>
         )}
 
-        {/* Dispute Status */}
         {dispute && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
             <div className="flex items-center gap-2 mb-2">
@@ -259,7 +322,6 @@ export default function JobDetails() {
           </div>
         )}
 
-        {/* Review Section */}
         {job.status === "completed" && isOwner && job.selectedHandymanId && (
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
@@ -284,18 +346,22 @@ export default function JobDetails() {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    onClick={() => createReview.mutate({
-                      jobId,
-                      revieweeId: job.selectedHandymanId!,
-                      rating: reviewRating,
-                      comment: reviewComment,
-                    })}
+                    onClick={() =>
+                      createReview.mutate({
+                        jobId,
+                        revieweeId: job.selectedHandymanId!,
+                        rating: reviewRating,
+                        comment: reviewComment,
+                      })
+                    }
                     disabled={reviewRating === 0 || createReview.isPending}
                   >
                     {createReview.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
                     Submit Review
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>Cancel</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>
+                    Cancel
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -307,7 +373,6 @@ export default function JobDetails() {
           </div>
         )}
 
-        {/* Accepted Bid */}
         {acceptedBid && (
           <div className="bg-white rounded-xl border border-emerald-200 p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
@@ -354,7 +419,6 @@ export default function JobDetails() {
           />
         )}
 
-        {/* Bids List */}
         {job.status === "open" && (
           <div>
             <h2 className="text-base font-semibold text-foreground mb-3">
@@ -406,10 +470,7 @@ export default function JobDetails() {
                         <div className="flex gap-2 mt-2">
                           <Button
                             size="sm"
-                            onClick={() => {
-                              setPendingBidId(bid.id);
-                              acceptBid.mutate({ bidId: bid.id });
-                            }}
+                            onClick={() => acceptBid.mutate({ bidId: bid.id })}
                             disabled={acceptBid.isPending}
                           >
                             {acceptBid.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
@@ -437,16 +498,15 @@ export default function JobDetails() {
         )}
       </div>
 
-      {/* Stripe Payment Modal */}
       {showPaymentModal && job?.selectedBidId && (
         <StripePaymentModal
           jobId={jobId}
           amount={parseFloat(bids?.find((b) => b.id === job.selectedBidId)?.bidAmount ?? acceptedBid?.bidAmount ?? "0")}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowPaymentModal(false);
-            toast.success("Payment successful! Funds held in escrow. Work can now begin.");
-            utils.jobs.getById.invalidate({ jobId });
-            utils.payments.getByJob.invalidate({ jobId });
+            toast.success("Payment successful. Funds are held in escrow.");
+            await utils.jobs.getById.invalidate({ jobId });
+            await utils.payments.getByJob.invalidate({ jobId });
           }}
           onClose={() => setShowPaymentModal(false)}
         />

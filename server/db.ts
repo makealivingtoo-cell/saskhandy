@@ -211,6 +211,15 @@ export async function getOpenJobs(limit = 20, offset = 0, category?: string): Pr
   return db.select().from(jobs).where(conditions).orderBy(desc(jobs.createdAt)).limit(limit).offset(offset);
 }
 
+export async function updateJob(
+  jobId: number,
+  data: Partial<Pick<InsertJob, "title" | "description" | "category" | "location" | "budgetMin" | "budgetMax">>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(jobs).set(data).where(eq(jobs.id, jobId));
+}
+
 export async function updateJobStatus(
   jobId: number,
   status: Job["status"],
@@ -219,6 +228,12 @@ export async function updateJobStatus(
   const db = await getDb();
   if (!db) return;
   await db.update(jobs).set({ status, ...extra }).where(eq(jobs.id, jobId));
+}
+
+export async function deleteJobById(jobId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(jobs).where(eq(jobs.id, jobId));
 }
 
 export async function getJobsForHandyman(handymanId: number): Promise<Job[]> {

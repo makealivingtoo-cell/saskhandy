@@ -16,6 +16,7 @@ import SignUp from "./pages/SignUp";
 import HomeownerDashboard from "./pages/homeowner/Dashboard";
 import PostJob from "./pages/homeowner/PostJob";
 import JobDetails from "./pages/homeowner/JobDetails";
+import EditJob from "./pages/homeowner/EditJob";
 
 // Handyman
 import HandymanDashboard from "./pages/handyman/Dashboard";
@@ -32,19 +33,17 @@ import AdminPanel from "./pages/AdminPanel";
 function Router() {
   return (
     <Switch>
-      {/* Public */}
       <Route path="/" component={Home} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/sign-up" component={SignUp} />
       <Route path="/role-select" component={RoleSelect} />
       <Route path="/onboarding" component={HandymanOnboarding} />
 
-      {/* Homeowner */}
       <Route path="/dashboard" component={HomeownerDashboard} />
       <Route path="/post-job" component={PostJob} />
       <Route path="/jobs/:id" component={JobDetails} />
+      <Route path="/jobs/:id/edit" component={EditJob} />
 
-      {/* Handyman */}
       <Route path="/handyman/dashboard" component={HandymanDashboard} />
       <Route path="/handyman/browse" component={BrowseJobs} />
       <Route path="/handyman/jobs/:id" component={HandymanJobDetails} />
@@ -52,7 +51,6 @@ function Router() {
       <Route path="/handyman/profile" component={HandymanProfile} />
       <Route path="/handyman/earnings" component={HandymanEarnings} />
 
-      {/* Shared */}
       <Route path="/profile/:userId" component={PublicProfile} />
       <Route path="/admin" component={AdminPanel} />
 

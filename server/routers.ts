@@ -13,6 +13,7 @@ import {
   createLocalUser,
   createPayment,
   createReview,
+  deleteJobById,
   getAllDisputes,
   getAllHandymanProfiles,
   getAllUsers,
@@ -36,6 +37,7 @@ import {
   resolveDispute,
   updateBidStatus,
   updateHandymanProfile,
+  updateJob,
   updateJobStatus,
   updatePayment,
   updateUserType,
@@ -276,6 +278,97 @@ const jobsRouter = router({
         expiresAt,
       });
       return { jobId };
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        jobId: z.number(),
+        title: z.string().min(3).max(255),
+        description: z.string().min(10),
+        category: z.string(),
+        location: z.string().min(2),
+        budgetMin: z.number().positive(),
+        budgetMax: z.number().positive(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      if (job.status !== "open") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be edited" });
+      }
+      if (job.selectedBidId || job.selectedHandymanId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This job can no longer be edited" });
+      }
+
+      await updateJob(input.jobId, {
+        title: input.title,
+        description: input.description,
+        category: input.category,
+        location: input.location,
+        budgetMin: input.budgetMin.toFixed(2),
+        budgetMax: input.budgetMax.toFixed(2),
+      });
+
+      return { success: true };
+    }),
+
+  remove: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      if (job.status !== "open") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be removed" });
+      }
+
+      const bidList = await getBidsForJob(input.jobId);
+      if (bidList.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Jobs with bids cannot be deleted. Cancel the job instead.",
+        });
+      }
+
+      const payment = await getPaymentByJob(input.jobId);
+      if (payment) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This job cannot be deleted because a payment record exists.",
+        });
+      }
+
+      await deleteJobById(input.jobId);
+      return { success: true };
+    }),
+
+  cancel: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      if (job.status !== "open") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be cancelled" });
+      }
+      if (job.selectedBidId || job.selectedHandymanId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Accepted jobs cannot be cancelled from here.",
+        });
+      }
+
+      await updateJobStatus(input.jobId, "cancelled");
+      return { success: true };
     }),
 
   getByHomeowner: protectedProcedure.query(async ({ ctx }) => {
