@@ -6,23 +6,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { JOB_CATEGORIES } from "@shared/constants";
 import { CheckCircle, Loader2, Save, Shield, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 export default function HandymanProfile() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
   const { data: profile, isLoading } = trpc.handymanProfiles.get.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
   const { data: reviews } = trpc.reviews.getForUser.useQuery(
     { userId: user?.id ?? 0 },
     { enabled: !!user?.id }
   );
+
+  const { data: categories = [] } = trpc.jobs.categories.useQuery();
 
   const [bio, setBio] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -30,20 +34,33 @@ export default function HandymanProfile() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate("/sign-in");
+      return;
+    }
+
+    if (!loading && isAuthenticated && user?.userType !== "handyman" && user?.role !== "admin") {
+      navigate("/role-select");
+    }
+  }, [loading, isAuthenticated, user, navigate]);
+
+  useEffect(() => {
     if (profile) {
       setBio(profile.bio ?? "");
       try {
         const cats = JSON.parse(profile.categories ?? "[]");
         setSelectedCategories(Array.isArray(cats) ? cats : []);
-      } catch { setSelectedCategories([]); }
+      } catch {
+        setSelectedCategories([]);
+      }
       setHourlyRate(profile.hourlyRate ? String(parseFloat(profile.hourlyRate)) : "");
     }
   }, [profile]);
 
   const updateProfile = trpc.handymanProfiles.createOrUpdate.useMutation({
-    onSuccess: () => {
-      toast.success("Profile updated!");
-      utils.handymanProfiles.get.invalidate();
+    onSuccess: async () => {
+      toast.success("Profile updated.");
+      await utils.handymanProfiles.get.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -65,27 +82,31 @@ export default function HandymanProfile() {
   const handleInsuranceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("File must be under 5MB");
+      toast.error("File must be under 5MB.");
       return;
     }
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
+
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload failed");
+
       const { url } = await res.json();
       await updateProfile.mutateAsync({ insuranceCertUrl: url });
-      toast.success("Insurance certificate uploaded!");
-    } catch (err) {
+      toast.success("Insurance certificate uploaded.");
+    } catch {
       toast.error("Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
   };
 
-  if (isLoading) {
+  if (loading || isLoading) {
     return (
       <AppLayout title="My Profile">
         <div className="flex justify-center py-16">
@@ -98,7 +119,6 @@ export default function HandymanProfile() {
   return (
     <AppLayout title="My Profile">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Profile Header */}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
@@ -108,7 +128,7 @@ export default function HandymanProfile() {
             </div>
             <div>
               <h2 className="font-semibold text-foreground text-lg">{user?.name}</h2>
-              <div className="flex items-center gap-3 mt-0.5">
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                 {profile?.rating && parseFloat(profile.rating) > 0 ? (
                   <StarRatingDisplay rating={parseFloat(profile.rating)} size="sm" showValue />
                 ) : (
@@ -125,9 +145,14 @@ export default function HandymanProfile() {
             </div>
           </div>
 
-          {/* Insurance */}
-          <div className={`rounded-lg p-4 ${profile?.insuranceCertUrl ? "bg-emerald-50 border border-emerald-200" : "bg-amber-50 border border-amber-200"}`}>
-            <div className="flex items-center justify-between">
+          <div
+            className={`rounded-lg p-4 ${
+              profile?.insuranceCertUrl
+                ? "bg-emerald-50 border border-emerald-200"
+                : "bg-amber-50 border border-amber-200"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 {profile?.insuranceCertUrl ? (
                   <CheckCircle className="w-4 h-4 text-emerald-600" />
@@ -135,19 +160,44 @@ export default function HandymanProfile() {
                   <Shield className="w-4 h-4 text-amber-600" />
                 )}
                 <div>
-                  <p className={`text-sm font-medium ${profile?.insuranceCertUrl ? "text-emerald-800" : "text-amber-800"}`}>
-                    {profile?.insuranceCertUrl ? "Insurance Verified" : "Insurance Certificate"}
+                  <p
+                    className={`text-sm font-medium ${
+                      profile?.insuranceCertUrl ? "text-emerald-800" : "text-amber-800"
+                    }`}
+                  >
+                    {profile?.insuranceCertUrl ? "Insurance Uploaded" : "Insurance Certificate"}
                   </p>
-                  <p className={`text-xs ${profile?.insuranceCertUrl ? "text-emerald-700" : "text-amber-700"}`}>
-                    {profile?.insuranceCertUrl ? "Your certificate is on file." : "Upload to get a verified badge."}
+                  <p
+                    className={`text-xs ${
+                      profile?.insuranceCertUrl ? "text-emerald-700" : "text-amber-700"
+                    }`}
+                  >
+                    {profile?.insuranceCertUrl
+                      ? "Your certificate is on file."
+                      : "Upload to strengthen trust with homeowners."}
                   </p>
                 </div>
               </div>
+
               <label className="cursor-pointer">
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleInsuranceUpload} />
-                <Button size="sm" variant="outline" className={profile?.insuranceCertUrl ? "border-emerald-300" : "border-amber-300"} asChild>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={handleInsuranceUpload}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={profile?.insuranceCertUrl ? "border-emerald-300" : "border-amber-300"}
+                  asChild
+                >
                   <span>
-                    {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+                    {uploading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    )}
                     {profile?.insuranceCertUrl ? "Replace" : "Upload"}
                   </span>
                 </Button>
@@ -156,7 +206,6 @@ export default function HandymanProfile() {
           </div>
         </div>
 
-        {/* Edit Profile */}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 space-y-6">
           <h3 className="font-semibold text-foreground">Edit Profile</h3>
 
@@ -164,7 +213,7 @@ export default function HandymanProfile() {
             <Label htmlFor="bio">About You</Label>
             <Textarea
               id="bio"
-              placeholder="Describe your experience, skills, and what makes you the best choice..."
+              placeholder="Describe your experience, skills, and what makes you a strong choice..."
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
@@ -175,7 +224,7 @@ export default function HandymanProfile() {
           <div className="space-y-3">
             <Label>Service Categories</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {JOB_CATEGORIES.map((cat) => {
+              {categories.map((cat) => {
                 const isSelected = selectedCategories.includes(cat);
                 return (
                   <button
@@ -211,7 +260,9 @@ export default function HandymanProfile() {
                 onChange={(e) => setHourlyRate(e.target.value)}
                 className="pl-7"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">/hr</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                /hr
+              </span>
             </div>
           </div>
 
@@ -225,7 +276,6 @@ export default function HandymanProfile() {
           </Button>
         </div>
 
-        {/* Reviews */}
         {reviews && reviews.length > 0 && (
           <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
             <h3 className="font-semibold text-foreground mb-4">Reviews ({reviews.length})</h3>
@@ -233,7 +283,9 @@ export default function HandymanProfile() {
               {reviews.map((review) => (
                 <div key={review.id} className="border-b border-border/40 last:border-0 pb-4 last:pb-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground">{review.reviewerName ?? "User"}</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {review.reviewerName ?? "User"}
+                    </span>
                     <StarRatingDisplay rating={review.rating} size="sm" />
                   </div>
                   {review.comment && (

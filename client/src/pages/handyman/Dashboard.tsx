@@ -5,11 +5,23 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
-import { Briefcase, DollarSign, Loader2, Plus, Search, Star, TrendingUp } from "lucide-react";
+import { Briefcase, DollarSign, Loader2, Search, Star, TrendingUp } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 
-function StatCard({ label, value, icon: Icon, color, sub }: { label: string; value: string | number; icon: React.ElementType; color: string; sub?: string }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+  sub,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: string;
+  sub?: string;
+}) {
   return (
     <div className="bg-white rounded-xl border border-border/60 p-5 flex items-center gap-4">
       <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
@@ -31,22 +43,36 @@ export default function HandymanDashboard() {
   const { data: profile, isLoading: profileLoading } = trpc.handymanProfiles.get.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
   const { data: myBids, isLoading: bidsLoading } = trpc.bids.getForHandyman.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
   const { data: earnings } = trpc.payments.getHandymanEarnings.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) navigate("/");
+    if (!loading && !isAuthenticated) {
+      navigate("/sign-in");
+      return;
+    }
+
     if (!loading && isAuthenticated && user?.userType !== "handyman" && user?.role !== "admin") {
       navigate("/role-select");
+      return;
     }
-    if (!loading && isAuthenticated && user?.userType === "handyman" && !profileLoading && !profile) {
+
+    if (
+      !loading &&
+      isAuthenticated &&
+      user?.userType === "handyman" &&
+      !profileLoading &&
+      !profile
+    ) {
       navigate("/onboarding");
     }
-  }, [loading, isAuthenticated, user, profileLoading, profile]);
+  }, [loading, isAuthenticated, user, profileLoading, profile, navigate]);
 
   const pendingBids = myBids?.filter((b) => b.status === "pending") ?? [];
   const acceptedBids = myBids?.filter((b) => b.status === "accepted") ?? [];
@@ -63,15 +89,16 @@ export default function HandymanDashboard() {
 
   return (
     <AppLayout>
-      {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl font-serif text-foreground">
             Welcome back, {user?.name?.split(" ")[0]}
           </h1>
-          <div className="flex items-center gap-3 mt-1">
-            {profile?.rating && parseFloat(profile.rating) > 0 && (
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            {profile?.rating && parseFloat(profile.rating) > 0 ? (
               <StarRatingDisplay rating={parseFloat(profile.rating)} size="sm" showValue />
+            ) : (
+              <span className="text-sm text-muted-foreground">No ratings yet</span>
             )}
             <span className="text-sm text-muted-foreground">
               {profile?.totalJobs ?? 0} jobs completed
@@ -83,6 +110,7 @@ export default function HandymanDashboard() {
             )}
           </div>
         </div>
+
         <Button asChild>
           <Link href="/handyman/browse">
             <Search className="w-4 h-4 mr-2" />
@@ -91,7 +119,6 @@ export default function HandymanDashboard() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           label="Total Earned"
@@ -116,24 +143,27 @@ export default function HandymanDashboard() {
           value={profile?.rating ? parseFloat(profile.rating).toFixed(1) : "—"}
           icon={Star}
           color="bg-purple-50 text-purple-600"
-          sub={profile?.totalJobs ? `${profile.totalJobs} reviews` : undefined}
+          sub={profile?.totalJobs ? `${profile.totalJobs} jobs` : undefined}
         />
       </div>
 
-      {/* Profile incomplete warning */}
       {profile && (!profile.bio || !profile.categories || profile.categories === "[]") && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-amber-800">Complete your profile</p>
-            <p className="text-xs text-amber-700">A complete profile gets 3x more bids accepted.</p>
+            <p className="text-xs text-amber-700">A complete profile makes it easier for homeowners to trust your bids.</p>
           </div>
-          <Button asChild size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100">
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="border-amber-300 text-amber-800 hover:bg-amber-100"
+          >
             <Link href="/handyman/profile">Update Profile</Link>
           </Button>
         </div>
       )}
 
-      {/* Recent Bids */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-foreground">Recent Bids</h2>
@@ -168,7 +198,9 @@ export default function HandymanDashboard() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-medium text-foreground text-sm truncate">{bid.jobTitle ?? "Job"}</p>
+                        <p className="font-medium text-foreground text-sm truncate">
+                          {bid.jobTitle ?? "Job"}
+                        </p>
                         <StatusBadge status={bid.status} />
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">

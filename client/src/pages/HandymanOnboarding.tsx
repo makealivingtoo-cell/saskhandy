@@ -4,24 +4,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { JOB_CATEGORIES } from "@shared/constants";
 import { CheckCircle, Hammer, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function HandymanOnboarding() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
+
+  const { data: existingProfile, isLoading: profileLoading } = trpc.handymanProfiles.get.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+
+  const { data: categories = [] } = trpc.jobs.categories.useQuery();
 
   const [bio, setBio] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hourlyRate, setHourlyRate] = useState("");
 
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate("/sign-in");
+      return;
+    }
+
+    if (!loading && isAuthenticated && user?.userType !== "handyman" && user?.role !== "admin") {
+      navigate("/role-select");
+      return;
+    }
+
+    if (!loading && !profileLoading && existingProfile) {
+      navigate("/handyman/dashboard");
+    }
+  }, [loading, isAuthenticated, user, existingProfile, profileLoading, navigate]);
+
   const createProfile = trpc.handymanProfiles.createOrUpdate.useMutation({
     onSuccess: () => {
-      toast.success("Profile created! Welcome to SaskHandy.");
+      toast.success("Profile created. Welcome to SaskHandy.");
       navigate("/handyman/dashboard");
     },
     onError: (err) => toast.error(err.message),
@@ -35,10 +57,12 @@ export default function HandymanOnboarding() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (selectedCategories.length === 0) {
       toast.error("Please select at least one service category.");
       return;
     }
+
     createProfile.mutate({
       bio: bio.trim() || undefined,
       categories: selectedCategories,
@@ -46,10 +70,17 @@ export default function HandymanOnboarding() {
     });
   };
 
+  if (loading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        {/* Header */}
         <div className="text-center mb-10">
           <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
             <Hammer className="w-6 h-6 text-primary-foreground" />
@@ -61,14 +92,13 @@ export default function HandymanOnboarding() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border/60 shadow-sm p-8 space-y-8">
-          {/* Bio */}
           <div className="space-y-2">
             <Label htmlFor="bio" className="text-sm font-medium">
               About You <span className="text-muted-foreground font-normal">(optional)</span>
             </Label>
             <Textarea
               id="bio"
-              placeholder="e.g., 15 years of plumbing experience. Licensed and insured. Available weekdays and weekends."
+              placeholder="e.g., 15 years of plumbing experience. Licensed and insured."
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
@@ -76,14 +106,13 @@ export default function HandymanOnboarding() {
             />
           </div>
 
-          {/* Categories */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">
               Service Categories <span className="text-destructive">*</span>
             </Label>
             <p className="text-xs text-muted-foreground">Select all that apply to your skills.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {JOB_CATEGORIES.map((cat) => {
+              {categories.map((cat) => {
                 const isSelected = selectedCategories.includes(cat);
                 return (
                   <button
@@ -105,7 +134,6 @@ export default function HandymanOnboarding() {
             </div>
           </div>
 
-          {/* Hourly Rate */}
           <div className="space-y-2">
             <Label htmlFor="rate" className="text-sm font-medium">
               Hourly Rate <span className="text-muted-foreground font-normal">(optional)</span>
@@ -122,18 +150,19 @@ export default function HandymanOnboarding() {
                 onChange={(e) => setHourlyRate(e.target.value)}
                 className="pl-7"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">/hr</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                /hr
+              </span>
             </div>
             <p className="text-xs text-muted-foreground">
               This is for reference only. Actual job prices are set in your bids.
             </p>
           </div>
 
-          {/* Insurance Note */}
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <p className="text-sm text-amber-800 font-medium mb-1">Insurance Verification</p>
             <p className="text-xs text-amber-700">
-              You'll be able to upload your insurance certificate from your profile settings. Verified handymen get priority placement in search results.
+              You&apos;ll be able to upload your insurance certificate from your profile settings.
             </p>
           </div>
 
