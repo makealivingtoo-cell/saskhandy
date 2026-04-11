@@ -15,7 +15,7 @@ import multer from "multer";
 import { nanoid } from "nanoid";
 
 function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const server = net.createServer();
     server.listen(port, () => {
       server.close(() => resolve(true));
@@ -43,6 +43,7 @@ async function startServer() {
     async (req, res) => {
       const sig = req.headers["stripe-signature"] as string;
       let event;
+
       try {
         event = constructWebhookEvent(req.body as Buffer, sig);
       } catch (err: any) {
@@ -63,15 +64,29 @@ async function startServer() {
           if (db) {
             await db
               .update(payments)
-              .set({ status: "pending", stripePaymentIntentId: intent.id })
+              .set({
+                status: "pending",
+                stripePaymentIntentId: intent.id,
+              })
               .where(eq(payments.jobId, jobId));
 
             await db
               .update(jobs)
               .set({ status: "in_progress" })
               .where(eq(jobs.id, jobId));
+
+            console.log(`[Webhook] Payment succeeded for job ${jobId}`);
           }
         }
+      }
+
+      if (event.type === "payment_intent.payment_failed") {
+        const intent = event.data.object as any;
+        console.warn(
+          "[Webhook] Payment failed:",
+          intent.id,
+          intent.last_payment_error?.message ?? "Unknown error"
+        );
       }
 
       res.json({ received: true });
@@ -88,10 +103,13 @@ async function startServer() {
 
   app.post("/api/upload", upload.single("file"), async (req: any, res) => {
     try {
-      if (!req.file) return res.status(400).json({ error: "No file provided" });
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
 
       const ext = (req.file.originalname as string).split(".").pop() ?? "bin";
       const key = `uploads/${nanoid()}.${ext}`;
+
       const { url } = await storagePut(
         key,
         req.file.buffer as Buffer,
