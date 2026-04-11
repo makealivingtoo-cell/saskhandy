@@ -22,6 +22,7 @@ import {
   getBidsForJob,
   getDisputeByJob,
   getHandymanProfile,
+  getHandymanProfilesForAdmin,
   getJobById,
   getJobsByHomeowner,
   getJobsForHandyman,
@@ -35,6 +36,7 @@ import {
   recalculateHandymanRating,
   rejectOtherBids,
   resolveDispute,
+  setHandymanInsuranceVerification,
   updateBidStatus,
   updateHandymanProfile,
   updateJob,
@@ -83,7 +85,6 @@ function verifyPassword(password: string, stored: string) {
   return timingSafeEqual(derived, hashBuffer);
 }
 
-// ─── Auth Router ──────────────────────────────────────────────────────────────
 const authRouter = router({
   me: publicProcedure.query((opts) => opts.ctx.user),
 
@@ -201,7 +202,6 @@ const authRouter = router({
     }),
 });
 
-// ─── Handyman Profiles Router ─────────────────────────────────────────────────
 const handymanProfilesRouter = router({
   get: protectedProcedure.query(async ({ ctx }) => {
     return getHandymanProfile(ctx.user.id);
@@ -242,13 +242,13 @@ const handymanProfilesRouter = router({
           bio: input.bio,
           categories: categoriesStr,
           hourlyRate: input.hourlyRate?.toFixed(2),
+          insuranceCertUrl: input.insuranceCertUrl,
         });
       }
       return { success: true };
     }),
 });
 
-// ─── Jobs Router ──────────────────────────────────────────────────────────────
 const jobsRouter = router({
   create: protectedProcedure
     .input(
@@ -385,7 +385,13 @@ const jobsRouter = router({
     }),
 
   getOpen: publicProcedure
-    .input(z.object({ limit: z.number().default(20), offset: z.number().default(0), category: z.string().optional() }))
+    .input(
+      z.object({
+        limit: z.number().default(20),
+        offset: z.number().default(0),
+        category: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       return getOpenJobs(input.limit, input.offset, input.category);
     }),
@@ -429,7 +435,6 @@ const jobsRouter = router({
   categories: publicProcedure.query(() => JOB_CATEGORIES),
 });
 
-// ─── Bids Router ──────────────────────────────────────────────────────────────
 const bidsRouter = router({
   create: protectedProcedure
     .input(
@@ -556,7 +561,6 @@ const bidsRouter = router({
     }),
 });
 
-// ─── Payments Router ──────────────────────────────────────────────────────────
 const paymentsRouter = router({
   getByJob: protectedProcedure
     .input(z.object({ jobId: z.number() }))
@@ -586,7 +590,6 @@ const paymentsRouter = router({
     }),
 });
 
-// ─── Reviews Router ───────────────────────────────────────────────────────────
 const reviewsRouter = router({
   create: protectedProcedure
     .input(
@@ -644,7 +647,6 @@ const reviewsRouter = router({
     }),
 });
 
-// ─── Disputes Router ──────────────────────────────────────────────────────────
 const disputesRouter = router({
   create: protectedProcedure
     .input(z.object({ jobId: z.number(), reason: z.string().min(10) }))
@@ -755,7 +757,6 @@ const disputesRouter = router({
     }),
 });
 
-// ─── Messages Router ─────────────────────────────────────────────────────────────
 const messagesRouter = router({
   create: protectedProcedure
     .input(
@@ -823,12 +824,12 @@ const messagesRouter = router({
     }),
 });
 
-// ─── Admin Router ─────────────────────────────────────────────────────────────
 const adminRouter = router({
   getUsers: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     return getAllUsers();
   }),
+
   getStats: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     const userList = await getAllUsers();
@@ -842,9 +843,26 @@ const adminRouter = router({
       openDisputes: disputeList.filter((d) => d.status === "open").length,
     };
   }),
+
+  getInsuranceQueue: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+    return getHandymanProfilesForAdmin();
+  }),
+
+  setInsuranceVerification: protectedProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        insuranceVerified: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      await setHandymanInsuranceVerification(input.userId, input.insuranceVerified);
+      return { success: true };
+    }),
 });
 
-// ─── App Router ───────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,

@@ -10,26 +10,40 @@ import {
   Briefcase,
   CheckCircle,
   DollarSign,
+  ExternalLink,
   Loader2,
   RefreshCw,
   Shield,
   Users,
+  XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 export default function AdminPanel() {
   const { user, isAuthenticated } = useAuth();
-  const [, navigate] = useLocation();
 
   const { data: stats } = trpc.admin.getStats.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
-  const { data: disputes, isLoading: disputesLoading, refetch } = trpc.disputes.getAll.useQuery(undefined, {
+
+  const {
+    data: disputes,
+    isLoading: disputesLoading,
+    refetch,
+  } = trpc.disputes.getAll.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
+
   const { data: users } = trpc.admin.getUsers.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+  });
+
+  const {
+    data: insuranceQueue,
+    isLoading: insuranceLoading,
+    refetch: refetchInsurance,
+  } = trpc.admin.getInsuranceQueue.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
 
@@ -45,13 +59,23 @@ export default function AdminPanel() {
     onError: (err) => toast.error(err.message),
   });
 
+  const setInsuranceVerification = trpc.admin.setInsuranceVerification.useMutation({
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.insuranceVerified ? "Insurance approved." : "Insurance verification removed."
+      );
+      refetchInsurance();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   if (!user || user.role !== "admin") {
     return (
       <AppLayout>
         <div className="text-center py-20">
           <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
           <h2 className="font-semibold text-foreground mb-2">Access Denied</h2>
-          <p className="text-sm text-muted-foreground">You don't have admin privileges.</p>
+          <p className="text-sm text-muted-foreground">You do not have admin privileges.</p>
         </div>
       </AppLayout>
     );
@@ -60,10 +84,15 @@ export default function AdminPanel() {
   const openDisputes = disputes?.filter((d) => d.status === "open") ?? [];
   const resolvedDisputes = disputes?.filter((d) => d.status !== "open") ?? [];
 
+  const pendingInsurance =
+    insuranceQueue?.filter((p) => p.insuranceCertUrl && !p.insuranceVerified) ?? [];
+
+  const verifiedInsurance =
+    insuranceQueue?.filter((p) => p.insuranceCertUrl && p.insuranceVerified) ?? [];
+
   return (
     <AppLayout title="Admin Panel">
       <div className="space-y-8">
-        {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "bg-blue-50 text-blue-600" },
@@ -84,7 +113,129 @@ export default function AdminPanel() {
           ))}
         </div>
 
-        {/* Open Disputes */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Insurance Review <span className="text-muted-foreground font-normal">({pendingInsurance.length})</span>
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => refetchInsurance()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {insuranceLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : pendingInsurance.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No pending insurance reviews.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingInsurance.map((profile) => (
+                <div key={profile.userId} className="bg-white rounded-xl border border-border/60 p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">
+                        {profile.userName ?? "Unnamed handyman"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {profile.userEmail ?? "No email"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Submitted {format(new Date(profile.updatedAt), "MMM d, yyyy")}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {profile.insuranceCertUrl && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={profile.insuranceCertUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View File
+                          </a>
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() =>
+                          setInsuranceVerification.mutate({
+                            userId: profile.userId,
+                            insuranceVerified: true,
+                          })
+                        }
+                        disabled={setInsuranceVerification.isPending}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {verifiedInsurance.length > 0 && (
+          <div>
+            <h2 className="text-base font-semibold text-foreground mb-4">
+              Verified Insurance <span className="text-muted-foreground font-normal">({verifiedInsurance.length})</span>
+            </h2>
+
+            <div className="space-y-3">
+              {verifiedInsurance.map((profile) => (
+                <div key={profile.userId} className="bg-white rounded-xl border border-emerald-200 p-4">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {profile.userName ?? "Unnamed handyman"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{profile.userEmail ?? "No email"}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+                        Verified
+                      </span>
+
+                      {profile.insuranceCertUrl && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={profile.insuranceCertUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View File
+                          </a>
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                        onClick={() =>
+                          setInsuranceVerification.mutate({
+                            userId: profile.userId,
+                            insuranceVerified: false,
+                          })
+                        }
+                        disabled={setInsuranceVerification.isPending}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
@@ -103,7 +254,7 @@ export default function AdminPanel() {
           ) : openDisputes.length === 0 ? (
             <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
               <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No open disputes. All clear!</p>
+              <p className="text-sm text-muted-foreground">No open disputes. All clear.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -178,10 +329,7 @@ export default function AdminPanel() {
                       </div>
                     </div>
                   ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => setResolvingId(dispute.id)}
-                    >
+                    <Button size="sm" onClick={() => setResolvingId(dispute.id)}>
                       <Shield className="w-3.5 h-3.5 mr-1.5" />
                       Resolve Dispute
                     </Button>
@@ -192,7 +340,6 @@ export default function AdminPanel() {
           )}
         </div>
 
-        {/* Resolved Disputes */}
         {resolvedDisputes.length > 0 && (
           <div>
             <h2 className="text-base font-semibold text-foreground mb-4">
@@ -225,7 +372,6 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* Users Table */}
         <div>
           <h2 className="text-base font-semibold text-foreground mb-4">
             Users <span className="text-muted-foreground font-normal">({users?.length ?? 0})</span>
@@ -254,7 +400,9 @@ export default function AdminPanel() {
                       </td>
                       <td className="px-4 py-3">
                         {u.role === "admin" ? (
-                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Admin</span>
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                            Admin
+                          </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">User</span>
                         )}

@@ -180,6 +180,45 @@ export async function getAllHandymanProfiles() {
   return db.select().from(handymanProfiles).orderBy(desc(handymanProfiles.rating));
 }
 
+export async function getHandymanProfilesForAdmin() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db
+    .select()
+    .from(handymanProfiles)
+    .orderBy(desc(handymanProfiles.createdAt));
+
+  const enriched = await Promise.all(
+    rows.map(async (profile) => {
+      const user = await getUserById(profile.userId);
+      return {
+        ...profile,
+        userName: user?.name ?? null,
+        userEmail: user?.email ?? null,
+      };
+    })
+  );
+
+  return enriched;
+}
+
+export async function setHandymanInsuranceVerification(
+  userId: number,
+  insuranceVerified: boolean
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(handymanProfiles)
+    .set({
+      insuranceVerified,
+      verified: insuranceVerified,
+    })
+    .where(eq(handymanProfiles.userId, userId));
+}
+
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
 
 export async function createJob(data: InsertJob): Promise<number> {

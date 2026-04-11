@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle, Loader2, Save, Shield, Upload } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CheckCircle, ExternalLink, Loader2, Save, Shield, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -16,6 +16,7 @@ export default function HandymanProfile() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: profile, isLoading } = trpc.handymanProfiles.get.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -79,30 +80,73 @@ export default function HandymanProfile() {
     });
   };
 
+  const openFilePicker = () => {
+    if (uploading || updateProfile.isPending) return;
+    fileInputRef.current?.click();
+  };
+
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleInsuranceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a PDF, JPG, or PNG file.");
+      resetFileInput();
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File must be under 5MB.");
+      resetFileInput();
       return;
     }
 
     setUploading(true);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
 
-      const { url } = await res.json();
-      await updateProfile.mutateAsync({ insuranceCertUrl: url });
-      toast.success("Insurance certificate uploaded.");
+      if (!res.ok) {
+        throw new Error("Upload request failed");
+      }
+
+      const data = await res.json();
+
+      if (!data?.url) {
+        throw new Error("Upload response missing file URL");
+      }
+
+      await updateProfile.mutateAsync({
+        insuranceCertUrl: data.url,
+      });
+
+      await utils.handymanProfiles.get.invalidate();
+      toast.success("Insurance certificate uploaded and submitted for review.");
     } catch {
       toast.error("Upload failed. Please try again.");
     } finally {
       setUploading(false);
+      resetFileInput();
     }
   };
 
@@ -115,6 +159,12 @@ export default function HandymanProfile() {
       </AppLayout>
     );
   }
+
+  const insuranceState = !profile?.insuranceCertUrl
+    ? "not_uploaded"
+    : profile.insuranceVerified
+    ? "verified"
+    : "pending";
 
   return (
     <AppLayout title="My Profile">
@@ -135,10 +185,10 @@ export default function HandymanProfile() {
                   <span className="text-xs text-muted-foreground">No ratings yet</span>
                 )}
                 <span className="text-xs text-muted-foreground">{profile?.totalJobs ?? 0} jobs</span>
-                {profile?.verified && (
+                {profile?.insuranceVerified && (
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
-                    Verified
+                    Insurance Verified
                   </span>
                 )}
               </div>
@@ -147,61 +197,92 @@ export default function HandymanProfile() {
 
           <div
             className={`rounded-lg p-4 ${
-              profile?.insuranceCertUrl
+              insuranceState === "verified"
                 ? "bg-emerald-50 border border-emerald-200"
-                : "bg-amber-50 border border-amber-200"
+                : insuranceState === "pending"
+                ? "bg-amber-50 border border-amber-200"
+                : "bg-muted/40 border border-border/60"
             }`}
           >
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                {profile?.insuranceCertUrl ? (
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                {insuranceState === "verified" ? (
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                 ) : (
-                  <Shield className="w-4 h-4 text-amber-600" />
+                  <Shield className="w-4 h-4 text-amber-600 shrink-0" />
                 )}
-                <div>
+
+                <div className="min-w-0">
                   <p
                     className={`text-sm font-medium ${
-                      profile?.insuranceCertUrl ? "text-emerald-800" : "text-amber-800"
+                      insuranceState === "verified"
+                        ? "text-emerald-800"
+                        : insuranceState === "pending"
+                        ? "text-amber-800"
+                        : "text-foreground"
                     }`}
                   >
-                    {profile?.insuranceCertUrl ? "Insurance Uploaded" : "Insurance Certificate"}
+                    {insuranceState === "verified"
+                      ? "Insurance Verified"
+                      : insuranceState === "pending"
+                      ? "Insurance Submitted for Review"
+                      : "Insurance Certificate"}
                   </p>
+
                   <p
                     className={`text-xs ${
-                      profile?.insuranceCertUrl ? "text-emerald-700" : "text-amber-700"
+                      insuranceState === "verified"
+                        ? "text-emerald-700"
+                        : insuranceState === "pending"
+                        ? "text-amber-700"
+                        : "text-muted-foreground"
                     }`}
                   >
-                    {profile?.insuranceCertUrl
-                      ? "Your certificate is on file."
-                      : "Upload to strengthen trust with homeowners."}
+                    {insuranceState === "verified"
+                      ? "Your insurance has been approved by admin."
+                      : insuranceState === "pending"
+                      ? "Your uploaded file is waiting for admin review."
+                      : "Upload a PDF, JPG, or PNG under 5MB."}
                   </p>
+
+                  {profile?.insuranceCertUrl && (
+                    <a
+                      href={profile.insuranceCertUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:underline"
+                    >
+                      View uploaded file
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
               </div>
 
-              <label className="cursor-pointer">
+              <div className="shrink-0">
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="hidden"
                   onChange={handleInsuranceUpload}
                 />
+
                 <Button
                   size="sm"
                   variant="outline"
-                  className={profile?.insuranceCertUrl ? "border-emerald-300" : "border-amber-300"}
-                  asChild
+                  type="button"
+                  onClick={openFilePicker}
+                  disabled={uploading || updateProfile.isPending}
                 >
-                  <span>
-                    {uploading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    )}
-                    {profile?.insuranceCertUrl ? "Replace" : "Upload"}
-                  </span>
+                  {uploading ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  {profile?.insuranceCertUrl ? "Replace File" : "Upload"}
                 </Button>
-              </label>
+              </div>
             </div>
           </div>
         </div>
@@ -266,7 +347,7 @@ export default function HandymanProfile() {
             </div>
           </div>
 
-          <Button onClick={handleSave} disabled={updateProfile.isPending}>
+          <Button onClick={handleSave} disabled={updateProfile.isPending || uploading}>
             {updateProfile.isPending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
