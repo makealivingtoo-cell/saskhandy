@@ -6,7 +6,7 @@ export const ENV = {
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
 
-  openAiApiKey: process.env.OPENAI_API_KEY ?? "",
-  openAiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
-  openAiModel: process.env.OPENAI_MODEL ?? "gpt-5-mini",
+  groqApiKey: process.env.GROQ_API_KEY ?? "",
+  groqBaseUrl: process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1",
+  groqModel: process.env.GROQ_MODEL ?? "llama-3.1-8b-instant",
 };

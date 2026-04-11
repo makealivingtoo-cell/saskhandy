@@ -204,8 +204,8 @@ const normalizeToolChoice = (
 };
 
 const assertApiKey = () => {
-  if (!ENV.openAiApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!ENV.groqApiKey) {
+    throw new Error("GROQ_API_KEY is not configured");
   }
 };
 
@@ -268,55 +268,22 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     max_tokens,
   } = params;
 
-  const normalizedMessages = messages.map(normalizeMessage);
-  const developerInstructions = normalizedMessages
-    .filter((m) => m.role === "system")
-    .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
-    .join("\n\n");
-
-  const input = normalizedMessages
-    .filter((m) => m.role !== "system")
-    .map((m) => ({
-      role: m.role === "assistant" ? "assistant" : "user",
-      content:
-        typeof m.content === "string"
-          ? [{ type: "input_text", text: m.content }]
-          : Array.isArray(m.content)
-          ? m.content.map((part) => {
-              if (part.type === "text") {
-                return { type: "input_text", text: part.text };
-              }
-              if (part.type === "image_url") {
-                return {
-                  type: "input_image",
-                  image_url: part.image_url.url,
-                  detail: part.image_url.detail ?? "auto",
-                };
-              }
-              if (part.type === "file_url") {
-                return {
-                  type: "input_file",
-                  file_url: part.file_url.url,
-                };
-              }
-              return { type: "input_text", text: JSON.stringify(part) };
-            })
-          : [{ type: "input_text", text: JSON.stringify(m.content) }],
-    }));
-
   const payload: Record<string, unknown> = {
-    model: ENV.openAiModel,
-    input,
+    model: ENV.groqModel,
+    messages: messages.map(normalizeMessage),
+    temperature: 0.2,
+    max_completion_tokens: maxTokens ?? max_tokens ?? 1200,
   };
 
-  if (developerInstructions) {
-    payload.instructions = developerInstructions;
-  }
-
-  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
   if (tools && tools.length > 0) {
     payload.tools = tools;
   }
+
+  const normalizedToolChoice = normalizeToolChoice(
+    toolChoice || tool_choice,
+    tools
+  );
+
   if (normalizedToolChoice) {
     payload.tool_choice = normalizedToolChoice;
   }
@@ -328,72 +295,58 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
   });
 
-  if (normalizedResponseFormat?.type === "json_schema") {
-    payload.text = {
-      format: {
-        type: "json_schema",
-        name: normalizedResponseFormat.json_schema.name,
-        schema: normalizedResponseFormat.json_schema.schema,
-        strict: normalizedResponseFormat.json_schema.strict ?? true,
-      },
-    };
-  } else if (normalizedResponseFormat?.type === "json_object") {
-    payload.text = {
-      format: {
-        type: "json_object",
-      },
-    };
+  if (normalizedResponseFormat) {
+    payload.response_format = normalizedResponseFormat;
   }
 
-  payload.max_output_tokens = maxTokens ?? max_tokens ?? 1200;
-
-  const response = await fetch(`${ENV.openAiBaseUrl.replace(/\/$/, "")}/responses`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.openAiApiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    `${ENV.groqBaseUrl.replace(/\/$/, "")}/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${ENV.groqApiKey}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+    throw new Error(
+      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+    );
   }
 
   const raw = await response.json();
+  const choice = raw.choices?.[0];
 
-  const outputText =
-    typeof raw.output_text === "string"
-      ? raw.output_text
-      : Array.isArray(raw.output)
-      ? raw.output
-          .flatMap((item: any) => item.content ?? [])
-          .filter((item: any) => item?.type === "output_text")
-          .map((item: any) => item.text ?? "")
-          .join("\n")
-      : "";
+  const content =
+    choice?.message?.content ??
+    "";
 
   return {
     id: raw.id ?? "",
-    created: raw.created_at ?? Date.now(),
-    model: raw.model ?? ENV.openAiModel,
+    created: raw.created ?? Date.now(),
+    model: raw.model ?? ENV.groqModel,
     choices: [
       {
         index: 0,
         message: {
           role: "assistant",
-          content: outputText,
+          content,
+          ...(choice?.message?.tool_calls
+            ? { tool_calls: choice.message.tool_calls }
+            : {}),
         },
-        finish_reason: raw.status ?? "stop",
+        finish_reason: choice?.finish_reason ?? "stop",
       },
     ],
     usage: raw.usage
       ? {
-          prompt_tokens: raw.usage.input_tokens ?? 0,
-          completion_tokens: raw.usage.output_tokens ?? 0,
-          total_tokens:
-            (raw.usage.input_tokens ?? 0) + (raw.usage.output_tokens ?? 0),
+          prompt_tokens: raw.usage.prompt_tokens ?? 0,
+          completion_tokens: raw.usage.completion_tokens ?? 0,
+          total_tokens: raw.usage.total_tokens ?? 0,
         }
       : undefined,
   };
