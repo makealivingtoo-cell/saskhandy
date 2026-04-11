@@ -169,7 +169,13 @@ export default function PostJob() {
 
           {followUpQuestions.length > 0 && (
             <div className="bg-white rounded-xl border border-border/60 p-4">
-              <p className="text-sm font-medium text-foreground mb-2">Helpful follow-up questions</p>
+              <p className="text-sm font-medium text-foreground mb-2">
+                Add these details if you know them
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                You can include any of these answers in the description below to help handymen
+                understand the job better and give more accurate bids.
+              </p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 {followUpQuestions.map((question, index) => (
                   <li key={`${question}-${index}`} className="leading-relaxed">
@@ -181,7 +187,10 @@ export default function PostJob() {
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border/60 shadow-sm p-8 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-2xl border border-border/60 shadow-sm p-8 space-y-6"
+        >
           <div className="space-y-2">
             <Label htmlFor="title">
               Job Title <span className="text-destructive">*</span>
@@ -281,14 +290,16 @@ export default function PostJob() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Set a realistic range to attract quality bids. Handymen will bid within or near this range.
+              Set a realistic range to attract quality bids. Handymen will bid within or near this
+              range.
             </p>
           </div>
 
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
             <p className="text-sm font-medium text-primary mb-1">How Payment Works</p>
             <p className="text-xs text-muted-foreground">
-              Payment is only charged when you accept a bid. Funds are held in escrow and released to the handyman only after you confirm the work is complete.
+              Payment is only charged when you accept a bid. Funds are held in escrow and released
+              to the handyman only after you confirm the work is complete.
             </p>
           </div>
 
