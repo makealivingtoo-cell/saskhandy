@@ -43,6 +43,7 @@ import {
   updateJobStatus,
   updatePayment,
   updateUserType,
+  upsertUser,
 } from "./db";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -93,7 +94,7 @@ const authRouter = router({
       z.object({
         name: z.string().min(2).max(120),
         email: z.string().email(),
-        password: z.string().min(8).max(100),
+        password: z.string().min(6).max(100),
         userType: z.enum(["homeowner", "handyman"]),
       })
     )
@@ -140,7 +141,7 @@ const authRouter = router({
     .input(
       z.object({
         email: z.string().email(),
-        password: z.string().min(8).max(100),
+        password: z.string().min(6).max(100),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -163,8 +164,26 @@ const authRouter = router({
         });
       }
 
-      const sessionToken = await sdk.createSessionToken(user.openId, {
-        name: user.name ?? "",
+      const adminEmails = ["donovanmmoyo@gmail.com"].map((value) => value.toLowerCase());
+
+      if (user.email && adminEmails.includes(user.email.toLowerCase()) && user.role !== "admin") {
+        await upsertUser({
+          openId: user.openId,
+          role: "admin",
+        });
+      }
+
+      const refreshedUser = await getUserByEmail(email);
+
+      if (!refreshedUser) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to load signed-in user",
+        });
+      }
+
+      const sessionToken = await sdk.createSessionToken(refreshedUser.openId, {
+        name: refreshedUser.name ?? "",
         expiresInMs: ONE_YEAR_MS,
       });
 
@@ -173,7 +192,7 @@ const authRouter = router({
 
       return {
         success: true,
-        user,
+        user: refreshedUser,
       };
     }),
 
