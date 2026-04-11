@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { StripePaymentModal } from "@/components/StripePaymentModal";
 import { JobChat } from "@/components/JobChat";
 import { AppLayout } from "@/components/AppLayout";
+import MapView from "@/components/Map";
 import { StarRatingDisplay, StarRatingInput } from "@/components/StarRating";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -204,6 +205,14 @@ export default function JobDetails() {
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
+          <MapView
+            locationQuery={job.location}
+            title="Job Location"
+            heightClassName="h-[280px]"
+          />
         </div>
 
         {isAwaitingPayment && acceptedBid && (

@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
+import MapView from "@/components/Map";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { JOB_CATEGORIES } from "@shared/constants";
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -251,7 +252,17 @@ export default function PostJob() {
               required
               minLength={2}
             />
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="w-3.5 h-3.5" />
+              A live map preview will appear below so you can confirm the area.
+            </div>
           </div>
+
+          <MapView
+            locationQuery={location}
+            title="Location Preview"
+            heightClassName="h-[260px]"
+          />
 
           <div className="space-y-2">
             <Label>
