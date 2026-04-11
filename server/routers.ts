@@ -45,6 +45,15 @@ import {
   updateUserType,
   upsertUser,
 } from "./db";
+import {
+  addSupportTicketMessage,
+  createSupportTicket,
+  getAllSupportTickets,
+  getSupportTicketById,
+  getSupportTicketMessages,
+  getSupportTicketsForUser,
+  updateSupportTicketStatus,
+} from "./db-support";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -1092,6 +1101,145 @@ const adminRouter = router({
   }),
 });
 
+const supportRouter = router({
+  getFaqs: publicProcedure.query(() => {
+    return [
+      {
+        id: "payments",
+        title: "How do payments work?",
+        answer:
+          "When a homeowner accepts a bid, payment is collected and held in escrow. Funds are released after the job is marked complete.",
+      },
+      {
+        id: "awaiting-payment",
+        title: "Why is my job awaiting payment?",
+        answer:
+          "That means a bid has been accepted, but the payment has not been completed or confirmed yet.",
+      },
+      {
+        id: "disputes",
+        title: "How do disputes work?",
+        answer:
+          "If something goes wrong during or after the job, a dispute can be opened. Admin reviews the case and can release payment or refund the homeowner.",
+      },
+      {
+        id: "insurance",
+        title: "What does insurance verified mean?",
+        answer:
+          "It means the handyman uploaded an insurance document and it was reviewed and approved by admin.",
+      },
+      {
+        id: "payouts",
+        title: "When does a handyman get paid?",
+        answer:
+          "After the homeowner marks the job complete, the platform releases the payout based on the escrow flow.",
+      },
+    ];
+  }),
+
+  createTicket: protectedProcedure
+    .input(
+      z.object({
+        subject: z.string().min(3).max(255),
+        category: z.enum(["general", "payments", "dispute", "account", "insurance", "technical"]),
+        content: z.string().min(10),
+        jobId: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const ticketId = await createSupportTicket({
+        userId: ctx.user.id,
+        subject: input.subject,
+        category: input.category,
+        content: input.content,
+        jobId: input.jobId,
+      });
+
+      return { ticketId };
+    }),
+
+  getMine: protectedProcedure.query(async ({ ctx }) => {
+    return getSupportTicketsForUser(ctx.user.id);
+  }),
+
+  getAll: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+    return getAllSupportTickets();
+  }),
+
+  getById: protectedProcedure
+    .input(z.object({ ticketId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const ticket = await getSupportTicketById(input.ticketId);
+      if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
+
+      if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      return ticket;
+    }),
+
+  getMessages: protectedProcedure
+    .input(z.object({ ticketId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const ticket = await getSupportTicketById(input.ticketId);
+      if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
+
+      if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      return getSupportTicketMessages(input.ticketId);
+    }),
+
+  reply: protectedProcedure
+    .input(
+      z.object({
+        ticketId: z.number(),
+        content: z.string().min(1).max(3000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const ticket = await getSupportTicketById(input.ticketId);
+      if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const isAdmin = ctx.user.role === "admin";
+      const isOwner = ticket.userId === ctx.user.id;
+
+      if (!isAdmin && !isOwner) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      await addSupportTicketMessage({
+        ticketId: input.ticketId,
+        senderId: ctx.user.id,
+        senderRole: isAdmin ? "admin" : "user",
+        content: input.content,
+      });
+
+      return { success: true };
+    }),
+
+  updateStatus: protectedProcedure
+    .input(
+      z.object({
+        ticketId: z.number(),
+        status: z.enum(["open", "replied", "closed"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      await updateSupportTicketStatus(input.ticketId, input.status);
+      return { success: true };
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -1103,6 +1251,7 @@ export const appRouter = router({
   disputes: disputesRouter,
   messages: messagesRouter,
   admin: adminRouter,
+  support: supportRouter,
   stripe: stripeRouter,
 });
 

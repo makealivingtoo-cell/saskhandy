@@ -11,6 +11,9 @@ import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import SupportPage from "./pages/Support";
+import SupportTicketPage from "./pages/SupportTicket";
+import AdminSupportPage from "./pages/AdminSupport";
 
 // Homeowner
 import HomeownerDashboard from "./pages/homeowner/Dashboard";
@@ -45,6 +48,8 @@ function Router() {
       <Route path="/jobs/:id" component={JobDetails} />
       <Route path="/jobs/:id/edit" component={EditJob} />
       <Route path="/messages" component={MessagesPage} />
+      <Route path="/support" component={SupportPage} />
+      <Route path="/support/:id" component={SupportTicketPage} />
 
       <Route path="/handyman/dashboard" component={HandymanDashboard} />
       <Route path="/handyman/browse" component={BrowseJobs} />
@@ -56,6 +61,7 @@ function Router() {
 
       <Route path="/profile/:userId" component={PublicProfile} />
       <Route path="/admin" component={AdminPanel} />
+      <Route path="/admin/support" component={AdminSupportPage} />
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

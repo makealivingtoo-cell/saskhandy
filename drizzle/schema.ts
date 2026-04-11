@@ -163,3 +163,41 @@ export const messages = mysqlTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+// ─── Support Tickets ──────────────────────────────────────────────────────────
+export const supportTickets = mysqlTable("support_tickets", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  category: mysqlEnum("category", [
+    "general",
+    "payments",
+    "dispute",
+    "account",
+    "insurance",
+    "technical",
+  ])
+    .default("general")
+    .notNull(),
+  status: mysqlEnum("status", ["open", "replied", "closed"])
+    .default("open")
+    .notNull(),
+  jobId: int("jobId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const supportTicketMessages = mysqlTable("support_ticket_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  ticketId: int("ticketId").notNull(),
+  senderId: int("senderId").notNull(),
+  senderRole: mysqlEnum("senderRole", ["user", "admin"]).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = typeof supportTickets.$inferInsert;
+
+export type SupportTicketMessage = typeof supportTicketMessages.$inferSelect;
+export type InsertSupportTicketMessage = typeof supportTicketMessages.$inferInsert;

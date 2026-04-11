@@ -13,6 +13,7 @@ import {
   DollarSign,
   Hammer,
   LayoutDashboard,
+  LifeBuoy,
   Loader2,
   LogOut,
   MessageSquare,
@@ -37,6 +38,7 @@ const HOMEOWNER_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/post-job", label: "Post a Job", icon: Plus },
   { href: "/messages", label: "Messages", icon: MessageSquare },
+  { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
 const HANDYMAN_NAV: NavItem[] = [
@@ -46,6 +48,7 @@ const HANDYMAN_NAV: NavItem[] = [
   { href: "/handyman/messages", label: "Messages", icon: MessageSquare },
   { href: "/handyman/earnings", label: "Earnings", icon: DollarSign },
   { href: "/handyman/profile", label: "Profile", icon: User },
+  { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
 interface AppLayoutProps {
@@ -104,19 +107,35 @@ export function AppLayout({ children, title }: AppLayoutProps) {
             })}
 
             {user?.role === "admin" && (
-              <Link href="/admin">
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
-                    location === "/admin"
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                  )}
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  Admin
-                </div>
-              </Link>
+              <>
+                <Link href="/admin">
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+                      location === "/admin"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    Admin
+                  </div>
+                </Link>
+
+                <Link href="/admin/support">
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+                      location === "/admin/support"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    <LifeBuoy className="w-3.5 h-3.5" />
+                    Support
+                  </div>
+                </Link>
+              </>
             )}
           </div>
 
@@ -157,12 +176,20 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   ))}
 
                   {user?.role === "admin" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin">
-                        <Shield className="w-4 h-4 mr-2" />
-                        Admin Panel
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin">
+                          <Shield className="w-4 h-4 mr-2" />
+                          Admin Panel
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/support">
+                          <LifeBuoy className="w-4 h-4 mr-2" />
+                          Support Inbox
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
 
                   <DropdownMenuSeparator />
