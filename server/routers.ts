@@ -225,17 +225,24 @@ const handymanProfilesRouter = router({
   get: protectedProcedure.query(async ({ ctx }) => {
     return getHandymanProfile(ctx.user.id);
   }),
+
   getById: publicProcedure
     .input(z.object({ userId: z.number() }))
     .query(async ({ input }) => {
       const profile = await getHandymanProfile(input.userId);
       const user = await getUserById(input.userId);
       if (!profile || !user) return null;
-      return { ...profile, userName: user?.name, userEmail: user?.email };
+      return {
+        ...profile,
+        userName: user?.name,
+        userEmail: user?.email,
+      };
     }),
+
   getAll: publicProcedure.query(async () => {
     return getAllHandymanProfiles();
   }),
+
   createOrUpdate: protectedProcedure
     .input(
       z.object({
@@ -248,6 +255,7 @@ const handymanProfilesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const existing = await getHandymanProfile(ctx.user.id);
       const categoriesStr = JSON.stringify(input.categories ?? []);
+
       if (existing) {
         await updateHandymanProfile(ctx.user.id, {
           bio: input.bio,
@@ -264,6 +272,7 @@ const handymanProfilesRouter = router({
           insuranceCertUrl: input.insuranceCertUrl,
         });
       }
+
       return { success: true };
     }),
 });
@@ -284,8 +293,10 @@ const jobsRouter = router({
       if (ctx.user.userType !== "homeowner" && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Only homeowners can post jobs" });
       }
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
+
       const jobId = await createJob({
         homeownerId: ctx.user.id,
         title: input.title,
@@ -296,6 +307,7 @@ const jobsRouter = router({
         budgetMax: input.budgetMax.toFixed(2),
         expiresAt,
       });
+
       return { jobId };
     }),
 
@@ -314,12 +326,15 @@ const jobsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
       if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       if (job.status !== "open") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be edited" });
       }
+
       if (job.selectedBidId || job.selectedHandymanId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "This job can no longer be edited" });
       }
@@ -341,9 +356,11 @@ const jobsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
       if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       if (job.status !== "open") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be removed" });
       }
@@ -373,12 +390,15 @@ const jobsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
       if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       if (job.status !== "open") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be cancelled" });
       }
+
       if (job.selectedBidId || job.selectedHandymanId) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -399,6 +419,7 @@ const jobsRouter = router({
     .query(async ({ input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
       const homeowner = await getUserById(job.homeownerId);
       return { ...job, homeownerName: homeowner?.name };
     }),
@@ -416,22 +437,41 @@ const jobsRouter = router({
     }),
 
   updateStatus: protectedProcedure
-    .input(z.object({ jobId: z.number(), status: z.enum(["open", "in_progress", "completed", "disputed", "cancelled"]) }))
+    .input(
+      z.object({
+        jobId: z.number(),
+        status: z.enum([
+          "open",
+          "awaiting_payment",
+          "in_progress",
+          "completed",
+          "disputed",
+          "cancelled",
+        ]),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
       if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       await updateJobStatus(input.jobId, input.status);
 
       if (input.status === "completed" && job.selectedHandymanId) {
         const payment = await getPaymentByJob(input.jobId);
+
         if (payment && payment.status === "pending") {
           await updatePayment(payment.id, { status: "completed" });
+
           const profile = await getHandymanProfile(job.selectedHandymanId);
           if (profile) {
-            const newEarnings = (parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)).toFixed(2);
+            const newEarnings = (
+              parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)
+            ).toFixed(2);
+
             await updateHandymanProfile(job.selectedHandymanId, {
               totalJobs: (profile.totalJobs ?? 0) + 1,
               totalEarnings: newEarnings,
@@ -444,6 +484,7 @@ const jobsRouter = router({
           jobTitle: job.title,
         });
       }
+
       return { success: true };
     }),
 
@@ -468,13 +509,25 @@ const bidsRouter = router({
       if (ctx.user.userType !== "handyman" && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Only handymen can place bids" });
       }
+
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
-      if (job.status !== "open") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open for bids" });
+
+      if (job.status !== "open") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open for bids" });
+      }
 
       const existingBids = await getBidsForJob(input.jobId);
-      const alreadyBid = existingBids.find((b) => b.handymanId === ctx.user.id && b.status === "pending");
-      if (alreadyBid) throw new TRPCError({ code: "BAD_REQUEST", message: "You already have a pending bid on this job" });
+      const alreadyBid = existingBids.find(
+        (b) => b.handymanId === ctx.user.id && b.status === "pending"
+      );
+
+      if (alreadyBid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You already have a pending bid on this job",
+        });
+      }
 
       const bidId = await createBid({
         jobId: input.jobId,
@@ -499,29 +552,40 @@ const bidsRouter = router({
     .input(z.object({ jobId: z.number() }))
     .query(async ({ input }) => {
       const bidList = await getBidsForJob(input.jobId);
+
       const enriched = await Promise.all(
         bidList.map(async (bid) => {
           const user = await getUserById(bid.handymanId);
           const profile = await getHandymanProfile(bid.handymanId);
+
           return {
             ...bid,
             handymanName: user?.name,
             handymanRating: profile?.rating,
             handymanTotalJobs: profile?.totalJobs,
+            handymanInsuranceVerified: profile?.insuranceVerified ?? false,
           };
         })
       );
+
       return enriched;
     }),
 
   getForHandyman: protectedProcedure.query(async ({ ctx }) => {
     const bidList = await getBidsForHandyman(ctx.user.id);
+
     const enriched = await Promise.all(
       bidList.map(async (bid) => {
         const job = await getJobById(bid.jobId);
-        return { ...bid, jobTitle: job?.title, jobStatus: job?.status, jobLocation: job?.location };
+        return {
+          ...bid,
+          jobTitle: job?.title,
+          jobStatus: job?.status,
+          jobLocation: job?.location,
+        };
       })
     );
+
     return enriched;
   }),
 
@@ -533,13 +597,19 @@ const bidsRouter = router({
 
       const job = await getJobById(bid.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
-      if (job.homeownerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
-      if (job.status !== "open") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open" });
+
+      if (job.homeownerId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      if (job.status !== "open") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open" });
+      }
 
       await updateBidStatus(input.bidId, "accepted");
       await rejectOtherBids(bid.jobId, input.bidId);
 
-      await updateJobStatus(bid.jobId, "in_progress", {
+      await updateJobStatus(bid.jobId, "awaiting_payment", {
         selectedHandymanId: bid.handymanId,
         selectedBidId: input.bidId,
       });
@@ -572,9 +642,14 @@ const bidsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const bid = await getBidById(input.bidId);
       if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
+
       const job = await getJobById(bid.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
-      if (job.homeownerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+
+      if (job.homeownerId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
       await updateBidStatus(input.bidId, "rejected");
       return { success: true };
     }),
@@ -586,9 +661,15 @@ const paymentsRouter = router({
     .query(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
-      if (job.homeownerId !== ctx.user.id && job.selectedHandymanId !== ctx.user.id && ctx.user.role !== "admin") {
+
+      if (
+        job.homeownerId !== ctx.user.id &&
+        job.selectedHandymanId !== ctx.user.id &&
+        ctx.user.role !== "admin"
+      ) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       return getPaymentByJob(input.jobId);
     }),
 
@@ -603,7 +684,11 @@ const paymentsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const payment = await getPaymentByJob(input.jobId);
       if (!payment) throw new TRPCError({ code: "NOT_FOUND" });
-      if (payment.homeownerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+
+      if (payment.homeownerId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
       await updatePayment(payment.id, { stripePaymentIntentId: input.stripePaymentIntentId });
       return { success: true };
     }),
@@ -622,14 +707,25 @@ const reviewsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
       if (job.status !== "completed") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Job must be completed before leaving a review" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Job must be completed before leaving a review",
+        });
       }
+
       if (job.homeownerId !== ctx.user.id && job.selectedHandymanId !== ctx.user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       const existing = await getReviewForJob(input.jobId, ctx.user.id);
-      if (existing) throw new TRPCError({ code: "BAD_REQUEST", message: "You already reviewed this job" });
+      if (existing) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You already reviewed this job",
+        });
+      }
 
       await createReview({
         jobId: input.jobId,
@@ -650,12 +746,14 @@ const reviewsRouter = router({
     .input(z.object({ userId: z.number() }))
     .query(async ({ input }) => {
       const reviewList = await getReviewsForUser(input.userId);
+
       const enriched = await Promise.all(
         reviewList.map(async (r) => {
           const reviewer = await getUserById(r.reviewerId);
           return { ...r, reviewerName: reviewer?.name };
         })
       );
+
       return enriched;
     }),
 
@@ -672,14 +770,25 @@ const disputesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
       if (job.homeownerId !== ctx.user.id && job.selectedHandymanId !== ctx.user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       if (job.status !== "in_progress" && job.status !== "completed") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Can only dispute active or completed jobs" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Can only dispute active or completed jobs",
+        });
       }
+
       const existing = await getDisputeByJob(input.jobId);
-      if (existing) throw new TRPCError({ code: "BAD_REQUEST", message: "A dispute already exists for this job" });
+      if (existing) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A dispute already exists for this job",
+        });
+      }
 
       await updateJobStatus(input.jobId, "disputed");
       const disputeId = await createDispute({
@@ -703,15 +812,23 @@ const disputesRouter = router({
     .query(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
-      if (job.homeownerId !== ctx.user.id && job.selectedHandymanId !== ctx.user.id && ctx.user.role !== "admin") {
+
+      if (
+        job.homeownerId !== ctx.user.id &&
+        job.selectedHandymanId !== ctx.user.id &&
+        ctx.user.role !== "admin"
+      ) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+
       return getDisputeByJob(input.jobId);
     }),
 
   getAll: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
     const disputeList = await getAllDisputes();
+
     const enriched = await Promise.all(
       disputeList.map(async (d) => {
         const job = await getJobById(d.jobId);
@@ -719,6 +836,7 @@ const disputesRouter = router({
         return { ...d, jobTitle: job?.title, initiatorName: initiator?.name };
       })
     );
+
     return enriched;
   }),
 
@@ -732,14 +850,17 @@ const disputesRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
       await resolveDispute(input.disputeId, input.resolution, input.adminNotes);
 
       const allDisputes = await getAllDisputes();
       const dispute = allDisputes.find((d) => d.id === input.disputeId);
+
       if (dispute) {
         const job = await getJobById(dispute.jobId);
         if (job) {
           const payment = await getPaymentByJob(job.id);
+
           if (payment) {
             if (input.resolution === "resolved_release") {
               await updatePayment(payment.id, { status: "completed" });
@@ -748,7 +869,10 @@ const disputesRouter = router({
               if (job.selectedHandymanId) {
                 const profile = await getHandymanProfile(job.selectedHandymanId);
                 if (profile) {
-                  const newEarnings = (parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)).toFixed(2);
+                  const newEarnings = (
+                    parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)
+                  ).toFixed(2);
+
                   await updateHandymanProfile(job.selectedHandymanId, {
                     totalJobs: (profile.totalJobs ?? 0) + 1,
                     totalEarnings: newEarnings,
@@ -766,12 +890,14 @@ const disputesRouter = router({
                   console.error(`[Dispute] Stripe refund failed: ${err.message}`);
                 }
               }
+
               await updatePayment(payment.id, { status: "refunded" });
               await updateJobStatus(job.id, "cancelled");
             }
           }
         }
       }
+
       return { success: true };
     }),
 });
@@ -790,6 +916,7 @@ const messagesRouter = router({
 
       const isHomeowner = job.homeownerId === ctx.user.id;
       const isHandyman = job.selectedHandymanId === ctx.user.id;
+
       if (!isHomeowner && !isHandyman) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
@@ -811,11 +938,13 @@ const messagesRouter = router({
 
       const isHomeowner = job.homeownerId === ctx.user.id;
       const isHandyman = job.selectedHandymanId === ctx.user.id;
+
       if (!isHomeowner && !isHandyman && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
       const jobMessages = await getMessagesForJob(input.jobId);
+
       const enriched = await Promise.all(
         jobMessages.map(async (msg) => {
           const sender = await getUserById(msg.senderId);
@@ -851,9 +980,11 @@ const adminRouter = router({
 
   getStats: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
     const userList = await getAllUsers();
     const openJobList = await getOpenJobs(1000);
     const disputeList = await getAllDisputes();
+
     return {
       totalUsers: userList.length,
       homeowners: userList.filter((u) => u.userType === "homeowner").length,
@@ -877,9 +1008,88 @@ const adminRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
       await setHandymanInsuranceVerification(input.userId, input.insuranceVerified);
       return { success: true };
     }),
+
+  getFlaggedUsers: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+
+    const users = await getAllUsers();
+    const disputes = await getAllDisputes();
+
+    const flaggedMap = new Map<
+      number,
+      {
+        userId: number;
+        name: string | null;
+        email: string | null;
+        reasons: string[];
+        openDisputes: number;
+        totalDisputes: number;
+      }
+    >();
+
+    for (const dispute of disputes) {
+      const job = await getJobById(dispute.jobId);
+      if (!job) continue;
+
+      const involvedUserIds = [job.homeownerId, job.selectedHandymanId].filter(
+        (value): value is number => typeof value === "number"
+      );
+
+      for (const userId of involvedUserIds) {
+        const user = users.find((u) => u.id === userId);
+        if (!user) continue;
+
+        const existing =
+          flaggedMap.get(userId) ?? {
+            userId,
+            name: user.name ?? null,
+            email: user.email ?? null,
+            reasons: [],
+            openDisputes: 0,
+            totalDisputes: 0,
+          };
+
+        existing.totalDisputes += 1;
+
+        if (dispute.status === "open") {
+          existing.openDisputes += 1;
+        }
+
+        flaggedMap.set(userId, existing);
+      }
+    }
+
+    const flaggedUsers = Array.from(flaggedMap.values())
+      .map((item) => {
+        const reasons: string[] = [];
+
+        if (item.openDisputes > 0) {
+          reasons.push(`${item.openDisputes} open dispute${item.openDisputes > 1 ? "s" : ""}`);
+        }
+
+        if (item.totalDisputes >= 2) {
+          reasons.push(`${item.totalDisputes} total disputes`);
+        }
+
+        return {
+          ...item,
+          reasons,
+        };
+      })
+      .filter((item) => item.reasons.length > 0)
+      .sort((a, b) => {
+        if (b.openDisputes !== a.openDisputes) return b.openDisputes - a.openDisputes;
+        return b.totalDisputes - a.totalDisputes;
+      });
+
+    return flaggedUsers;
+  }),
 });
 
 export const appRouter = router({

@@ -47,6 +47,13 @@ export default function AdminPanel() {
     enabled: isAuthenticated && user?.role === "admin",
   });
 
+  const {
+    data: flaggedUsers,
+    isLoading: flaggedLoading,
+  } = trpc.admin.getFlaggedUsers.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+  });
+
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<number, string>>({});
 
@@ -235,6 +242,48 @@ export default function AdminPanel() {
             </div>
           </div>
         )}
+
+        <div>
+          <h2 className="text-base font-semibold text-foreground mb-4">
+            Flagged Users <span className="text-muted-foreground font-normal">({flaggedUsers?.length ?? 0})</span>
+          </h2>
+
+          {flaggedLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : !flaggedUsers || flaggedUsers.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <Shield className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No flagged users right now.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {flaggedUsers.map((flagged) => (
+                <div key={flagged.userId} className="bg-white rounded-xl border border-border/60 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {flagged.name ?? "Unnamed user"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{flagged.email ?? "No email"}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {flagged.reasons.map((reason: string) => (
+                          <span
+                            key={reason}
+                            className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium"
+                          >
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div>
           <div className="flex items-center justify-between mb-4">

@@ -18,7 +18,9 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  userType: mysqlEnum("userType", ["homeowner", "handyman", "unset"]).default("unset").notNull(),
+  userType: mysqlEnum("userType", ["homeowner", "handyman", "unset"])
+    .default("unset")
+    .notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -58,7 +60,14 @@ export const jobs = mysqlTable("jobs", {
   location: varchar("location", { length: 255 }).notNull(),
   budgetMin: decimal("budgetMin", { precision: 10, scale: 2 }),
   budgetMax: decimal("budgetMax", { precision: 10, scale: 2 }),
-  status: mysqlEnum("status", ["open", "in_progress", "completed", "disputed", "cancelled"])
+  status: mysqlEnum("status", [
+    "open",
+    "awaiting_payment",
+    "in_progress",
+    "completed",
+    "disputed",
+    "cancelled",
+  ])
     .default("open")
     .notNull(),
   selectedHandymanId: int("selectedHandymanId"),

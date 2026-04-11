@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 function getBidInsuranceVerified(bid: any) {
   return bid?.handymanInsuranceVerified === true;
@@ -45,11 +45,26 @@ export default function JobDetails() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  const { data: job, isLoading: jobLoading } = trpc.jobs.getById.useQuery({ jobId }, { enabled: !!jobId });
-  const { data: bids, isLoading: bidsLoading } = trpc.bids.getForJob.useQuery({ jobId }, { enabled: !!jobId });
-  const { data: payment } = trpc.payments.getByJob.useQuery({ jobId }, { enabled: !!jobId && !!job?.selectedBidId });
-  const { data: dispute } = trpc.disputes.getByJob.useQuery({ jobId }, { enabled: !!jobId && job?.status === "disputed" });
-  const { data: myReview } = trpc.reviews.getMyReview.useQuery({ jobId }, { enabled: !!jobId && job?.status === "completed" });
+  const { data: job, isLoading: jobLoading } = trpc.jobs.getById.useQuery(
+    { jobId },
+    { enabled: !!jobId }
+  );
+  const { data: bids, isLoading: bidsLoading } = trpc.bids.getForJob.useQuery(
+    { jobId },
+    { enabled: !!jobId }
+  );
+  const { data: payment } = trpc.payments.getByJob.useQuery(
+    { jobId },
+    { enabled: !!jobId && !!job?.selectedBidId }
+  );
+  const { data: dispute } = trpc.disputes.getByJob.useQuery(
+    { jobId },
+    { enabled: !!jobId && job?.status === "disputed" }
+  );
+  const { data: myReview } = trpc.reviews.getMyReview.useQuery(
+    { jobId },
+    { enabled: !!jobId && job?.status === "completed" }
+  );
 
   const acceptBid = trpc.bids.accept.useMutation({
     onSuccess: async () => {
@@ -142,6 +157,8 @@ export default function JobDetails() {
   const canEdit = isOwner && job.status === "open" && !job.selectedBidId && !job.selectedHandymanId;
   const canDelete = canEdit && pendingBids.length === 0 && !payment;
   const canCancel = canEdit && pendingBids.length > 0;
+  const isAwaitingPayment = job.status === "awaiting_payment";
+  const canRetryPayment = isAwaitingPayment && !!acceptedBid;
 
   return (
     <AppLayout>
@@ -182,10 +199,30 @@ export default function JobDetails() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Posted</p>
-              <p className="text-sm font-medium">{formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}</p>
+              <p className="text-sm font-medium">
+                {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
+              </p>
             </div>
           </div>
         </div>
+
+        {isAwaitingPayment && acceptedBid && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-amber-700" />
+              <h3 className="font-semibold text-amber-800">Awaiting payment</h3>
+            </div>
+            <p className="text-sm text-amber-700 mb-4">
+              Your bid has been accepted, but the job is not officially active yet. Complete payment to start the job and move it into active work.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={() => setShowPaymentModal(true)}>Complete Payment</Button>
+              <p className="text-xs text-amber-700 self-center">
+                If your earlier payment attempt failed or was closed, you can retry here.
+              </p>
+            </div>
+          </div>
+        )}
 
         {(canEdit || canDelete || canCancel) && (
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
@@ -265,7 +302,11 @@ export default function JobDetails() {
               onClick={() => markComplete.mutate({ jobId, status: "completed" })}
               disabled={markComplete.isPending}
             >
-              {markComplete.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+              {markComplete.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
               Mark Job Complete
             </Button>
             <Button
@@ -299,7 +340,9 @@ export default function JobDetails() {
                 onClick={() => createDispute.mutate({ jobId, reason: disputeReason })}
                 disabled={disputeReason.length < 10 || createDispute.isPending}
               >
-                {createDispute.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+                {createDispute.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : null}
                 Submit Dispute
               </Button>
               <Button size="sm" variant="outline" onClick={() => setShowDisputeForm(false)}>
@@ -360,7 +403,9 @@ export default function JobDetails() {
                     }
                     disabled={reviewRating === 0 || createReview.isPending}
                   >
-                    {createReview.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+                    {createReview.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : null}
                     Submit Review
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>
@@ -381,8 +426,11 @@ export default function JobDetails() {
           <div className="bg-white rounded-xl border border-emerald-200 p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle className="w-4 h-4 text-emerald-600" />
-              <h3 className="font-semibold text-foreground">Accepted Bid</h3>
+              <h3 className="font-semibold text-foreground">
+                {isAwaitingPayment ? "Accepted Bid — Payment Required" : "Accepted Bid"}
+              </h3>
             </div>
+
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -397,7 +445,11 @@ export default function JobDetails() {
 
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {acceptedBid.handymanRating && (
-                    <StarRatingDisplay rating={parseFloat(acceptedBid.handymanRating)} size="sm" showValue />
+                    <StarRatingDisplay
+                      rating={parseFloat(acceptedBid.handymanRating)}
+                      size="sm"
+                      showValue
+                    />
                   )}
                   {acceptedBid.handymanTotalJobs !== undefined && (
                     <span className="text-xs text-muted-foreground">
@@ -417,7 +469,9 @@ export default function JobDetails() {
               <div className="text-right shrink-0">
                 <p className="text-xl font-bold text-foreground">${acceptedBid.bidAmount}</p>
                 <Link href={`/profile/${acceptedBid.handymanId}`}>
-                  <span className="text-xs text-primary hover:underline cursor-pointer">View Profile</span>
+                  <span className="text-xs text-primary hover:underline cursor-pointer">
+                    View Profile
+                  </span>
                 </Link>
               </div>
             </div>
@@ -427,10 +481,16 @@ export default function JobDetails() {
                 <p className="text-xs text-muted-foreground">{acceptedBid.message}</p>
               </div>
             )}
+
+            {canRetryPayment && (
+              <div className="mt-4 pt-4 border-t border-border/40">
+                <Button onClick={() => setShowPaymentModal(true)}>Retry Payment</Button>
+              </div>
+            )}
           </div>
         )}
 
-        {job.selectedHandymanId && (
+        {job.selectedHandymanId && job.status !== "awaiting_payment" && (
           <JobChat
             jobId={jobId}
             otherPartyLabel={acceptedBid?.handymanName ?? "your handyman"}
@@ -449,7 +509,9 @@ export default function JobDetails() {
             ) : pendingBids.length === 0 ? (
               <div className="bg-white rounded-xl border border-border/60 p-8 text-center">
                 <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No bids yet. Handymen will start bidding soon.</p>
+                <p className="text-sm text-muted-foreground">
+                  No bids yet. Handymen will start bidding soon.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -464,7 +526,9 @@ export default function JobDetails() {
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-foreground text-sm">{bid.handymanName ?? "Handyman"}</p>
+                              <p className="font-medium text-foreground text-sm">
+                                {bid.handymanName ?? "Handyman"}
+                              </p>
                               {getBidInsuranceVerified(bid) && (
                                 <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                                   <Shield className="w-3 h-3" />
@@ -475,7 +539,11 @@ export default function JobDetails() {
 
                             <div className="flex items-center gap-2 flex-wrap">
                               {bid.handymanRating && (
-                                <StarRatingDisplay rating={parseFloat(bid.handymanRating)} size="sm" showValue />
+                                <StarRatingDisplay
+                                  rating={parseFloat(bid.handymanRating)}
+                                  size="sm"
+                                  showValue
+                                />
                               )}
                               {bid.handymanTotalJobs !== undefined && (
                                 <span className="text-xs text-muted-foreground">
@@ -505,7 +573,9 @@ export default function JobDetails() {
                             onClick={() => acceptBid.mutate({ bidId: bid.id })}
                             disabled={acceptBid.isPending}
                           >
-                            {acceptBid.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                            {acceptBid.isPending ? (
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            ) : null}
                             Accept & Pay
                           </Button>
                           <Button
@@ -518,7 +588,9 @@ export default function JobDetails() {
                           </Button>
                         </div>
                         <Link href={`/profile/${bid.handymanId}`}>
-                          <span className="text-xs text-primary hover:underline cursor-pointer block mt-1">View Profile</span>
+                          <span className="text-xs text-primary hover:underline cursor-pointer block mt-1">
+                            View Profile
+                          </span>
                         </Link>
                       </div>
                     </div>
@@ -530,13 +602,13 @@ export default function JobDetails() {
         )}
       </div>
 
-      {showPaymentModal && job?.selectedBidId && (
+      {showPaymentModal && acceptedBid && (
         <StripePaymentModal
           jobId={jobId}
-          amount={parseFloat(bids?.find((b) => b.id === job.selectedBidId)?.bidAmount ?? acceptedBid?.bidAmount ?? "0")}
+          amount={parseFloat(acceptedBid.bidAmount)}
           onSuccess={async () => {
             setShowPaymentModal(false);
-            toast.success("Payment successful. Funds are held in escrow.");
+            toast.success("Payment submitted. Once confirmed, the job will move into active work.");
             await utils.jobs.getById.invalidate({ jobId });
             await utils.payments.getByJob.invalidate({ jobId });
           }}

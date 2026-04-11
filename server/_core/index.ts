@@ -55,33 +55,49 @@ async function startServer() {
         return res.json({ verified: true });
       }
 
+      const db = await getDb();
+
       if (event.type === "payment_intent.succeeded") {
         const intent = event.data.object as any;
         const jobId = parseInt(intent.metadata?.jobId ?? "0");
 
-        if (jobId) {
-          const db = await getDb();
-          if (db) {
-            await db
-              .update(payments)
-              .set({
-                status: "pending",
-                stripePaymentIntentId: intent.id,
-              })
-              .where(eq(payments.jobId, jobId));
+        if (jobId && db) {
+          await db
+            .update(payments)
+            .set({
+              status: "pending",
+              stripePaymentIntentId: intent.id,
+            })
+            .where(eq(payments.jobId, jobId));
 
-            await db
-              .update(jobs)
-              .set({ status: "in_progress" })
-              .where(eq(jobs.id, jobId));
+          await db
+            .update(jobs)
+            .set({ status: "in_progress" })
+            .where(eq(jobs.id, jobId));
 
-            console.log(`[Webhook] Payment succeeded for job ${jobId}`);
-          }
+          console.log(`[Webhook] Payment succeeded for job ${jobId}`);
         }
       }
 
       if (event.type === "payment_intent.payment_failed") {
         const intent = event.data.object as any;
+        const jobId = parseInt(intent.metadata?.jobId ?? "0");
+
+        if (jobId && db) {
+          await db
+            .update(payments)
+            .set({
+              status: "failed",
+              stripePaymentIntentId: intent.id,
+            })
+            .where(eq(payments.jobId, jobId));
+
+          await db
+            .update(jobs)
+            .set({ status: "awaiting_payment" })
+            .where(eq(jobs.id, jobId));
+        }
+
         console.warn(
           "[Webhook] Payment failed:",
           intent.id,
