@@ -19,7 +19,12 @@ export type FileContent = {
   type: "file_url";
   file_url: {
     url: string;
-    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4" ;
+    mime_type?:
+      | "audio/mpeg"
+      | "audio/wav"
+      | "application/pdf"
+      | "audio/mp4"
+      | "video/mp4";
   };
 };
 
@@ -121,15 +126,7 @@ const normalizeContentPart = (
     return { type: "text", text: part };
   }
 
-  if (part.type === "text") {
-    return part;
-  }
-
-  if (part.type === "image_url") {
-    return part;
-  }
-
-  if (part.type === "file_url") {
+  if (part.type === "text" || part.type === "image_url" || part.type === "file_url") {
     return part;
   }
 
@@ -141,7 +138,7 @@ const normalizeMessage = (message: Message) => {
 
   if (role === "tool" || role === "function") {
     const content = ensureArray(message.content)
-      .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
+      .map((part) => (typeof part === "string" ? part : JSON.stringify(part)))
       .join("\n");
 
     return {
@@ -154,7 +151,6 @@ const normalizeMessage = (message: Message) => {
 
   const contentParts = ensureArray(message.content).map(normalizeContentPart);
 
-  // If there's only text content, collapse to a single string for compatibility
   if (contentParts.length === 1 && contentParts[0].type === "text") {
     return {
       role,
@@ -182,9 +178,7 @@ const normalizeToolChoice = (
 
   if (toolChoice === "required") {
     if (!tools || tools.length === 0) {
-      throw new Error(
-        "tool_choice 'required' was provided but no tools were configured"
-      );
+      throw new Error("tool_choice 'required' was provided but no tools were configured");
     }
 
     if (tools.length > 1) {
@@ -209,13 +203,8 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
-
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
+  if (!ENV.openAiApiKey) {
     throw new Error("OPENAI_API_KEY is not configured");
   }
 };
@@ -241,9 +230,7 @@ const normalizeResponseFormat = ({
       explicitFormat.type === "json_schema" &&
       !explicitFormat.json_schema?.schema
     ) {
-      throw new Error(
-        "responseFormat json_schema requires a defined schema object"
-      );
+      throw new Error("responseFormat json_schema requires a defined schema object");
     }
     return explicitFormat;
   }
@@ -277,28 +264,61 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
     responseFormat,
     response_format,
+    maxTokens,
+    max_tokens,
   } = params;
 
+  const normalizedMessages = messages.map(normalizeMessage);
+  const developerInstructions = normalizedMessages
+    .filter((m) => m.role === "system")
+    .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+    .join("\n\n");
+
+  const input = normalizedMessages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content:
+        typeof m.content === "string"
+          ? [{ type: "input_text", text: m.content }]
+          : Array.isArray(m.content)
+          ? m.content.map((part) => {
+              if (part.type === "text") {
+                return { type: "input_text", text: part.text };
+              }
+              if (part.type === "image_url") {
+                return {
+                  type: "input_image",
+                  image_url: part.image_url.url,
+                  detail: part.image_url.detail ?? "auto",
+                };
+              }
+              if (part.type === "file_url") {
+                return {
+                  type: "input_file",
+                  file_url: part.file_url.url,
+                };
+              }
+              return { type: "input_text", text: JSON.stringify(part) };
+            })
+          : [{ type: "input_text", text: JSON.stringify(m.content) }],
+    }));
+
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
-    messages: messages.map(normalizeMessage),
+    model: ENV.openAiModel,
+    input,
   };
 
+  if (developerInstructions) {
+    payload.instructions = developerInstructions;
+  }
+
+  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
   if (tools && tools.length > 0) {
     payload.tools = tools;
   }
-
-  const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
-  );
   if (normalizedToolChoice) {
     payload.tool_choice = normalizedToolChoice;
-  }
-
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -308,25 +328,73 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
   });
 
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
+  if (normalizedResponseFormat?.type === "json_schema") {
+    payload.text = {
+      format: {
+        type: "json_schema",
+        name: normalizedResponseFormat.json_schema.name,
+        schema: normalizedResponseFormat.json_schema.schema,
+        strict: normalizedResponseFormat.json_schema.strict ?? true,
+      },
+    };
+  } else if (normalizedResponseFormat?.type === "json_object") {
+    payload.text = {
+      format: {
+        type: "json_object",
+      },
+    };
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  payload.max_output_tokens = maxTokens ?? max_tokens ?? 1200;
+
+  const response = await fetch(`${ENV.openAiBaseUrl.replace(/\/$/, "")}/responses`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${ENV.openAiApiKey}`,
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
-    );
+    throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
   }
 
-  return (await response.json()) as InvokeResult;
+  const raw = await response.json();
+
+  const outputText =
+    typeof raw.output_text === "string"
+      ? raw.output_text
+      : Array.isArray(raw.output)
+      ? raw.output
+          .flatMap((item: any) => item.content ?? [])
+          .filter((item: any) => item?.type === "output_text")
+          .map((item: any) => item.text ?? "")
+          .join("\n")
+      : "";
+
+  return {
+    id: raw.id ?? "",
+    created: raw.created_at ?? Date.now(),
+    model: raw.model ?? ENV.openAiModel,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content: outputText,
+        },
+        finish_reason: raw.status ?? "stop",
+      },
+    ],
+    usage: raw.usage
+      ? {
+          prompt_tokens: raw.usage.input_tokens ?? 0,
+          completion_tokens: raw.usage.output_tokens ?? 0,
+          total_tokens:
+            (raw.usage.input_tokens ?? 0) + (raw.usage.output_tokens ?? 0),
+        }
+      : undefined,
+  };
 }
