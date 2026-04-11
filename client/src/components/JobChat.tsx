@@ -1,129 +1,148 @@
-import { useMemo, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
-import { Loader2, MessageSquare, Send } from "lucide-react";
-import { toast } from "sonner";
-
-import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { format, formatDistanceToNow } from "date-fns";
+import { Loader2, MessageSquare, Send } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type JobChatProps = {
+interface JobChatProps {
   jobId: number;
-  otherPartyLabel?: string;
-};
+  otherPartyLabel: string;
+}
 
-export function JobChat({ jobId, otherPartyLabel = "the other person" }: JobChatProps) {
+export function JobChat({ jobId, otherPartyLabel }: JobChatProps) {
   const { user } = useAuth();
   const utils = trpc.useUtils();
-  const [content, setContent] = useState("");
+  const [message, setMessage] = useState("");
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const { data: messages, isLoading } = trpc.messages.getForJob.useQuery(
+  const messagesQuery = trpc.messages.getForJob.useQuery(
     { jobId },
     {
-      enabled: !!jobId,
-      refetchInterval: 15000,
+      refetchInterval: 4000,
+      refetchOnWindowFocus: true,
     }
   );
 
-  const createMessage = trpc.messages.create.useMutation({
+  const sendMessage = trpc.messages.create.useMutation({
     onSuccess: async () => {
-      setContent("");
+      setMessage("");
       await utils.messages.getForJob.invalidate({ jobId });
       await utils.messages.getUnreadCount.invalidate({ jobId });
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const sortedMessages = useMemo(() => {
-    return [...(messages ?? [])].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-  }, [messages]);
+  const messages = messagesQuery.data ?? [];
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
+  const groupedMessages = useMemo(() => messages, [messages]);
 
   const handleSend = () => {
-    const trimmed = content.trim();
-    if (!trimmed) return;
-    createMessage.mutate({ jobId, content: trimmed });
+    const content = message.trim();
+    if (!content) return;
+
+    sendMessage.mutate({
+      jobId,
+      content,
+    });
   };
 
   return (
-    <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div>
-          <h3 className="font-semibold text-foreground text-sm">Job chat</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Send updates, questions, and scheduling details to {otherPartyLabel}.
-          </p>
-        </div>
+    <div className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden mt-6">
+      <div className="px-5 py-4 border-b border-border/40">
+        <h3 className="font-semibold text-foreground">Chat</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Message {otherPartyLabel} about this job.
+        </p>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-10">
-          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+      {messagesQuery.isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
-      ) : sortedMessages.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center bg-muted/20">
-          <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-foreground">No messages yet</p>
+      ) : groupedMessages.length === 0 ? (
+        <div className="px-6 py-12 text-center">
+          <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm font-medium text-foreground">No messages yet</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Start the conversation with {otherPartyLabel} here.
+            Start the conversation with {otherPartyLabel}.
           </p>
         </div>
       ) : (
-        <ScrollArea className="h-[320px] pr-3">
-          <div className="space-y-3">
-            {sortedMessages.map((message) => {
-              const isMine = message.senderId === user?.id;
-              return (
+        <div className="max-h-[420px] overflow-y-auto px-4 py-4 space-y-3 bg-muted/20">
+          {groupedMessages.map((msg) => {
+            const isMine = msg.senderId === user?.id;
+
+            return (
+              <div
+                key={msg.id}
+                className={cn("flex", isMine ? "justify-end" : "justify-start")}
+              >
                 <div
-                  key={message.id}
-                  className={cn("flex", isMine ? "justify-end" : "justify-start")}
+                  className={cn(
+                    "max-w-[80%] rounded-2xl px-4 py-3 shadow-sm",
+                    isMine
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-white border border-border/60 text-foreground"
+                  )}
                 >
-                  <div
-                    className={cn(
-                      "max-w-[85%] rounded-2xl px-4 py-3 border",
-                      isMine
-                        ? "bg-primary text-primary-foreground border-primary/80"
-                        : "bg-muted/30 border-border/60 text-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <p className={cn("text-xs font-medium", isMine ? "text-primary-foreground/90" : "text-muted-foreground")}>
-                        {isMine ? "You" : message.senderName ?? otherPartyLabel}
-                      </p>
-                      <span className={cn("text-[11px]", isMine ? "text-primary-foreground/80" : "text-muted-foreground") }>
-                        {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                      </span>
-                    </div>
-                    <p className={cn("text-sm whitespace-pre-wrap break-words", isMine ? "text-primary-foreground" : "text-foreground")}>
-                      {message.content}
+                  {!isMine && (
+                    <p className="text-[11px] font-medium mb-1 opacity-80">
+                      {msg.senderName ?? otherPartyLabel}
                     </p>
-                  </div>
+                  )}
+
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+
+                  <p
+                    className={cn(
+                      "text-[10px] mt-2",
+                      isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+                    )}
+                    title={format(new Date(msg.createdAt), "MMM d, yyyy h:mm a")}
+                  >
+                    {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
       )}
 
-      <div className="mt-4 space-y-3">
-        <Textarea
-          placeholder="Type a message..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={3}
-          maxLength={2000}
-          className="resize-none"
-        />
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">Keep messages work-related and clear.</p>
-          <Button onClick={handleSend} disabled={!content.trim() || createMessage.isPending}>
-            {createMessage.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-            Send
-          </Button>
+      <div className="border-t border-border/40 p-4">
+        <div className="space-y-3">
+          <Textarea
+            placeholder={`Write a message to ${otherPartyLabel}...`}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+
+          <div className="flex justify-end">
+            <Button onClick={handleSend} disabled={sendMessage.isPending || !message.trim()}>
+              {sendMessage.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Message
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

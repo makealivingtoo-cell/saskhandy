@@ -7,7 +7,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { trpc } from "@/lib/trpc";
 import {
   Briefcase,
   ChevronDown,
@@ -26,6 +25,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MessagesCounterBadge, NotificationBell } from "@/components/NotificationBell";
 
 interface NavItem {
   href: string;
@@ -51,38 +51,6 @@ const HANDYMAN_NAV: NavItem[] = [
 interface AppLayoutProps {
   children: ReactNode;
   title?: string;
-}
-
-function NavUnreadBadge({ href }: { href: string }) {
-  const isHandyman = href.startsWith("/handyman");
-  const jobsQuery = isHandyman
-    ? trpc.jobs.getForHandyman.useQuery(undefined)
-    : trpc.jobs.getByHomeowner.useQuery(undefined);
-
-  const jobs =
-    jobsQuery.data?.filter((job) =>
-      isHandyman ? true : !!job.selectedHandymanId
-    ) ?? [];
-
-  const totalUnreadQueries = jobs.map((job) =>
-    trpc.messages.getUnreadCount.useQuery(
-      { jobId: job.id },
-      { enabled: jobs.length > 0 }
-    )
-  );
-
-  const totalUnread = totalUnreadQueries.reduce(
-    (sum, query) => sum + (query.data ?? 0),
-    0
-  );
-
-  if (totalUnread <= 0) return null;
-
-  return (
-    <span className="ml-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold px-1.5">
-      {totalUnread > 99 ? "99+" : totalUnread}
-    </span>
-  );
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
@@ -116,6 +84,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = location === item.href;
+
               return (
                 <Link key={item.href} href={item.href}>
                   <div
@@ -128,7 +97,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   >
                     <item.icon className="w-3.5 h-3.5" />
                     {item.label}
-                    {item.label === "Messages" && <NavUnreadBadge href={item.href} />}
+                    {item.label === "Messages" && <MessagesCounterBadge />}
                   </div>
                 </Link>
               );
@@ -151,65 +120,69 @@ export function AppLayout({ children, title }: AppLayoutProps) {
             )}
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-semibold text-primary">
-                    {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-semibold text-primary">
+                      {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
+                    </span>
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium max-w-24 truncate">
+                    {user?.name}
                   </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-medium truncate">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.userType}</p>
                 </div>
-                <span className="hidden sm:block text-sm font-medium max-w-24 truncate">
-                  {user?.name}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="px-3 py-2">
-                <p className="text-sm font-medium truncate">{user?.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{user?.userType}</p>
-              </div>
-
-              <DropdownMenuSeparator />
-
-              <div className="md:hidden">
-                {navItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link href={item.href}>
-                      <item.icon className="w-4 h-4 mr-2" />
-                      {item.label}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-
-                {user?.role === "admin" && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Admin Panel
-                    </Link>
-                  </DropdownMenuItem>
-                )}
 
                 <DropdownMenuSeparator />
-              </div>
 
-              <DropdownMenuItem
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="text-destructive focus:text-destructive"
-              >
-                {isLoggingOut ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <LogOut className="w-4 h-4 mr-2" />
-                )}
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <div className="md:hidden">
+                  {navItems.map((item) => (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link href={item.href}>
+                        <item.icon className="w-4 h-4 mr-2" />
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+
+                  {user?.role === "admin" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuSeparator />
+                </div>
+
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="text-destructive focus:text-destructive"
+                >
+                  {isLoggingOut ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <LogOut className="w-4 h-4 mr-2" />
+                  )}
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </nav>
 

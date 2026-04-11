@@ -7,28 +7,20 @@ import { ArrowRight, Loader2, MapPin, MessageSquare } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 
-function UnreadChip({ jobId }: { jobId: number }) {
-  const { data: unread = 0 } = trpc.messages.getUnreadCount.useQuery({ jobId });
-
-  if (unread <= 0) return null;
-
-  return (
-    <span className="inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-medium px-2 py-1">
-      {unread} unread
-    </span>
-  );
-}
-
 export default function MessagesPage() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
 
   const homeownerJobs = trpc.jobs.getByHomeowner.useQuery(undefined, {
     enabled: isAuthenticated && user?.userType !== "handyman",
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
   });
 
   const handymanJobs = trpc.jobs.getForHandyman.useQuery(undefined, {
     enabled: isAuthenticated && user?.userType === "handyman",
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {
@@ -43,6 +35,20 @@ export default function MessagesPage() {
     ? handymanJobs.data ?? []
     : (homeownerJobs.data ?? []).filter((job) => !!job.selectedHandymanId);
 
+  const unreadQueries = trpc.useQueries((t) =>
+    jobs.map((job) =>
+      t.messages.getUnreadCount(
+        { jobId: job.id },
+        {
+          refetchInterval: 10000,
+          refetchOnWindowFocus: true,
+        }
+      )
+    )
+  );
+
+  const totalUnread = unreadQueries.reduce((sum, query) => sum + (query.data ?? 0), 0);
+
   const isLoading = loading || homeownerJobs.isLoading || handymanJobs.isLoading;
 
   const sortedJobs = [...jobs].sort((a, b) => {
@@ -54,6 +60,17 @@ export default function MessagesPage() {
   return (
     <AppLayout title="Messages">
       <div className="max-w-3xl mx-auto">
+        <div className="flex items-center gap-2 mb-5">
+          <p className="text-sm text-muted-foreground">
+            {sortedJobs.length} active {sortedJobs.length === 1 ? "conversation" : "conversations"}
+          </p>
+          {totalUnread > 0 && (
+            <span className="inline-flex min-w-6 h-6 items-center justify-center rounded-full bg-red-500 text-white text-xs font-semibold px-2">
+              {totalUnread > 99 ? "99+" : totalUnread}
+            </span>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -64,14 +81,18 @@ export default function MessagesPage() {
             <h2 className="font-semibold text-foreground mb-2">No active conversations yet</h2>
             <p className="text-sm text-muted-foreground">
               {isHandyman
-                ? "Once a homeowner accepts one of your bids, the conversation will show up here."
-                : "Once you accept a handyman for a job, the conversation will show up here."}
+                ? "Once a homeowner accepts one of your bids, your conversation will appear here."
+                : "Once you accept a handyman for a job, your conversation will appear here."}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             {sortedJobs.map((job) => {
               const href = isHandyman ? `/handyman/jobs/${job.id}` : `/jobs/${job.id}`;
+              const unread =
+                unreadQueries.find((query) => query.dataUpdatedAt && query.data !== undefined)?.data ??
+                unreadQueries[jobs.findIndex((j) => j.id === job.id)]?.data ??
+                0;
 
               return (
                 <Link key={job.id} href={href}>
@@ -79,11 +100,13 @@ export default function MessagesPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <p className="font-semibold text-foreground text-sm truncate">
-                            {job.title}
-                          </p>
+                          <p className="font-semibold text-foreground text-sm truncate">{job.title}</p>
                           <StatusBadge status={job.status} />
-                          <UnreadChip jobId={job.id} />
+                          {unread > 0 && (
+                            <span className="inline-flex items-center rounded-full bg-red-500 text-white text-xs font-medium px-2 py-1">
+                              {unread} unread
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
