@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import AIChatBox from "@/components/AIChatBox";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,8 @@ export default function SupportPage() {
   return (
     <AppLayout title="Support">
       <div className="max-w-3xl mx-auto space-y-6">
+        <AIChatBox />
+
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
           <div className="flex items-center gap-2 mb-4">
             <LifeBuoy className="w-4 h-4 text-primary" />
