@@ -5,8 +5,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
-import { Briefcase, DollarSign, Loader2, Search, Star, TrendingUp } from "lucide-react";
-import { useEffect } from "react";
+import { Briefcase, DollarSign, Loader2, Search, Shield, Star, TrendingUp } from "lucide-react";
+import { useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 
 function StatCard({
@@ -63,19 +63,31 @@ export default function HandymanDashboard() {
       return;
     }
 
-    if (
-      !loading &&
-      isAuthenticated &&
-      user?.userType === "handyman" &&
-      !profileLoading &&
-      !profile
-    ) {
+    if (!loading && isAuthenticated && user?.userType === "handyman" && !profileLoading && !profile) {
       navigate("/onboarding");
     }
   }, [loading, isAuthenticated, user, profileLoading, profile, navigate]);
 
   const pendingBids = myBids?.filter((b) => b.status === "pending") ?? [];
   const acceptedBids = myBids?.filter((b) => b.status === "accepted") ?? [];
+
+  const profileCompletion = useMemo(() => {
+    if (!profile) return 0;
+
+    let categories: string[] = [];
+    try {
+      categories = JSON.parse(profile.categories ?? "[]");
+    } catch {}
+
+    let score = 0;
+    if (profile.bio?.trim()) score += 20;
+    if (categories.length > 0) score += 20;
+    if (profile.hourlyRate) score += 20;
+    if (profile.insuranceCertUrl) score += 20;
+    if (profile.insuranceVerified) score += 20;
+
+    return score;
+  }, [profile]);
 
   if (loading || profileLoading) {
     return (
@@ -100,14 +112,21 @@ export default function HandymanDashboard() {
             ) : (
               <span className="text-sm text-muted-foreground">No ratings yet</span>
             )}
+
             <span className="text-sm text-muted-foreground">
               {profile?.totalJobs ?? 0} jobs completed
             </span>
-            {profile?.verified && (
+
+            {profile?.insuranceVerified ? (
+              <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Insurance Verified
+              </span>
+            ) : profile?.verified ? (
               <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
                 Verified
               </span>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -117,6 +136,22 @@ export default function HandymanDashboard() {
             Browse Jobs
           </Link>
         </Button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-medium text-foreground">Profile completion</p>
+          <p className="text-sm font-semibold text-foreground">{profileCompletion}%</p>
+        </div>
+        <div className="h-2 rounded-full bg-muted overflow-hidden mb-3">
+          <div
+            className="h-full bg-primary rounded-full transition-all"
+            style={{ width: `${profileCompletion}%` }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          A more complete profile makes homeowners more likely to trust your bids.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -143,15 +178,17 @@ export default function HandymanDashboard() {
           value={profile?.rating ? parseFloat(profile.rating).toFixed(1) : "—"}
           icon={Star}
           color="bg-purple-50 text-purple-600"
-          sub={profile?.totalJobs ? `${profile.totalJobs} jobs` : undefined}
+          sub={profile?.totalJobs ? `${profile.totalJobs} jobs completed` : undefined}
         />
       </div>
 
-      {profile && (!profile.bio || !profile.categories || profile.categories === "[]") && (
+      {profileCompletion < 100 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-amber-800">Complete your profile</p>
-            <p className="text-xs text-amber-700">A complete profile makes it easier for homeowners to trust your bids.</p>
+            <p className="text-xs text-amber-700">
+              Add missing details to increase trust and improve your chances of winning bids.
+            </p>
           </div>
           <Button
             asChild

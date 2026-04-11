@@ -6,19 +6,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
 import { Briefcase, Loader2, MapPin, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+
+type SortOption = "newest" | "highest_budget" | "lowest_budget";
 
 export default function BrowseJobs() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
+
   const [search, setSearch] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
   const [category, setCategory] = useState("all");
+  const [budgetMin, setBudgetMin] = useState("");
+  const [budgetMax, setBudgetMax] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   const { data: categories = [] } = trpc.jobs.categories.useQuery();
 
   const { data: jobs, isLoading } = trpc.jobs.getOpen.useQuery(
-    { limit: 50, offset: 0, category: category === "all" ? undefined : category },
+    { limit: 100, offset: 0, category: undefined },
     { enabled: isAuthenticated }
   );
 
@@ -33,16 +41,58 @@ export default function BrowseJobs() {
     }
   }, [loading, isAuthenticated, user, navigate]);
 
-  const filtered =
-    jobs?.filter((job) => {
-      if (!search) return true;
-      const q = search.toLowerCase();
+  const filtered = useMemo(() => {
+    const minBudget = budgetMin ? parseFloat(budgetMin) : null;
+    const maxBudget = budgetMax ? parseFloat(budgetMax) : null;
+
+    let list = (jobs ?? []).filter((job) => {
+      const searchText = search.trim().toLowerCase();
+      const locationText = locationFilter.trim().toLowerCase();
+
+      const matchesSearch =
+        !searchText ||
+        job.title.toLowerCase().includes(searchText) ||
+        job.description.toLowerCase().includes(searchText) ||
+        job.location.toLowerCase().includes(searchText);
+
+      const matchesLocation =
+        !locationText || job.location.toLowerCase().includes(locationText);
+
+      const matchesCategory =
+        category === "all" || job.category === category;
+
+      const jobMin = parseFloat(job.budgetMin);
+      const jobMax = parseFloat(job.budgetMax);
+
+      const matchesBudgetMin =
+        minBudget === null || jobMax >= minBudget;
+
+      const matchesBudgetMax =
+        maxBudget === null || jobMin <= maxBudget;
+
       return (
-        job.title.toLowerCase().includes(q) ||
-        job.description.toLowerCase().includes(q) ||
-        job.location.toLowerCase().includes(q)
+        matchesSearch &&
+        matchesLocation &&
+        matchesCategory &&
+        matchesBudgetMin &&
+        matchesBudgetMax
       );
-    }) ?? [];
+    });
+
+    list = list.sort((a, b) => {
+      if (sortBy === "highest_budget") {
+        return parseFloat(b.budgetMax) - parseFloat(a.budgetMax);
+      }
+
+      if (sortBy === "lowest_budget") {
+        return parseFloat(a.budgetMin) - parseFloat(b.budgetMin);
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return list;
+  }, [jobs, search, locationFilter, category, budgetMin, budgetMax, sortBy]);
 
   if (loading) {
     return (
@@ -56,30 +106,110 @@ export default function BrowseJobs() {
 
   return (
     <AppLayout title="Browse Jobs">
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="space-y-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search jobs by title, description, or location..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
           <Input
-            placeholder="Search jobs by title, description, or location..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            placeholder="Filter by location"
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="w-full sm:w-52"
           />
+
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+            <SelectTrigger className="w-full sm:w-52">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="highest_budget">Highest Budget</SelectItem>
+              <SelectItem value="lowest_budget">Lowest Budget</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-full sm:w-52">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <Input
+                type="number"
+                min="0"
+                step="10"
+                placeholder="Min budget"
+                value={budgetMin}
+                onChange={(e) => setBudgetMin(e.target.value)}
+                className="pl-7"
+              />
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <Input
+                type="number"
+                min="0"
+                step="10"
+                placeholder="Max budget"
+                value={budgetMax}
+                onChange={(e) => setBudgetMax(e.target.value)}
+                className="pl-7"
+              />
+            </div>
+          </div>
+
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-full sm:w-52">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setCategory("all")}
+            className={cn(
+              "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
+              category === "all"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
+            )}
+          >
+            All
+          </button>
+
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(cat)}
+              className={cn(
+                "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
+                category === cat
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
       {!isLoading && (
@@ -97,9 +227,7 @@ export default function BrowseJobs() {
           <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <h3 className="font-semibold text-foreground mb-2">No jobs found</h3>
           <p className="text-sm text-muted-foreground">
-            {search || category !== "all"
-              ? "Try adjusting your search or category filter."
-              : "No open jobs right now. Check back soon."}
+            Try adjusting your search, filters, or category.
           </p>
         </div>
       ) : (
@@ -119,7 +247,7 @@ export default function BrowseJobs() {
                 </p>
 
                 <div className="space-y-2 mt-auto">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-xs bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full font-medium">
                       {job.category}
                     </span>

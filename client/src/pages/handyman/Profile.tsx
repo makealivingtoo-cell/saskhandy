@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { CheckCircle, ExternalLink, Loader2, Save, Shield, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -166,6 +166,16 @@ export default function HandymanProfile() {
     ? "verified"
     : "pending";
 
+  const profileCompletion = useMemo(() => {
+    let score = 0;
+    if (bio.trim()) score += 20;
+    if (selectedCategories.length > 0) score += 20;
+    if (hourlyRate.trim()) score += 20;
+    if (profile?.insuranceCertUrl) score += 20;
+    if (profile?.insuranceVerified) score += 20;
+    return score;
+  }, [bio, selectedCategories.length, hourlyRate, profile?.insuranceCertUrl, profile?.insuranceVerified]);
+
   return (
     <AppLayout title="My Profile">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -184,7 +194,9 @@ export default function HandymanProfile() {
                 ) : (
                   <span className="text-xs text-muted-foreground">No ratings yet</span>
                 )}
-                <span className="text-xs text-muted-foreground">{profile?.totalJobs ?? 0} jobs</span>
+                <span className="text-xs text-muted-foreground">
+                  {profile?.totalJobs ?? 0} jobs completed
+                </span>
                 {profile?.insuranceVerified && (
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
@@ -192,6 +204,19 @@ export default function HandymanProfile() {
                   </span>
                 )}
               </div>
+            </div>
+          </div>
+
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-muted-foreground">Profile completion</p>
+              <p className="text-xs font-semibold text-foreground">{profileCompletion}%</p>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${profileCompletion}%` }}
+              />
             </div>
           </div>
 

@@ -2,7 +2,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { StarRatingDisplay } from "@/components/StarRating";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
-import { Briefcase, Loader2, MapPin, Shield, Star } from "lucide-react";
+import { Briefcase, CheckCircle, Loader2, Shield, Star } from "lucide-react";
+import { useMemo } from "react";
 import { useParams } from "wouter";
 
 export default function PublicProfile() {
@@ -13,6 +14,7 @@ export default function PublicProfile() {
     { userId: uid },
     { enabled: !!uid }
   );
+
   const { data: reviews, isLoading: reviewsLoading } = trpc.reviews.getForUser.useQuery(
     { userId: uid },
     { enabled: !!uid }
@@ -39,12 +41,23 @@ export default function PublicProfile() {
   }
 
   let categories: string[] = [];
-  try { categories = JSON.parse(profile.categories ?? "[]"); } catch {}
+  try {
+    categories = JSON.parse(profile.categories ?? "[]");
+  } catch {}
+
+  const profileCompletion = useMemo(() => {
+    let score = 0;
+    if (profile.bio?.trim()) score += 20;
+    if (categories.length > 0) score += 20;
+    if (profile.hourlyRate) score += 20;
+    if (profile.insuranceCertUrl) score += 20;
+    if (profile.insuranceVerified) score += 20;
+    return score;
+  }, [profile.bio, profile.hourlyRate, profile.insuranceCertUrl, profile.insuranceVerified, categories.length]);
 
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Profile Header */}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-8">
           <div className="flex items-start gap-5">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
@@ -52,23 +65,33 @@ export default function PublicProfile() {
                 {profile.userName?.charAt(0)?.toUpperCase()}
               </span>
             </div>
+
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1 className="text-xl font-serif text-foreground">{profile.userName}</h1>
-                {profile.verified && (
+
+                {profile.insuranceVerified && (
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
+                    Insurance Verified
+                  </span>
+                )}
+
+                {profile.verified && !profile.insuranceVerified && (
+                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
                     Verified
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-4 mb-3">
+              <div className="flex items-center gap-4 mb-3 flex-wrap">
                 {profile.rating && parseFloat(profile.rating) > 0 ? (
                   <StarRatingDisplay rating={parseFloat(profile.rating)} showValue />
                 ) : (
                   <span className="text-sm text-muted-foreground">No ratings yet</span>
                 )}
+
                 <span className="text-sm text-muted-foreground">
                   <Briefcase className="w-3.5 h-3.5 inline mr-1" />
                   {profile.totalJobs ?? 0} jobs completed
@@ -80,6 +103,19 @@ export default function PublicProfile() {
                   ${parseFloat(profile.hourlyRate).toFixed(0)}/hr
                 </p>
               )}
+            </div>
+          </div>
+
+          <div className="mt-5 pt-5 border-t border-border/40">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-muted-foreground">Profile completion</p>
+              <p className="text-xs font-semibold text-foreground">{profileCompletion}%</p>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${profileCompletion}%` }}
+              />
             </div>
           </div>
 
@@ -106,7 +142,6 @@ export default function PublicProfile() {
           )}
         </div>
 
-        {/* Reviews */}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
           <div className="flex items-center gap-2 mb-5">
             <Star className="w-4 h-4 text-amber-500" />
@@ -133,7 +168,9 @@ export default function PublicProfile() {
                           {review.reviewerName?.charAt(0)?.toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-medium text-foreground">{review.reviewerName ?? "User"}</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {review.reviewerName ?? "User"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <StarRatingDisplay rating={review.rating} size="sm" />

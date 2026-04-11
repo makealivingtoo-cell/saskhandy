@@ -23,9 +23,13 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
+import { useMemo, useState } from "react";
+
+function getBidInsuranceVerified(bid: any) {
+  return bid?.handymanInsuranceVerified === true;
+}
 
 export default function JobDetails() {
   const { id } = useParams();
@@ -379,17 +383,29 @@ export default function JobDetails() {
               <CheckCircle className="w-4 h-4 text-emerald-600" />
               <h3 className="font-semibold text-foreground">Accepted Bid</h3>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">{acceptedBid.handymanName}</p>
-                <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-medium text-foreground">{acceptedBid.handymanName}</p>
+                  {getBidInsuranceVerified(acceptedBid) && (
+                    <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Insurance Verified
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {acceptedBid.handymanRating && (
                     <StarRatingDisplay rating={parseFloat(acceptedBid.handymanRating)} size="sm" showValue />
                   )}
                   {acceptedBid.handymanTotalJobs !== undefined && (
-                    <span className="text-xs text-muted-foreground">{acceptedBid.handymanTotalJobs} jobs</span>
+                    <span className="text-xs text-muted-foreground">
+                      {acceptedBid.handymanTotalJobs} jobs completed
+                    </span>
                   )}
                 </div>
+
                 {acceptedBid.availability && (
                   <div className="flex items-center gap-1 mt-1">
                     <Clock className="w-3 h-3 text-muted-foreground" />
@@ -397,13 +413,15 @@ export default function JobDetails() {
                   </div>
                 )}
               </div>
-              <div className="text-right">
+
+              <div className="text-right shrink-0">
                 <p className="text-xl font-bold text-foreground">${acceptedBid.bidAmount}</p>
                 <Link href={`/profile/${acceptedBid.handymanId}`}>
                   <span className="text-xs text-primary hover:underline cursor-pointer">View Profile</span>
                 </Link>
               </div>
             </div>
+
             {acceptedBid.message && (
               <div className="mt-3 pt-3 border-t border-border/40">
                 <p className="text-xs text-muted-foreground">{acceptedBid.message}</p>
@@ -438,23 +456,36 @@ export default function JobDetails() {
                 {pendingBids.map((bid) => (
                   <div key={bid.id} className="bg-white rounded-xl border border-border/60 p-5">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                             <User className="w-4 h-4 text-primary" />
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground text-sm">{bid.handymanName ?? "Handyman"}</p>
-                            <div className="flex items-center gap-2">
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium text-foreground text-sm">{bid.handymanName ?? "Handyman"}</p>
+                              {getBidInsuranceVerified(bid) && (
+                                <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                  <Shield className="w-3 h-3" />
+                                  Insurance Verified
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap">
                               {bid.handymanRating && (
                                 <StarRatingDisplay rating={parseFloat(bid.handymanRating)} size="sm" showValue />
                               )}
                               {bid.handymanTotalJobs !== undefined && (
-                                <span className="text-xs text-muted-foreground">{bid.handymanTotalJobs} jobs completed</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {bid.handymanTotalJobs} jobs completed
+                                </span>
                               )}
                             </div>
                           </div>
                         </div>
+
                         {bid.message && (
                           <p className="text-sm text-muted-foreground mt-2 ml-10">{bid.message}</p>
                         )}
@@ -465,6 +496,7 @@ export default function JobDetails() {
                           </div>
                         )}
                       </div>
+
                       <div className="text-right shrink-0">
                         <p className="text-xl font-bold text-foreground">${bid.bidAmount}</p>
                         <div className="flex gap-2 mt-2">
