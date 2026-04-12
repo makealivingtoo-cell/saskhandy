@@ -1,45 +1,126 @@
-import { Skeleton } from './ui/skeleton';
+import { cn } from "@/lib/utils";
 
-export function DashboardLayoutSkeleton() {
+interface DashboardLayoutSkeletonProps {
+  title?: boolean;
+  subtitle?: boolean;
+  headerAction?: boolean;
+  statCards?: number;
+  showSidebar?: boolean;
+  contentRows?: number;
+  className?: string;
+}
+
+function SkeletonBlock({
+  className,
+}: {
+  className?: string;
+}) {
+  return <div className={cn("animate-pulse rounded-xl bg-muted/60", className)} />;
+}
+
+export default function DashboardLayoutSkeleton({
+  title = true,
+  subtitle = true,
+  headerAction = true,
+  statCards = 4,
+  showSidebar = false,
+  contentRows = 4,
+  className,
+}: DashboardLayoutSkeletonProps) {
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar skeleton */}
-      <div className="w-[280px] border-r border-border bg-background p-4 space-y-6">
-        {/* Logo area */}
-        <div className="flex items-center gap-3 px-2">
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-
-        {/* Menu items */}
-        <div className="space-y-2 px-2">
-          <Skeleton className="h-10 w-full rounded-lg" />
-          <Skeleton className="h-10 w-full rounded-lg" />
-          <Skeleton className="h-10 w-full rounded-lg" />
-        </div>
-
-        {/* User profile area at bottom */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="flex items-center gap-3 px-1">
-            <Skeleton className="h-9 w-9 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-2 w-32" />
+    <div className={cn("min-h-screen bg-background", className)}>
+      <div className="container py-8">
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="space-y-3 flex-1">
+              {title && <SkeletonBlock className="h-8 w-56" />}
+              {subtitle && <SkeletonBlock className="h-4 w-80 max-w-full" />}
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Main content skeleton */}
-      <div className="flex-1 p-4 space-y-4">
-        {/* Content blocks */}
-        <Skeleton className="h-12 w-48 rounded-lg" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
+            {headerAction && <SkeletonBlock className="h-10 w-36 shrink-0" />}
+          </div>
+
+          {statCards > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: statCards }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-2xl border border-border/60 shadow-sm p-5"
+                >
+                  <div className="flex items-center gap-4">
+                    <SkeletonBlock className="w-11 h-11 rounded-xl shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <SkeletonBlock className="h-6 w-16" />
+                      <SkeletonBlock className="h-4 w-24" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showSidebar ? (
+            <div className="grid lg:grid-cols-[320px_1fr] gap-6">
+              <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 space-y-4">
+                <SkeletonBlock className="h-6 w-32" />
+                <div className="space-y-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <SkeletonBlock key={index} className="h-14 w-full rounded-xl" />
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 space-y-4">
+                <SkeletonBlock className="h-7 w-40" />
+                <SkeletonBlock className="h-4 w-64" />
+
+                <div className="space-y-4 pt-2">
+                  {Array.from({ length: contentRows }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="border border-border/60 rounded-2xl p-4 space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <SkeletonBlock className="h-5 w-40" />
+                        <SkeletonBlock className="h-5 w-20 rounded-full" />
+                      </div>
+                      <SkeletonBlock className="h-4 w-full" />
+                      <SkeletonBlock className="h-4 w-3/4" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 space-y-4">
+              <SkeletonBlock className="h-7 w-40" />
+              <SkeletonBlock className="h-4 w-72 max-w-full" />
+
+              <div className="space-y-4 pt-2">
+                {Array.from({ length: contentRows }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="border border-border/60 rounded-2xl p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="space-y-2 flex-1">
+                        <SkeletonBlock className="h-5 w-44" />
+                        <SkeletonBlock className="h-4 w-72 max-w-full" />
+                      </div>
+                      <SkeletonBlock className="h-6 w-20 rounded-full shrink-0" />
+                    </div>
+
+                    <div className="grid sm:grid-cols-3 gap-3">
+                      <SkeletonBlock className="h-16 w-full" />
+                      <SkeletonBlock className="h-16 w-full" />
+                      <SkeletonBlock className="h-16 w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <Skeleton className="h-64 rounded-xl" />
       </div>
     </div>
   );
