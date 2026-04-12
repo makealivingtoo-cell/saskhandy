@@ -11,6 +11,7 @@ import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import VerifyEmailPage from "./pages/VerifyEmail";
 import SupportPage from "./pages/Support";
 import SupportTicketPage from "./pages/SupportTicket";
 import AdminSupportPage from "./pages/AdminSupport";
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/sign-up" component={SignUp} />
+      <Route path="/verify-email" component={VerifyEmailPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/role-select" component={RoleSelect} />

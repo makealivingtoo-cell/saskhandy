@@ -37,15 +37,9 @@ export default function SignUp() {
   }, [loading, isAuthenticated, navigate]);
 
   const signUp = trpc.auth.signUp.useMutation({
-    onSuccess: ({ user }) => {
-      toast.success("Account created successfully.");
-
-      if (user.userType === "handyman") {
-        navigate("/onboarding");
-        return;
-      }
-
-      navigate("/dashboard");
+    onSuccess: () => {
+      toast.success("Account created. Check your email to verify your account.");
+      navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
     },
     onError: (err) => {
       toast.error(err.message);
@@ -292,17 +286,6 @@ export default function SignUp() {
                     I would like to receive occasional product updates and service emails.
                   </span>
                 </label>
-              </div>
-
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  SaskHandy is a platform that connects homeowners and independent handymen. Handymen
-                  are responsible for ensuring they are properly licensed, insured, and qualified for
-                  any work they accept.
-                </p>
-                <p className="text-[11px] text-amber-700 mt-2">
-                  Terms version: {TERMS_VERSION} • Privacy version: {PRIVACY_VERSION}
-                </p>
               </div>
 
               <Button

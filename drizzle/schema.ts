@@ -22,6 +22,9 @@ export const users = mysqlTable("users", {
     .default("unset")
     .notNull(),
 
+  emailVerified: boolean("emailVerified").default(false).notNull(),
+  emailVerifiedAt: timestamp("emailVerifiedAt"),
+
   termsVersionAccepted: varchar("termsVersionAccepted", { length: 32 }),
   termsAcceptedAt: timestamp("termsAcceptedAt"),
   privacyVersionAccepted: varchar("privacyVersionAccepted", { length: 32 }),
@@ -35,8 +38,20 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const emailVerificationTokens = mysqlTable("email_verification_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
+export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
 
 // ─── Handyman Profiles ────────────────────────────────────────────────────────
 export const handymanProfiles = mysqlTable("handyman_profiles", {

@@ -3,16 +3,20 @@ import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
 import { createMessage, getMessagesForJob, markMessageAsRead, getUnreadCount } from "./db-messages";
 import { sendNotification } from "./notifications";
+import { sendVerificationEmail } from "./email";
 import { z } from "zod";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
   createBid,
   createDispute,
+  createEmailVerificationToken,
   createHandymanProfile,
   createJob,
   createLocalUser,
   createPayment,
   createReview,
+  deleteEmailVerificationTokenById,
+  deleteEmailVerificationTokensForUser,
   deleteJobById,
   getAllDisputes,
   getAllHandymanProfiles,
@@ -33,6 +37,8 @@ import {
   getReviewsForUser,
   getUserByEmail,
   getUserById,
+  getValidEmailVerificationToken,
+  markUserEmailVerified,
   recalculateHandymanRating,
   rejectOtherBids,
   resolveDispute,
@@ -98,6 +104,34 @@ function verifyPassword(password: string, stored: string) {
   return timingSafeEqual(derived, hashBuffer);
 }
 
+async function createAndSendVerification(user: {
+  id: number;
+  email: string | null;
+  name: string | null;
+}) {
+  if (!user.email) {
+    throw new Error("User email is missing");
+  }
+
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  await deleteEmailVerificationTokensForUser(user.id);
+
+  await createEmailVerificationToken({
+    userId: user.id,
+    email: user.email,
+    token,
+    expiresAt,
+  });
+
+  await sendVerificationEmail({
+    to: user.email,
+    name: user.name,
+    token,
+  });
+}
+
 const authRouter = router({
   me: publicProcedure.query((opts) => opts.ctx.user),
 
@@ -116,7 +150,7 @@ const authRouter = router({
         privacyVersion: z.string().min(1),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
       const existing = await getUserByEmail(email);
 
@@ -143,14 +177,6 @@ const authRouter = router({
         marketingOptInAt: input.marketingOptIn ? now : null,
       });
 
-      const sessionToken = await sdk.createSessionToken(user.openId, {
-        name: user.name ?? "",
-        expiresInMs: ONE_YEAR_MS,
-      });
-
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-
       if (input.userType === "handyman") {
         await createHandymanProfile({
           userId: user.id,
@@ -158,10 +184,50 @@ const authRouter = router({
         });
       }
 
+      await createAndSendVerification(user);
+
       return {
         success: true,
         user,
+        verificationRequired: true,
       };
+    }),
+
+  verifyEmail: publicProcedure
+    .input(z.object({ token: z.string().min(10) }))
+    .mutation(async ({ input }) => {
+      const verification = await getValidEmailVerificationToken(input.token);
+
+      if (!verification) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This verification link is invalid or expired.",
+        });
+      }
+
+      await markUserEmailVerified(verification.userId);
+      await deleteEmailVerificationTokenById(verification.id);
+      await deleteEmailVerificationTokensForUser(verification.userId);
+
+      return { success: true };
+    }),
+
+  resendVerification: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const email = normalizeEmail(input.email);
+      const user = await getUserByEmail(email);
+
+      if (!user) {
+        return { success: true };
+      }
+
+      if (user.emailVerified) {
+        return { success: true };
+      }
+
+      await createAndSendVerification(user);
+      return { success: true };
     }),
 
   signIn: publicProcedure
@@ -188,6 +254,13 @@ const authRouter = router({
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password",
+        });
+      }
+
+      if (!user.emailVerified) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Please verify your email before signing in.",
         });
       }
 
@@ -1045,8 +1118,8 @@ const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
 
-    const usersList = await getAllUsers();
-    const disputesList = await getAllDisputes();
+    const users = await getAllUsers();
+    const disputes = await getAllDisputes();
 
     const flaggedMap = new Map<
       number,
@@ -1060,7 +1133,7 @@ const adminRouter = router({
       }
     >();
 
-    for (const dispute of disputesList) {
+    for (const dispute of disputes) {
       const job = await getJobById(dispute.jobId);
       if (!job) continue;
 
@@ -1069,7 +1142,7 @@ const adminRouter = router({
       );
 
       for (const userId of involvedUserIds) {
-        const user = usersList.find((u) => u.id === userId);
+        const user = users.find((u) => u.id === userId);
         if (!user) continue;
 
         const existing =

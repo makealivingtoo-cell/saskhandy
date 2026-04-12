@@ -1,10 +1,11 @@
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import {
   bids,
   disputes,
+  emailVerificationTokens,
   handymanProfiles,
   jobs,
   payments,
@@ -14,6 +15,7 @@ import {
   users,
   type InsertBid,
   type InsertDispute,
+  type InsertEmailVerificationToken,
   type InsertHandymanProfile,
   type InsertJob,
   type InsertPayment,
@@ -113,6 +115,8 @@ export async function createLocalUser(data: {
     loginMethod: "local",
     role: "user",
     userType: data.userType,
+    emailVerified: false,
+    emailVerifiedAt: null,
     termsVersionAccepted: data.termsVersionAccepted,
     privacyVersionAccepted: data.privacyVersionAccepted,
     termsAcceptedAt: data.termsAcceptedAt,
@@ -126,9 +130,49 @@ export async function createLocalUser(data: {
   return (await getUserByOpenId(openId))!;
 }
 
+export async function markUserEmailVerified(userId: number) {
+  const db = await getDb();
+  await db
+    .update(users)
+    .set({
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+}
+
 export async function updateUserType(userId: number, userType: "homeowner" | "handyman") {
   const db = await getDb();
   await db.update(users).set({ userType }).where(eq(users.id, userId));
+}
+
+// ─── Email Verification Tokens ────────────────────────────────────────────────
+export async function createEmailVerificationToken(data: InsertEmailVerificationToken) {
+  const db = await getDb();
+  const result = await db.insert(emailVerificationTokens).values(data);
+  return Number((result as any).insertId);
+}
+
+export async function getValidEmailVerificationToken(token: string) {
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(emailVerificationTokens)
+    .where(and(eq(emailVerificationTokens.token, token), gt(emailVerificationTokens.expiresAt, new Date())))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function deleteEmailVerificationTokensForUser(userId: number) {
+  const db = await getDb();
+  await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
+}
+
+export async function deleteEmailVerificationTokenById(id: number) {
+  const db = await getDb();
+  await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, id));
 }
 
 // ─── Handyman Profiles ────────────────────────────────────────────────────────
@@ -465,5 +509,4 @@ export async function resolveDispute(
     .where(eq(disputes.id, disputeId));
 }
 
-// ─── Re-export support tables for support helper modules if needed ───────────
 export { supportTickets, supportTicketMessages };
