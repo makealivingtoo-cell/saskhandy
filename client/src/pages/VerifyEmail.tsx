@@ -29,8 +29,12 @@ export default function VerifyEmailPage() {
   });
 
   const resendVerification = trpc.auth.resendVerification.useMutation({
-    onSuccess: () => {
-      toast.success("If that email exists and is not verified, a new verification email was sent.");
+    onSuccess: (data: any) => {
+      if (data?.emailSent) {
+        toast.success("Verification email sent.");
+      } else {
+        toast.error("We could not send the verification email right now.");
+      }
     },
     onError: (err) => {
       toast.error(err.message);
