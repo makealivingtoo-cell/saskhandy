@@ -14,6 +14,7 @@ import {
   Loader2,
   RefreshCw,
   Shield,
+  Trash2,
   Users,
   XCircle,
 } from "lucide-react";
@@ -35,7 +36,10 @@ export default function AdminPanel() {
     enabled: isAuthenticated && user?.role === "admin",
   });
 
-  const { data: users } = trpc.admin.getUsers.useQuery(undefined, {
+  const {
+    data: users,
+    refetch: refetchUsers,
+  } = trpc.admin.getUsers.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
 
@@ -56,6 +60,7 @@ export default function AdminPanel() {
 
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<number, string>>({});
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   const resolveDispute = trpc.disputes.resolve.useMutation({
     onSuccess: () => {
@@ -74,6 +79,18 @@ export default function AdminPanel() {
       refetchInsurance();
     },
     onError: (err) => toast.error(err.message),
+  });
+
+  const deleteUser = trpc.admin.deleteUser.useMutation({
+    onSuccess: () => {
+      toast.success("User deleted.");
+      setDeletingUserId(null);
+      refetchUsers();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      setDeletingUserId(null);
+    },
   });
 
   if (!user || user.role !== "admin") {
@@ -435,32 +452,63 @@ export default function AdminPanel() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Type</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Role</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Joined</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
-                  {users?.map((u) => (
-                    <tr key={u.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{u.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className="capitalize text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                          {u.userType ?? "unset"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {u.role === "admin" ? (
-                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                            Admin
+                  {users?.map((u) => {
+                    const isSelf = u.id === user.id;
+                    const isAdminUser = u.role === "admin";
+
+                    return (
+                      <tr key={u.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground">{u.name ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className="capitalize text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
+                            {u.userType ?? "unset"}
                           </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">User</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {format(new Date(u.createdAt), "MMM d, yyyy")}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3">
+                          {u.role === "admin" ? (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                              Admin
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">User</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">
+                          {format(new Date(u.createdAt), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                            onClick={() => {
+                              const confirmed = window.confirm(
+                                `Delete ${u.name ?? u.email ?? "this user"}? This cannot be undone.`
+                              );
+
+                              if (!confirmed) return;
+
+                              setDeletingUserId(u.id);
+                              deleteUser.mutate({ userId: u.id });
+                            }}
+                            disabled={isSelf || isAdminUser || deleteUser.isPending}
+                          >
+                            {deleteUser.isPending && deletingUserId === u.id ? (
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                            )}
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

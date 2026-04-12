@@ -18,6 +18,7 @@ import {
   deleteEmailVerificationTokenById,
   deleteEmailVerificationTokensForUser,
   deleteJobById,
+  deleteUserById,
   getAllDisputes,
   getAllHandymanProfiles,
   getAllUsers,
@@ -1103,6 +1104,45 @@ const adminRouter = router({
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     return getAllUsers();
   }),
+
+  deleteUser: protectedProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+      }
+
+      if (ctx.user.id === input.userId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You cannot delete your own admin account.",
+        });
+      }
+
+      const user = await getUserById(input.userId);
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      if (user.role === "admin") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Admin users cannot be deleted from this action.",
+        });
+      }
+
+      await deleteUserById(input.userId);
+
+      return { success: true };
+    }),
 
   getStats: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });

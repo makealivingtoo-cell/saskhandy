@@ -66,6 +66,11 @@ export async function getAllUsers() {
   return db.select().from(users).orderBy(desc(users.createdAt));
 }
 
+export async function deleteUserById(userId: number) {
+  const db = await getDb();
+  await db.delete(users).where(eq(users.id, userId));
+}
+
 export async function upsertUser(data: Partial<InsertUser> & Pick<InsertUser, "openId">) {
   const db = await getDb();
   const existing = await getUserByOpenId(data.openId);
