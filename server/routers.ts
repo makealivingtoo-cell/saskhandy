@@ -132,12 +132,19 @@ async function createAndSendVerification(user: {
       token,
     });
 
+    console.log("Verification email sent successfully to:", user.email);
+
     return {
       emailSent: true,
       token,
     };
-  } catch (error) {
-    console.error("Verification email failed:", error);
+  } catch (error: any) {
+    console.error("Verification email failed.");
+    console.error("Error message:", error?.message);
+    console.error("Error code:", error?.code);
+    console.error("Error command:", error?.command);
+    console.error("Error response:", error?.response);
+    console.error("Full error object:", error);
 
     return {
       emailSent: false,
