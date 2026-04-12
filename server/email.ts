@@ -29,7 +29,9 @@ export async function sendVerificationEmail(params: {
   token: string;
 }) {
   const transporter = getTransporter();
-  const verificationUrl = `${APP_URL}/verify-email?token=${encodeURIComponent(params.token)}`;
+  const verificationUrl =
+    `${APP_URL}/verify-email?token=${encodeURIComponent(params.token)}` +
+    `&email=${encodeURIComponent(params.to)}`;
 
   await transporter.sendMail({
     from: EMAIL_FROM,

@@ -37,8 +37,25 @@ export default function SignUp() {
   }, [loading, isAuthenticated, navigate]);
 
   const signUp = trpc.auth.signUp.useMutation({
+    onSuccess: (data: any) => {
+      if (data?.emailSent === false) {
+        toast.warning(
+          "Account created, but verification email could not be sent yet. You can resend it on the next screen."
+        );
+      } else {
+        toast.success("Account created. Check your email to verify your account.");
+      }
+
+      navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const resendVerification = trpc.auth.resendVerification.useMutation({
     onSuccess: () => {
-      toast.success("Account created. Check your email to verify your account.");
+      toast.success("Verification email sent again.");
       navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
     },
     onError: (err) => {
@@ -304,6 +321,28 @@ export default function SignUp() {
                 )}
               </Button>
             </form>
+
+            <div className="mt-4 text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Already signed up but did not get the email?
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => resendVerification.mutate({ email: email.trim() })}
+                disabled={!email.trim() || resendVerification.isPending}
+              >
+                {resendVerification.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Resending...
+                  </>
+                ) : (
+                  "Resend Verification Email"
+                )}
+              </Button>
+            </div>
 
             <p className="text-sm text-muted-foreground text-center mt-6">
               Already have an account?{" "}
