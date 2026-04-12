@@ -14,6 +14,8 @@ import SignUp from "./pages/SignUp";
 import SupportPage from "./pages/Support";
 import SupportTicketPage from "./pages/SupportTicket";
 import AdminSupportPage from "./pages/AdminSupport";
+import TermsPage from "./pages/Terms";
+import PrivacyPage from "./pages/Privacy";
 
 // Homeowner
 import HomeownerDashboard from "./pages/homeowner/Dashboard";
@@ -40,6 +42,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/sign-up" component={SignUp} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
       <Route path="/role-select" component={RoleSelect} />
       <Route path="/onboarding" component={HandymanOnboarding} />
 

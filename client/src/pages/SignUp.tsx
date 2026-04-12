@@ -1,158 +1,302 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { trpc } from "@/lib/trpc";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
+import { toast } from "sonner";
 
 type UserType = "homeowner" | "handyman";
 
 export default function SignUp() {
+  const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
-  const utils = trpc.useUtils();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [userType, setUserType] = useState<UserType>("homeowner");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [confirmAge, setConfirmAge] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [loading, isAuthenticated, navigate]);
 
   const signUp = trpc.auth.signUp.useMutation({
-    onSuccess: async (data) => {
-      await utils.auth.me.invalidate();
+    onSuccess: ({ user }) => {
+      toast.success("Account created successfully.");
 
-      if (data.user.userType === "homeowner") {
-        navigate("/dashboard");
+      if (user.userType === "handyman") {
+        navigate("/onboarding");
         return;
       }
 
-      navigate("/onboarding");
+      navigate("/dashboard");
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (err) => {
+      toast.error(err.message);
     },
   });
 
-  const onSubmit = (e: React.FormEvent) => {
+  const isFormValid =
+    name.trim().length >= 2 &&
+    email.trim().length > 0 &&
+    password.length >= 6 &&
+    confirmPassword.length >= 6 &&
+    password === confirmPassword &&
+    agreeTerms &&
+    agreePrivacy &&
+    confirmAge;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    if (!agreeTerms || !agreePrivacy || !confirmAge) {
+      toast.error("Please accept the required agreements before signing up.");
+      return;
+    }
+
     signUp.mutate({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim(),
       password,
       userType,
     });
+
+    if (marketingOptIn) {
+      console.log("[SignUp] User opted in to marketing emails:", email);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Create your account</h1>
-          <p className="mt-2 text-slate-600">Join SaskHandy as a homeowner or handyman</p>
-        </div>
-
-        <form onSubmit={onSubmit} className="space-y-5">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Full name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600"
-              placeholder="Your name"
-            />
+    <AppLayout title="Create Account">
+      <div className="max-w-md mx-auto">
+        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-8">
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl font-serif text-foreground mb-2">Join SaskHandy</h1>
+            <p className="text-sm text-muted-foreground">
+              Create your account to post jobs or bid as a handyman.
+            </p>
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600"
-              placeholder="At least 8 characters"
-            />
-          </div>
-
-          <div>
-            <label className="mb-3 block text-sm font-medium text-slate-700">I am joining as</label>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setUserType("homeowner")}
-                className={`rounded-2xl border p-5 text-left transition ${
-                  userType === "homeowner"
-                    ? "border-emerald-600 bg-emerald-50"
-                    : "border-slate-300 bg-white"
-                }`}
-              >
-                <div className="text-lg font-semibold text-slate-900">Homeowner</div>
-                <div className="mt-1 text-sm text-slate-600">
-                  Post jobs and hire local help
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setUserType("handyman")}
-                className={`rounded-2xl border p-5 text-left transition ${
-                  userType === "handyman"
-                    ? "border-emerald-600 bg-emerald-50"
-                    : "border-slate-300 bg-white"
-                }`}
-              >
-                <div className="text-lg font-semibold text-slate-900">Handyman</div>
-                <div className="mt-1 text-sm text-slate-600">
-                  Find jobs and grow your business
-                </div>
-              </button>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-sm font-medium text-foreground">
+                Full Name
+              </label>
+              <Input
+                id="name"
+                placeholder="Your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                minLength={2}
+              />
             </div>
-          </div>
 
-          <Button
-            type="submit"
-            className="w-full rounded-full bg-emerald-700 hover:bg-emerald-800"
-            disabled={signUp.isPending}
-          >
-            {signUp.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account
-              </>
-            ) : (
-              "Create account"
-            )}
-          </Button>
-        </form>
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-        <p className="mt-6 text-center text-sm text-slate-600">
-          Already have an account?{" "}
-          <Link href="/sign-in" className="font-medium text-emerald-700 hover:text-emerald-800">
-            Sign in
-          </Link>
-        </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">I am signing up as</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setUserType("homeowner")}
+                  className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                    userType === "homeowner"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-foreground hover:border-primary/30"
+                  }`}
+                >
+                  Homeowner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserType("handyman")}
+                  className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                    userType === "handyman"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-foreground hover:border-primary/30"
+                  }`}
+                >
+                  Handyman
+                </button>
+              </div>
+            </div>
 
-        <p className="mt-4 text-center text-sm">
-          <Link href="/" className="text-slate-500 hover:text-slate-800">
-            Back to home
-          </Link>
-        </p>
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                />
+                <span className="text-muted-foreground">
+                  I agree to the{" "}
+                  <Link href="/terms">
+                    <span className="text-primary hover:underline cursor-pointer">
+                      Terms and Conditions
+                    </span>
+                  </Link>
+                  .
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={agreePrivacy}
+                  onChange={(e) => setAgreePrivacy(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                />
+                <span className="text-muted-foreground">
+                  I have read and agree to the{" "}
+                  <Link href="/privacy">
+                    <span className="text-primary hover:underline cursor-pointer">
+                      Privacy Policy
+                    </span>
+                  </Link>
+                  .
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={confirmAge}
+                  onChange={(e) => setConfirmAge(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                />
+                <span className="text-muted-foreground">
+                  I confirm that I am at least 18 years old and legally able to enter into this agreement.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={marketingOptIn}
+                  onChange={(e) => setMarketingOptIn(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                />
+                <span className="text-muted-foreground">
+                  I would like to receive occasional product updates and service emails.
+                </span>
+              </label>
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs text-amber-800 leading-relaxed">
+                SaskHandy is a platform that connects homeowners and independent handymen. Handymen
+                are responsible for ensuring they are properly licensed, insured, and qualified for
+                any work they accept.
+              </p>
+            </div>
+
+            <Button type="submit" className="w-full" size="lg" disabled={signUp.isPending || !isFormValid}>
+              {signUp.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                "Create Account"
+              )}
+            </Button>
+          </form>
+
+          <p className="text-sm text-muted-foreground text-center mt-6">
+            Already have an account?{" "}
+            <Link href="/sign-in">
+              <span className="text-primary hover:underline cursor-pointer">Sign in</span>
+            </Link>
+          </p>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
