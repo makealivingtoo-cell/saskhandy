@@ -10,6 +10,9 @@ import { toast } from "sonner";
 
 type UserType = "homeowner" | "handyman";
 
+const TERMS_VERSION = "2026-04-11";
+const PRIVACY_VERSION = "2026-04-11";
+
 export default function SignUp() {
   const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
@@ -78,11 +81,13 @@ export default function SignUp() {
       email: email.trim(),
       password,
       userType,
+      agreeTerms: true,
+      agreePrivacy: true,
+      confirmAge: true,
+      marketingOptIn,
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
     });
-
-    if (marketingOptIn) {
-      console.log("[SignUp] User opted in to marketing emails:", email);
-    }
   };
 
   return (
@@ -274,6 +279,9 @@ export default function SignUp() {
                 SaskHandy is a platform that connects homeowners and independent handymen. Handymen
                 are responsible for ensuring they are properly licensed, insured, and qualified for
                 any work they accept.
+              </p>
+              <p className="text-[11px] text-amber-700 mt-2">
+                Terms version: {TERMS_VERSION} • Privacy version: {PRIVACY_VERSION}
               </p>
             </div>
 

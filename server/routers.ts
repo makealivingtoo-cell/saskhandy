@@ -73,6 +73,9 @@ const JOB_CATEGORIES = [
   "Roofing",
 ] as const;
 
+const TERMS_VERSION = "2026-04-11";
+const PRIVACY_VERSION = "2026-04-11";
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -105,6 +108,12 @@ const authRouter = router({
         email: z.string().email(),
         password: z.string().min(6).max(100),
         userType: z.enum(["homeowner", "handyman"]),
+        agreeTerms: z.literal(true),
+        agreePrivacy: z.literal(true),
+        confirmAge: z.literal(true),
+        marketingOptIn: z.boolean().default(false),
+        termsVersion: z.string().min(1),
+        privacyVersion: z.string().min(1),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -118,11 +127,20 @@ const authRouter = router({
         });
       }
 
+      const now = new Date();
+
       const user = await createLocalUser({
         name: input.name,
         email,
         passwordHash: hashPassword(input.password),
         userType: input.userType,
+        termsVersionAccepted: input.termsVersion || TERMS_VERSION,
+        privacyVersionAccepted: input.privacyVersion || PRIVACY_VERSION,
+        termsAcceptedAt: now,
+        privacyAcceptedAt: now,
+        ageConfirmedAt: now,
+        marketingOptIn: input.marketingOptIn,
+        marketingOptInAt: input.marketingOptIn ? now : null,
       });
 
       const sessionToken = await sdk.createSessionToken(user.openId, {
@@ -1027,8 +1045,8 @@ const adminRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
 
-    const users = await getAllUsers();
-    const disputes = await getAllDisputes();
+    const usersList = await getAllUsers();
+    const disputesList = await getAllDisputes();
 
     const flaggedMap = new Map<
       number,
@@ -1042,7 +1060,7 @@ const adminRouter = router({
       }
     >();
 
-    for (const dispute of disputes) {
+    for (const dispute of disputesList) {
       const job = await getJobById(dispute.jobId);
       if (!job) continue;
 
@@ -1051,7 +1069,7 @@ const adminRouter = router({
       );
 
       for (const userId of involvedUserIds) {
-        const user = users.find((u) => u.id === userId);
+        const user = usersList.find((u) => u.id === userId);
         if (!user) continue;
 
         const existing =

@@ -1,440 +1,469 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import "dotenv/config";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
-  Bid,
-  Dispute,
-  HandymanProfile,
-  InsertBid,
-  InsertDispute,
-  InsertHandymanProfile,
-  InsertJob,
-  InsertPayment,
-  InsertReview,
-  InsertUser,
-  Job,
-  Payment,
-  Review,
-  User,
   bids,
   disputes,
   handymanProfiles,
   jobs,
   payments,
   reviews,
+  supportTicketMessages,
+  supportTickets,
   users,
+  type InsertBid,
+  type InsertDispute,
+  type InsertHandymanProfile,
+  type InsertJob,
+  type InsertPayment,
+  type InsertReview,
+  type InsertUser,
 } from "../drizzle/schema";
-import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let dbInstance: Awaited<ReturnType<typeof createDb>> | null = null;
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+async function createDb() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is not configured");
   }
-  return _db;
+
+  const connection = await mysql.createConnection(databaseUrl);
+  return drizzle(connection);
 }
 
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
+export async function getDb() {
+  if (!dbInstance) {
+    dbInstance = await createDb();
+  }
+  return dbInstance;
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
-
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) throw new Error("User openId is required for upsert");
+export async function getUserById(id: number) {
   const db = await getDb();
-  if (!db) return;
-
-  const values: InsertUser = { openId: user.openId };
-  const updateSet: Record<string, unknown> = {};
-
-  const textFields = ["name", "email", "passwordHash", "loginMethod"] as const;
-  for (const field of textFields) {
-    const value = user[field];
-    if (value === undefined) continue;
-    const normalized = value ?? null;
-    values[field] = normalized;
-    updateSet[field] = normalized;
-  }
-
-  if (user.lastSignedIn !== undefined) {
-    values.lastSignedIn = user.lastSignedIn;
-    updateSet.lastSignedIn = user.lastSignedIn;
-  }
-
-  if (user.role !== undefined) {
-    values.role = user.role;
-    updateSet.role = user.role;
-  } else if (user.openId === ENV.ownerOpenId) {
-    values.role = "admin";
-    updateSet.role = "admin";
-  }
-
-  if (user.userType !== undefined) {
-    values.userType = user.userType;
-    updateSet.userType = user.userType;
-  }
-
-  if (!values.lastSignedIn) values.lastSignedIn = new Date();
-  if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
-}
-
-export async function createLocalUser(input: {
-  name: string;
-  email: string;
-  passwordHash: string;
-  userType: "homeowner" | "handyman";
-}): Promise<User> {
-  const db = await getDb();
-  if (!db) throw new Error("DB not available");
-
-  const email = normalizeEmail(input.email);
-  const openId = `local:${email}`;
-
-  await db.insert(users).values({
-    openId,
-    name: input.name,
-    email,
-    passwordHash: input.passwordHash,
-    loginMethod: "email",
-    userType: input.userType,
-    lastSignedIn: new Date(),
-  });
-
-  const created = await getUserByOpenId(openId);
-  if (!created) throw new Error("Failed to create user");
-  return created;
-}
-
-export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result[0];
+  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, normalizeEmail(email)))
-    .limit(1);
-  return result[0];
+  const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return rows[0] ?? null;
 }
 
-export async function getUserById(id: number) {
+export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return result[0];
-}
-
-export async function updateUserType(userId: number, userType: "homeowner" | "handyman") {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(users).set({ userType }).where(eq(users.id, userId));
+  const rows = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function getAllUsers() {
   const db = await getDb();
-  if (!db) return [];
   return db.select().from(users).orderBy(desc(users.createdAt));
 }
 
+export async function upsertUser(data: Partial<InsertUser> & Pick<InsertUser, "openId">) {
+  const db = await getDb();
+  const existing = await getUserByOpenId(data.openId);
+
+  if (existing) {
+    await db
+      .update(users)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+        lastSignedIn: new Date(),
+      })
+      .where(eq(users.openId, data.openId));
+
+    return (await getUserByOpenId(data.openId))!;
+  }
+
+  await db.insert(users).values({
+    ...data,
+    lastSignedIn: new Date(),
+  });
+
+  return (await getUserByOpenId(data.openId))!;
+}
+
+export async function createLocalUser(data: {
+  name: string;
+  email: string;
+  passwordHash: string;
+  userType: "homeowner" | "handyman";
+  termsVersionAccepted: string;
+  privacyVersionAccepted: string;
+  termsAcceptedAt: Date;
+  privacyAcceptedAt: Date;
+  ageConfirmedAt: Date;
+  marketingOptIn: boolean;
+  marketingOptInAt?: Date | null;
+}) {
+  const db = await getDb();
+  const openId = `local_${crypto.randomUUID()}`;
+
+  await db.insert(users).values({
+    openId,
+    name: data.name,
+    email: data.email,
+    passwordHash: data.passwordHash,
+    loginMethod: "local",
+    role: "user",
+    userType: data.userType,
+    termsVersionAccepted: data.termsVersionAccepted,
+    privacyVersionAccepted: data.privacyVersionAccepted,
+    termsAcceptedAt: data.termsAcceptedAt,
+    privacyAcceptedAt: data.privacyAcceptedAt,
+    ageConfirmedAt: data.ageConfirmedAt,
+    marketingOptIn: data.marketingOptIn,
+    marketingOptInAt: data.marketingOptInAt ?? null,
+    lastSignedIn: new Date(),
+  });
+
+  return (await getUserByOpenId(openId))!;
+}
+
+export async function updateUserType(userId: number, userType: "homeowner" | "handyman") {
+  const db = await getDb();
+  await db.update(users).set({ userType }).where(eq(users.id, userId));
+}
+
 // ─── Handyman Profiles ────────────────────────────────────────────────────────
-
-export async function getHandymanProfile(userId: number): Promise<HandymanProfile | undefined> {
+export async function getHandymanProfile(userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(handymanProfiles).where(eq(handymanProfiles.userId, userId)).limit(1);
-  return result[0];
-}
+  const rows = await db
+    .select()
+    .from(handymanProfiles)
+    .where(eq(handymanProfiles.userId, userId))
+    .limit(1);
 
-export async function createHandymanProfile(data: InsertHandymanProfile): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db.insert(handymanProfiles).values(data);
-}
-
-export async function updateHandymanProfile(
-  userId: number,
-  data: Partial<InsertHandymanProfile>
-): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(handymanProfiles).set(data).where(eq(handymanProfiles.userId, userId));
+  return rows[0] ?? null;
 }
 
 export async function getAllHandymanProfiles() {
   const db = await getDb();
-  if (!db) return [];
-  return db.select().from(handymanProfiles).orderBy(desc(handymanProfiles.rating));
+  return db.select().from(handymanProfiles).orderBy(desc(handymanProfiles.createdAt));
+}
+
+export async function createHandymanProfile(data: InsertHandymanProfile) {
+  const db = await getDb();
+  await db.insert(handymanProfiles).values(data);
+  return getHandymanProfile(data.userId);
+}
+
+export async function updateHandymanProfile(userId: number, data: Partial<InsertHandymanProfile>) {
+  const db = await getDb();
+  await db
+    .update(handymanProfiles)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(handymanProfiles.userId, userId));
+
+  return getHandymanProfile(userId);
 }
 
 export async function getHandymanProfilesForAdmin() {
   const db = await getDb();
-  if (!db) return [];
 
   const rows = await db
-    .select()
-    .from(handymanProfiles)
-    .orderBy(desc(handymanProfiles.createdAt));
-
-  const enriched = await Promise.all(
-    rows.map(async (profile) => {
-      const user = await getUserById(profile.userId);
-      return {
-        ...profile,
-        userName: user?.name ?? null,
-        userEmail: user?.email ?? null,
-      };
+    .select({
+      id: handymanProfiles.id,
+      userId: handymanProfiles.userId,
+      bio: handymanProfiles.bio,
+      categories: handymanProfiles.categories,
+      hourlyRate: handymanProfiles.hourlyRate,
+      rating: handymanProfiles.rating,
+      totalJobs: handymanProfiles.totalJobs,
+      totalEarnings: handymanProfiles.totalEarnings,
+      verified: handymanProfiles.verified,
+      backgroundCheckPassed: handymanProfiles.backgroundCheckPassed,
+      insuranceVerified: handymanProfiles.insuranceVerified,
+      insuranceCertUrl: handymanProfiles.insuranceCertUrl,
+      createdAt: handymanProfiles.createdAt,
+      updatedAt: handymanProfiles.updatedAt,
+      userName: users.name,
+      userEmail: users.email,
     })
-  );
+    .from(handymanProfiles)
+    .leftJoin(users, eq(handymanProfiles.userId, users.id))
+    .orderBy(desc(handymanProfiles.updatedAt));
 
-  return enriched;
+  return rows;
 }
 
-export async function setHandymanInsuranceVerification(
-  userId: number,
-  insuranceVerified: boolean
-): Promise<void> {
+export async function setHandymanInsuranceVerification(userId: number, insuranceVerified: boolean) {
   const db = await getDb();
-  if (!db) return;
-
   await db
     .update(handymanProfiles)
     .set({
       insuranceVerified,
-      verified: insuranceVerified,
+      updatedAt: new Date(),
+    })
+    .where(eq(handymanProfiles.userId, userId));
+}
+
+export async function recalculateHandymanRating(userId: number) {
+  const db = await getDb();
+
+  const rows = await db
+    .select({
+      avgRating: sql<string>`ROUND(AVG(${reviews.rating}), 2)`,
+    })
+    .from(reviews)
+    .where(eq(reviews.revieweeId, userId));
+
+  const avgRating = rows[0]?.avgRating ?? "0.00";
+
+  await db
+    .update(handymanProfiles)
+    .set({
+      rating: avgRating,
+      updatedAt: new Date(),
     })
     .where(eq(handymanProfiles.userId, userId));
 }
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
-
-export async function createJob(data: InsertJob): Promise<number> {
+export async function createJob(data: InsertJob) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
   const result = await db.insert(jobs).values(data);
-  return (result[0] as any).insertId;
+  return Number((result as any).insertId);
 }
 
-export async function getJobById(id: number): Promise<Job | undefined> {
+export async function getJobById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
-  return result[0];
+  const rows = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 
-export async function getJobsByHomeowner(homeownerId: number): Promise<Job[]> {
+export async function getJobsByHomeowner(homeownerId: number) {
   const db = await getDb();
-  if (!db) return [];
-  return db.select().from(jobs).where(eq(jobs.homeownerId, homeownerId)).orderBy(desc(jobs.createdAt));
+  return db
+    .select()
+    .from(jobs)
+    .where(eq(jobs.homeownerId, homeownerId))
+    .orderBy(desc(jobs.updatedAt));
 }
 
-export async function getOpenJobs(limit = 20, offset = 0, category?: string): Promise<Job[]> {
+export async function getOpenJobs(limit = 20, offset = 0, category?: string) {
   const db = await getDb();
-  if (!db) return [];
-  const conditions = category
-    ? and(eq(jobs.status, "open"), eq(jobs.category, category))
-    : eq(jobs.status, "open");
-  return db.select().from(jobs).where(conditions).orderBy(desc(jobs.createdAt)).limit(limit).offset(offset);
+
+  if (category) {
+    return db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.status, "open"), eq(jobs.category, category)))
+      .orderBy(desc(jobs.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  return db
+    .select()
+    .from(jobs)
+    .where(eq(jobs.status, "open"))
+    .orderBy(desc(jobs.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
-export async function updateJob(
-  jobId: number,
-  data: Partial<Pick<InsertJob, "title" | "description" | "category" | "location" | "budgetMin" | "budgetMax">>
-): Promise<void> {
+export async function getJobsForHandyman(handymanId: number) {
   const db = await getDb();
-  if (!db) return;
-  await db.update(jobs).set(data).where(eq(jobs.id, jobId));
-}
-
-export async function updateJobStatus(
-  jobId: number,
-  status: Job["status"],
-  extra?: { selectedHandymanId?: number; selectedBidId?: number }
-): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(jobs).set({ status, ...extra }).where(eq(jobs.id, jobId));
-}
-
-export async function deleteJobById(jobId: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db.delete(jobs).where(eq(jobs.id, jobId));
-}
-
-export async function getJobsForHandyman(handymanId: number): Promise<Job[]> {
-  const db = await getDb();
-  if (!db) return [];
   return db
     .select()
     .from(jobs)
     .where(eq(jobs.selectedHandymanId, handymanId))
-    .orderBy(desc(jobs.createdAt));
+    .orderBy(desc(jobs.updatedAt));
+}
+
+export async function updateJob(id: number, data: Partial<InsertJob>) {
+  const db = await getDb();
+  await db
+    .update(jobs)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(jobs.id, id));
+}
+
+export async function updateJobStatus(
+  jobId: number,
+  status: "open" | "awaiting_payment" | "in_progress" | "completed" | "disputed" | "cancelled",
+  extra?: Partial<InsertJob>
+) {
+  const db = await getDb();
+  await db
+    .update(jobs)
+    .set({
+      status,
+      ...(extra ?? {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(jobs.id, jobId));
+}
+
+export async function deleteJobById(jobId: number) {
+  const db = await getDb();
+  await db.delete(jobs).where(eq(jobs.id, jobId));
 }
 
 // ─── Bids ─────────────────────────────────────────────────────────────────────
-
-export async function createBid(data: InsertBid): Promise<number> {
+export async function createBid(data: InsertBid) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
   const result = await db.insert(bids).values(data);
-  return (result[0] as any).insertId;
+  return Number((result as any).insertId);
 }
 
-export async function getBidsForJob(jobId: number): Promise<Bid[]> {
+export async function getBidById(id: number) {
   const db = await getDb();
-  if (!db) return [];
-  return db.select().from(bids).where(eq(bids.jobId, jobId)).orderBy(bids.createdAt);
+  const rows = await db.select().from(bids).where(eq(bids.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 
-export async function getBidsForHandyman(handymanId: number): Promise<Bid[]> {
+export async function getBidsForJob(jobId: number) {
   const db = await getDb();
-  if (!db) return [];
-  return db.select().from(bids).where(eq(bids.handymanId, handymanId)).orderBy(desc(bids.createdAt));
+  return db.select().from(bids).where(eq(bids.jobId, jobId)).orderBy(desc(bids.createdAt));
 }
 
-export async function getBidById(id: number): Promise<Bid | undefined> {
+export async function getBidsForHandyman(handymanId: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(bids).where(eq(bids.id, id)).limit(1);
-  return result[0];
+  return db
+    .select()
+    .from(bids)
+    .where(eq(bids.handymanId, handymanId))
+    .orderBy(desc(bids.createdAt));
 }
 
-export async function updateBidStatus(bidId: number, status: Bid["status"]): Promise<void> {
+export async function updateBidStatus(
+  bidId: number,
+  status: "pending" | "accepted" | "rejected" | "cancelled"
+) {
   const db = await getDb();
-  if (!db) return;
-  await db.update(bids).set({ status }).where(eq(bids.id, bidId));
-}
-
-export async function rejectOtherBids(jobId: number, acceptedBidId: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
   await db
     .update(bids)
-    .set({ status: "rejected" })
-    .where(and(eq(bids.jobId, jobId), ne(bids.id, acceptedBidId)));
+    .set({
+      status,
+      updatedAt: new Date(),
+    })
+    .where(eq(bids.id, bidId));
+}
+
+export async function rejectOtherBids(jobId: number, acceptedBidId: number) {
+  const db = await getDb();
+  const otherBids = await db.select().from(bids).where(eq(bids.jobId, jobId));
+  const rejectIds = otherBids.filter((b) => b.id !== acceptedBidId).map((b) => b.id);
+
+  if (rejectIds.length > 0) {
+    await db
+      .update(bids)
+      .set({
+        status: "rejected",
+        updatedAt: new Date(),
+      })
+      .where(inArray(bids.id, rejectIds));
+  }
 }
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
-
-export async function createPayment(data: InsertPayment): Promise<number> {
+export async function createPayment(data: InsertPayment) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
   const result = await db.insert(payments).values(data);
-  return (result[0] as any).insertId;
+  return Number((result as any).insertId);
 }
 
-export async function getPaymentByJob(jobId: number): Promise<Payment | undefined> {
+export async function getPaymentByJob(jobId: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(payments).where(eq(payments.jobId, jobId)).limit(1);
-  return result[0];
+  const rows = await db.select().from(payments).where(eq(payments.jobId, jobId)).limit(1);
+  return rows[0] ?? null;
 }
 
-export async function updatePayment(
-  paymentId: number,
-  data: Partial<InsertPayment>
-): Promise<void> {
+export async function getPaymentsByHandyman(handymanId: number) {
   const db = await getDb();
-  if (!db) return;
-  await db.update(payments).set(data).where(eq(payments.id, paymentId));
-}
-
-export async function getPaymentsByHandyman(handymanId: number): Promise<Payment[]> {
-  const db = await getDb();
-  if (!db) return [];
   return db
     .select()
     .from(payments)
-    .where(and(eq(payments.handymanId, handymanId), eq(payments.status, "completed")))
+    .where(eq(payments.handymanId, handymanId))
     .orderBy(desc(payments.createdAt));
 }
 
+export async function updatePayment(paymentId: number, data: Partial<InsertPayment>) {
+  const db = await getDb();
+  await db
+    .update(payments)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(payments.id, paymentId));
+}
+
 // ─── Reviews ──────────────────────────────────────────────────────────────────
-
-export async function createReview(data: InsertReview): Promise<void> {
+export async function createReview(data: InsertReview) {
   const db = await getDb();
-  if (!db) return;
-  await db.insert(reviews).values(data);
+  const result = await db.insert(reviews).values(data);
+  return Number((result as any).insertId);
 }
 
-export async function getReviewsForUser(revieweeId: number): Promise<Review[]> {
+export async function getReviewsForUser(userId: number) {
   const db = await getDb();
-  if (!db) return [];
-  return db.select().from(reviews).where(eq(reviews.revieweeId, revieweeId)).orderBy(desc(reviews.createdAt));
+  return db
+    .select()
+    .from(reviews)
+    .where(eq(reviews.revieweeId, userId))
+    .orderBy(desc(reviews.createdAt));
 }
 
-export async function getReviewForJob(jobId: number, reviewerId: number): Promise<Review | undefined> {
+export async function getReviewForJob(jobId: number, reviewerId: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db
+  const rows = await db
     .select()
     .from(reviews)
     .where(and(eq(reviews.jobId, jobId), eq(reviews.reviewerId, reviewerId)))
     .limit(1);
-  return result[0];
-}
 
-export async function recalculateHandymanRating(handymanId: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  const userResult = await db.select({ id: users.id }).from(users).where(eq(users.id, handymanId)).limit(1);
-  if (!userResult[0]) return;
-
-  const reviewList = await db.select().from(reviews).where(eq(reviews.revieweeId, handymanId));
-  if (reviewList.length === 0) return;
-
-  const avg = reviewList.reduce((sum, r) => sum + r.rating, 0) / reviewList.length;
-  await db
-    .update(handymanProfiles)
-    .set({ rating: avg.toFixed(2) })
-    .where(eq(handymanProfiles.userId, handymanId));
+  return rows[0] ?? null;
 }
 
 // ─── Disputes ─────────────────────────────────────────────────────────────────
-
-export async function createDispute(data: InsertDispute): Promise<number> {
+export async function createDispute(data: InsertDispute) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
   const result = await db.insert(disputes).values(data);
-  return (result[0] as any).insertId;
+  return Number((result as any).insertId);
 }
 
-export async function getDisputeByJob(jobId: number): Promise<Dispute | undefined> {
+export async function getDisputeByJob(jobId: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(disputes).where(eq(disputes.jobId, jobId)).limit(1);
-  return result[0];
+  const rows = await db.select().from(disputes).where(eq(disputes.jobId, jobId)).limit(1);
+  return rows[0] ?? null;
 }
 
-export async function getAllDisputes(): Promise<Dispute[]> {
+export async function getAllDisputes() {
   const db = await getDb();
-  if (!db) return [];
-  return db.select().from(disputes).orderBy(desc(disputes.createdAt));
+  return db.select().from(disputes).orderBy(desc(disputes.updatedAt));
 }
 
 export async function resolveDispute(
   disputeId: number,
-  resolution: "resolved_release" | "resolved_refund",
+  status: "resolved_release" | "resolved_refund",
   adminNotes: string
-): Promise<void> {
+) {
   const db = await getDb();
-  if (!db) return;
   await db
     .update(disputes)
-    .set({ status: resolution, adminNotes, resolvedAt: new Date() })
+    .set({
+      status,
+      adminNotes,
+      resolvedAt: new Date(),
+      updatedAt: new Date(),
+    })
     .where(eq(disputes.id, disputeId));
 }
+
+// ─── Re-export support tables for support helper modules if needed ───────────
+export { supportTickets, supportTicketMessages };

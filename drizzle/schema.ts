@@ -21,6 +21,15 @@ export const users = mysqlTable("users", {
   userType: mysqlEnum("userType", ["homeowner", "handyman", "unset"])
     .default("unset")
     .notNull(),
+
+  termsVersionAccepted: varchar("termsVersionAccepted", { length: 32 }),
+  termsAcceptedAt: timestamp("termsAcceptedAt"),
+  privacyVersionAccepted: varchar("privacyVersionAccepted", { length: 32 }),
+  privacyAcceptedAt: timestamp("privacyAcceptedAt"),
+  ageConfirmedAt: timestamp("ageConfirmedAt"),
+  marketingOptIn: boolean("marketingOptIn").default(false).notNull(),
+  marketingOptInAt: timestamp("marketingOptInAt"),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -98,7 +107,7 @@ export const bids = mysqlTable("bids", {
 export type Bid = typeof bids.$inferSelect;
 export type InsertBid = typeof bids.$inferInsert;
 
-// ─── Payments (Escrow) ────────────────────────────────────────────────────────
+// ─── Payments ─────────────────────────────────────────────────────────────────
 export const payments = mysqlTable("payments", {
   id: int("id").autoincrement().primaryKey(),
   jobId: int("jobId").notNull(),
@@ -151,7 +160,7 @@ export const disputes = mysqlTable("disputes", {
 export type Dispute = typeof disputes.$inferSelect;
 export type InsertDispute = typeof disputes.$inferInsert;
 
-// ─── Messages (Job Chat) ──────────────────────────────────────────────────────
+// ─── Messages ─────────────────────────────────────────────────────────────────
 export const messages = mysqlTable("messages", {
   id: int("id").autoincrement().primaryKey(),
   jobId: int("jobId").notNull(),
