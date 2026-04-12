@@ -125,11 +125,25 @@ async function createAndSendVerification(user: {
     expiresAt,
   });
 
-  await sendVerificationEmail({
-    to: user.email,
-    name: user.name,
-    token,
-  });
+  try {
+    await sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      token,
+    });
+
+    return {
+      emailSent: true,
+      token,
+    };
+  } catch (error) {
+    console.error("Verification email failed:", error);
+
+    return {
+      emailSent: false,
+      token,
+    };
+  }
 }
 
 const authRouter = router({
@@ -184,12 +198,13 @@ const authRouter = router({
         });
       }
 
-      await createAndSendVerification(user);
+      const verificationResult = await createAndSendVerification(user);
 
       return {
         success: true,
         user,
         verificationRequired: true,
+        emailSent: verificationResult.emailSent,
       };
     }),
 
@@ -219,15 +234,19 @@ const authRouter = router({
       const user = await getUserByEmail(email);
 
       if (!user) {
-        return { success: true };
+        return { success: true, emailSent: false };
       }
 
       if (user.emailVerified) {
-        return { success: true };
+        return { success: true, emailSent: false };
       }
 
-      await createAndSendVerification(user);
-      return { success: true };
+      const verificationResult = await createAndSendVerification(user);
+
+      return {
+        success: true,
+        emailSent: verificationResult.emailSent,
+      };
     }),
 
   signIn: publicProcedure
