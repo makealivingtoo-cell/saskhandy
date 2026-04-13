@@ -89,7 +89,21 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
+            <Link
+              href="/about"
+              className="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 md:inline"
+            >
+              About
+            </Link>
+
+            <Link
+              href="/blog"
+              className="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 md:inline"
+            >
+              Blog
+            </Link>
+
             <Link
               href="/sign-in"
               className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
@@ -336,13 +350,30 @@ export default function HomePage() {
       </main>
 
       <footer className="border-t border-slate-200 bg-white">
-        <div className="container flex flex-col gap-4 py-8 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm font-semibold text-slate-900">SaskHandy</div>
-            <div className="text-sm text-slate-500">Local help for home jobs</div>
+        <div className="container py-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">SaskHandy</div>
+              <div className="text-sm text-slate-500">Local help for home jobs</div>
+            </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
+              <Link href="/about" className="hover:text-slate-900">
+                About Us
+              </Link>
+              <Link href="/blog" className="hover:text-slate-900">
+                Blog
+              </Link>
+              <Link href="/privacy" className="hover:text-slate-900">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-slate-900">
+                Terms & Conditions
+              </Link>
+            </div>
           </div>
 
-          <div className="text-sm text-slate-500">
+          <div className="mt-6 text-sm text-slate-500">
             © {new Date().getFullYear()} SaskHandy
           </div>
         </div>
