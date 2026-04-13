@@ -48,34 +48,46 @@ export default function SaskatchewanHandymanServicesPage() {
       <main>
         <section className="bg-[#f7faf8]">
           <div className="container py-16 md:py-20">
-            <div className="max-w-4xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
-                <MapPin className="h-4 w-4" />
-                Handyman services across Saskatchewan
+            <div className="grid items-center gap-10 lg:grid-cols-2">
+              <div className="max-w-4xl">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
+                  <MapPin className="h-4 w-4" />
+                  Handyman services across Saskatchewan
+                </div>
+
+                <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
+                  Saskatchewan Handyman Services
+                </h1>
+
+                <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
+                  SaskHandy helps homeowners across Saskatchewan connect with local handymen for
+                  repairs, installations, yard work, furniture assembly, painting, and other everyday
+                  home jobs. Whether you are in Saskatoon, Regina, or a growing community nearby, you
+                  can post a job, compare bids, and manage everything in one place.
+                </p>
+
+                <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                  <Button asChild size="lg" className="rounded-full bg-emerald-700 hover:bg-emerald-800">
+                    <Link href="/sign-up">
+                      Post a Job
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+
+                  <Button asChild size="lg" variant="outline" className="rounded-full">
+                    <Link href="/saskatoon-handyman-services">View Saskatoon Page</Link>
+                  </Button>
+                </div>
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                Saskatchewan Handyman Services
-              </h1>
-
-              <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                SaskHandy helps homeowners across Saskatchewan connect with local handymen for
-                repairs, installations, yard work, furniture assembly, painting, and other everyday
-                home jobs. Whether you are in Saskatoon, Regina, or a growing community nearby, you
-                can post a job, compare bids, and manage everything in one place.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                <Button asChild size="lg" className="rounded-full bg-emerald-700 hover:bg-emerald-800">
-                  <Link href="/sign-up">
-                    Post a Job
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-
-                <Button asChild size="lg" variant="outline" className="rounded-full">
-                  <Link href="/saskatoon-handyman-services">View Saskatoon Page</Link>
-                </Button>
+              <div>
+                <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
+                  <img
+                    src="/images/saskatchewan.jpg"
+                    alt="Saskatchewan landscape"
+                    className="block h-[420px] w-full object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>

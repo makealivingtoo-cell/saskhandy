@@ -37,34 +37,46 @@ export default function ReginaHandymanServicesPage() {
       <main>
         <section className="bg-[#f7faf8]">
           <div className="container py-16 md:py-20">
-            <div className="max-w-4xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
-                <MapPin className="h-4 w-4" />
-                Local handyman services in Regina
+            <div className="grid items-center gap-10 lg:grid-cols-2">
+              <div className="max-w-4xl">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
+                  <MapPin className="h-4 w-4" />
+                  Local handyman services in Regina
+                </div>
+
+                <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
+                  Handyman Services in Regina
+                </h1>
+
+                <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
+                  SaskHandy helps Regina homeowners connect with local handymen for everyday home
+                  repairs, installations, maintenance work, and other practical jobs around the house.
+                  If you are looking for a simpler way to hire local help in Regina, post a job and
+                  compare bids in one place.
+                </p>
+
+                <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                  <Button asChild size="lg" className="rounded-full bg-emerald-700 hover:bg-emerald-800">
+                    <Link href="/sign-up">
+                      Find a Regina Handyman
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+
+                  <Button asChild size="lg" variant="outline" className="rounded-full">
+                    <Link href="/saskatchewan-handyman-services">View Saskatchewan Page</Link>
+                  </Button>
+                </div>
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                Handyman Services in Regina
-              </h1>
-
-              <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                SaskHandy helps Regina homeowners connect with local handymen for everyday home
-                repairs, installations, maintenance work, and other practical jobs around the house.
-                If you are looking for a simpler way to hire local help in Regina, post a job and
-                compare bids in one place.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                <Button asChild size="lg" className="rounded-full bg-emerald-700 hover:bg-emerald-800">
-                  <Link href="/sign-up">
-                    Find a Regina Handyman
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-
-                <Button asChild size="lg" variant="outline" className="rounded-full">
-                  <Link href="/saskatchewan-handyman-services">View Saskatchewan Page</Link>
-                </Button>
+              <div>
+                <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
+                  <img
+                    src="/images/saskatchewan.jpg"
+                    alt="Saskatchewan landscape"
+                    className="block h-[420px] w-full object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>
