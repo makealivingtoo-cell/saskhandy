@@ -9,6 +9,9 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import AboutPage from "./pages/AboutPage";
 import BlogPage from "./pages/BlogPage";
+import SaskatchewanHandymanServicesPage from "./pages/SaskatchewanHandymanServices";
+import SaskatoonHandymanServicesPage from "./pages/SaskatoonHandymanServices";
+import ReginaHandymanServicesPage from "./pages/ReginaHandymanServices";
 import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
 import SignIn from "./pages/SignIn";
@@ -45,6 +48,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/about" component={AboutPage} />
       <Route path="/blog" component={BlogPage} />
+      <Route path="/saskatchewan-handyman-services" component={SaskatchewanHandymanServicesPage} />
+      <Route path="/saskatoon-handyman-services" component={SaskatoonHandymanServicesPage} />
+      <Route path="/regina-handyman-services" component={ReginaHandymanServicesPage} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/sign-up" component={SignUp} />
       <Route path="/verify-email" component={VerifyEmailPage} />
