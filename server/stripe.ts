@@ -1,89 +1,56 @@
-import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-import { protectedProcedure, router } from "./_core/trpc";
-import { createPaymentIntent, retrievePaymentIntent } from "./stripe";
-import { getBidById, getJobById, getPaymentByJob, updatePayment } from "./db";
+import Stripe from "stripe";
 
-export const stripeRouter = router({
-  createPaymentIntent: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const job = await getJobById(input.jobId);
-      if (!job) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
-      }
+const secretKey = process.env.STRIPE_SECRET_KEY;
 
-      if (job.homeownerId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not allowed" });
-      }
+if (!secretKey) {
+  throw new Error("STRIPE_SECRET_KEY is not configured");
+}
 
-      if (!job.selectedBidId || !job.selectedHandymanId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "A bid must be accepted before payment can be created",
-        });
-      }
-
-      const payment = await getPaymentByJob(input.jobId);
-      if (!payment) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Payment record not found",
-        });
-      }
-
-      const bid = await getBidById(job.selectedBidId);
-      if (!bid) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Accepted bid not found",
-        });
-      }
-
-      if (payment.stripePaymentIntentId) {
-        const existingIntent = await retrievePaymentIntent(payment.stripePaymentIntentId);
-
-        if (existingIntent.status === "succeeded") {
-          return {
-            clientSecret: null,
-            paymentIntentId: existingIntent.id,
-            alreadyPaid: true,
-          };
-        }
-
-        if (
-          existingIntent.client_secret &&
-          ["requires_payment_method", "requires_confirmation", "requires_action", "processing"].includes(
-            existingIntent.status
-          )
-        ) {
-          return {
-            clientSecret: existingIntent.client_secret,
-            paymentIntentId: existingIntent.id,
-            alreadyPaid: false,
-          };
-        }
-      }
-
-      const result = await createPaymentIntent({
-        amount: parseFloat(payment.amount),
-        jobId: input.jobId,
-        homeownerEmail: ctx.user.email ?? "",
-        homeownerName: ctx.user.name ?? "",
-        homeownerId: ctx.user.id,
-        handymanId: job.selectedHandymanId,
-        jobTitle: job.title,
-      });
-
-      await updatePayment(payment.id, {
-        stripePaymentIntentId: result.paymentIntentId,
-        status: "pending",
-      });
-
-      return {
-        clientSecret: result.clientSecret,
-        paymentIntentId: result.paymentIntentId,
-        alreadyPaid: false,
-      };
-    }),
+export const stripe = new Stripe(secretKey, {
+  apiVersion: "2025-03-31.basil",
 });
+
+export async function createPaymentIntent(params: {
+  amount: number;
+  jobId: number;
+  homeownerEmail: string;
+  homeownerName: string;
+  homeownerId: number;
+  handymanId: number;
+  jobTitle: string;
+}) {
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: Math.round(params.amount * 100),
+    currency: "cad",
+    automatic_payment_methods: {
+      enabled: true,
+    },
+    metadata: {
+      jobId: String(params.jobId),
+      homeownerEmail: params.homeownerEmail,
+      homeownerName: params.homeownerName,
+      homeownerId: String(params.homeownerId),
+      handymanId: String(params.handymanId),
+      jobTitle: params.jobTitle,
+    },
+  });
+
+  return {
+    clientSecret: paymentIntent.client_secret,
+    paymentIntentId: paymentIntent.id,
+  };
+}
+
+export async function retrievePaymentIntent(paymentIntentId: string) {
+  return await stripe.paymentIntents.retrieve(paymentIntentId);
+}
+
+export function constructWebhookEvent(body: string | Buffer, signature: string) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
+  }
+
+  return stripe.webhooks.constructEvent(body, signature, webhookSecret);
+}
