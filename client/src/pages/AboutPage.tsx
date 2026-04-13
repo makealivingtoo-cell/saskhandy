@@ -31,21 +31,33 @@ export default function AboutPage() {
       <main>
         <section className="bg-[#f7faf8]">
           <div className="container py-16 md:py-20">
-            <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
-                <MapPin className="h-4 w-4" />
-                Built for Saskatchewan homeowners and handymen
+            <div className="grid items-center gap-10 lg:grid-cols-2">
+              <div className="max-w-3xl">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
+                  <MapPin className="h-4 w-4" />
+                  Built for Saskatchewan homeowners and handymen
+                </div>
+
+                <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
+                  About SaskHandy
+                </h1>
+
+                <p className="mt-5 text-lg leading-8 text-slate-600">
+                  SaskHandy is a local marketplace that helps homeowners in Saskatchewan find trusted
+                  help for everyday home jobs. We make it easier to post jobs, compare bids, chat
+                  with local handymen, and pay securely in one place.
+                </p>
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                About SaskHandy
-              </h1>
-
-              <p className="mt-5 text-lg leading-8 text-slate-600">
-                SaskHandy is a local marketplace that helps homeowners in Saskatchewan find trusted
-                help for everyday home jobs. We make it easier to post jobs, compare bids, chat
-                with local handymen, and pay securely in one place.
-              </p>
+              <div>
+                <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
+                  <img
+                    src="/images/saskatchewan.jpg"
+                    alt="Saskatchewan landscape"
+                    className="h-[420px] w-full object-cover"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </section>
