@@ -12,6 +12,16 @@ import BlogPage from "./pages/BlogPage";
 import SaskatchewanHandymanServicesPage from "./pages/SaskatchewanHandymanServices";
 import SaskatoonHandymanServicesPage from "./pages/SaskatoonHandymanServices";
 import ReginaHandymanServicesPage from "./pages/ReginaHandymanServices";
+import FurnitureAssemblySaskatchewanPage from "./pages/FurnitureAssemblySaskatchewan";
+import TvMountingSaskatchewanPage from "./pages/TvMountingSaskatchewan";
+import PlumbingRepairsSaskatchewanPage from "./pages/PlumbingRepairsSaskatchewan";
+import ElectricalHelpSaskatchewanPage from "./pages/ElectricalHelpSaskatchewan";
+import YardWorkSaskatchewanPage from "./pages/YardWorkSaskatchewan";
+import DrywallPaintingSaskatchewanPage from "./pages/DrywallPaintingSaskatchewan";
+import MooseJawHandymanServicesPage from "./pages/MooseJawHandymanServices";
+import PrinceAlbertHandymanServicesPage from "./pages/PrinceAlbertHandymanServices";
+import WarmanHandymanServicesPage from "./pages/WarmanHandymanServices";
+import MartensvilleHandymanServicesPage from "./pages/MartensvilleHandymanServices";
 import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
 import SignIn from "./pages/SignIn";
@@ -48,9 +58,23 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/about" component={AboutPage} />
       <Route path="/blog" component={BlogPage} />
+
       <Route path="/saskatchewan-handyman-services" component={SaskatchewanHandymanServicesPage} />
       <Route path="/saskatoon-handyman-services" component={SaskatoonHandymanServicesPage} />
       <Route path="/regina-handyman-services" component={ReginaHandymanServicesPage} />
+
+      <Route path="/furniture-assembly-saskatchewan" component={FurnitureAssemblySaskatchewanPage} />
+      <Route path="/tv-mounting-saskatchewan" component={TvMountingSaskatchewanPage} />
+      <Route path="/plumbing-repairs-saskatchewan" component={PlumbingRepairsSaskatchewanPage} />
+      <Route path="/electrical-help-saskatchewan" component={ElectricalHelpSaskatchewanPage} />
+      <Route path="/yard-work-saskatchewan" component={YardWorkSaskatchewanPage} />
+      <Route path="/drywall-painting-saskatchewan" component={DrywallPaintingSaskatchewanPage} />
+
+      <Route path="/moose-jaw-handyman-services" component={MooseJawHandymanServicesPage} />
+      <Route path="/prince-albert-handyman-services" component={PrinceAlbertHandymanServicesPage} />
+      <Route path="/warman-handyman-services" component={WarmanHandymanServicesPage} />
+      <Route path="/martensville-handyman-services" component={MartensvilleHandymanServicesPage} />
+
       <Route path="/sign-in" component={SignIn} />
       <Route path="/sign-up" component={SignUp} />
       <Route path="/verify-email" component={VerifyEmailPage} />
