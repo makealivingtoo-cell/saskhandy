@@ -25,10 +25,10 @@ export default function PrinceAlbertHandymanServicesPage() {
         "Fence repair",
         "General home maintenance",
       ]}
-      whyTitle="Why Prince Albert pages matter for local SEO"
+      whyTitle="Why Prince Albert homeowners use SaskHandy"
       whyParagraphs={[
-        "Hyper-local pages help SaskHandy target homeowners searching by city instead of relying on a broad province-wide page alone.",
-        "Prince Albert homeowners looking for a handyman often need practical home repair and maintenance help that deserves its own local search page.",
+        "Prince Albert homeowners often need practical local help for repairs, maintenance work, furniture assembly, painting, and smaller home projects that still matter.",
+        "SaskHandy is designed to make that process simpler by helping homeowners compare local options and manage the job in one place.",
       ]}
       bottomTitle="Need a handyman in Prince Albert?"
       bottomParagraph="SaskHandy is building stronger city-level pages across Saskatchewan so homeowners in Prince Albert can find more relevant local handyman results."

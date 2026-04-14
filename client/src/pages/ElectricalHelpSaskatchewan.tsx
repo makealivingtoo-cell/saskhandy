@@ -25,10 +25,10 @@ export default function ElectricalHelpSaskatchewanPage() {
         "Basic lighting updates",
         "Small electrical fixes",
       ]}
-      whyTitle="Why homeowners search for electrical help"
+      whyTitle="Why homeowners book electrical help through SaskHandy"
       whyParagraphs={[
-        "Many homeowners need help with smaller electrical tasks that still require careful handling and a clean finish.",
-        "By building a focused electrical help page, SaskHandy can target specific homeowner searches tied to light fixtures, outlets, switches, and simple installations.",
+        "Many homeowners need help with smaller electrical jobs like light fixture installation, outlet replacement, switch updates, and ceiling fan installs.",
+        "SaskHandy gives homeowners a clearer way to find practical local help for these everyday electrical tasks without overcomplicating the process.",
       ]}
       bottomTitle="Need local electrical help in Saskatchewan?"
       bottomParagraph="SaskHandy is expanding coverage for small home installation and repair work, including electrical help in major Saskatchewan cities and nearby communities."

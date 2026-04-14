@@ -25,10 +25,10 @@ export default function DrywallPaintingSaskatchewanPage() {
         "Small room painting",
         "Finishing repairs",
       ]}
-      whyTitle="Why drywall and painting pages can rank well"
+      whyTitle="Why homeowners use SaskHandy for drywall repair and painting"
       whyParagraphs={[
-        "Drywall repair and painting are highly practical homeowner jobs that often sit on a growing to-do list until someone is ready to hire help.",
-        "By targeting drywall patch repair, interior painting, and wall touch-up searches, SaskHandy can capture homeowners looking for finishing help across Saskatchewan.",
+        "Drywall patching, wall touch-ups, and small painting jobs are common home tasks that homeowners often put off even though they make a big difference once finished.",
+        "SaskHandy helps homeowners find local help for practical finishing work across Saskatchewan, from drywall repair to interior painting and touch-up jobs.",
       ]}
       bottomTitle="Need drywall patching or painting help in Saskatchewan?"
       bottomParagraph="SaskHandy is building better local visibility for common home repair and finishing jobs, including drywall repair and painting services."

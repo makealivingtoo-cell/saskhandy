@@ -25,10 +25,10 @@ export default function YardWorkSaskatchewanPage() {
         "Property tidy-up",
         "Seasonal exterior help",
       ]}
-      whyTitle="Why yard work pages matter for local SEO"
+      whyTitle="Why homeowners use SaskHandy for yard work"
       whyParagraphs={[
-        "Yard work and outdoor maintenance often spike seasonally, which makes them a strong opportunity for homeowner search traffic.",
-        "A focused page targeting gutter cleaning, fence repair, and seasonal yard work helps SaskHandy capture local intent from homeowners who want practical outdoor help.",
+        "Yard work and outdoor maintenance are some of the most common seasonal jobs homeowners need help with in Saskatchewan. From spring cleanup to gutter cleaning and fence repair, these jobs are easier to manage with reliable local help.",
+        "SaskHandy gives homeowners a clearer way to post outdoor jobs, compare bids, and find practical help for seasonal maintenance without relying on scattered listings or last-minute referrals.",
       ]}
       bottomTitle="Looking for gutter cleaning or fence repair in Saskatchewan?"
       bottomParagraph="SaskHandy is building service pages around the real seasonal work homeowners search for, including yard maintenance, cleanup, and repair-focused outdoor jobs."

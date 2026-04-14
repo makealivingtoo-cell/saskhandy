@@ -27,8 +27,8 @@ export default function MooseJawHandymanServicesPage() {
       ]}
       whyTitle="Why Moose Jaw homeowners use SaskHandy"
       whyParagraphs={[
-        "SaskHandy gives homeowners a cleaner way to find local help for everyday home jobs instead of relying on scattered listings or informal referrals.",
-        "For practical repairs, maintenance tasks, and smaller installations, a location-focused page helps homeowners find more relevant local results.",
+        "SaskHandy gives Moose Jaw homeowners a cleaner way to find local help for everyday home repairs, furniture assembly, TV mounting, painting, and maintenance tasks.",
+        "Instead of relying on scattered listings or informal referrals, homeowners can post a job, compare bids, and move forward with more clarity.",
       ]}
       bottomTitle="Looking for local handyman services in Moose Jaw?"
       bottomParagraph="SaskHandy is building hyper-local visibility across Saskatchewan so homeowners searching in Moose Jaw can find practical home repair and maintenance help more easily."

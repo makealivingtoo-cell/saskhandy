@@ -15,7 +15,10 @@ type SeoLandingPageProps = {
   badge: string;
   intro: string;
   secondaryIntro?: string;
-  heroImage: "/images/hero-handyman.jpg" | "/images/homeowner-posting-job.jpg" | "/images/saskatchewan.jpg";
+  heroImage:
+    | "/images/hero-handyman.jpg"
+    | "/images/homeowner-posting-job.jpg"
+    | "/images/saskatchewan.jpg";
   primaryCtaText: string;
   primaryCtaHref?: string;
   secondaryCtaText?: string;
@@ -167,9 +170,9 @@ export default function SeoLandingPage({
               <div className="space-y-5">
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <ShieldCheck className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Compare bids with more clarity</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Compare bids with confidence</h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    Post once, review options, and choose the handyman that makes the most sense for your job.
+                    Post your job once, review responses, and choose the option that fits your needs and budget.
                   </p>
                 </div>
 
@@ -185,7 +188,7 @@ export default function SeoLandingPage({
                   <Wrench className="h-8 w-8 text-emerald-700" />
                   <h3 className="mt-4 text-xl font-semibold text-slate-900">Built for practical home jobs</h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    SaskHandy is focused on the real repair, installation, and maintenance jobs homeowners actually search for.
+                    SaskHandy is focused on the everyday repair, installation, and maintenance work homeowners actually need done.
                   </p>
                 </div>
               </div>

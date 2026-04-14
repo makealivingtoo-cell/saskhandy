@@ -25,10 +25,10 @@ export default function PlumbingRepairsSaskatchewanPage() {
         "Kitchen fixture swaps",
         "Minor plumbing maintenance",
       ]}
-      whyTitle="Why plumbing repair pages matter"
+      whyTitle="Why homeowners use SaskHandy for small plumbing repairs"
       whyParagraphs={[
-        "Small plumbing issues often turn into urgent searches because homeowners want the problem solved quickly before it gets worse.",
-        "By targeting terms like leaky faucet repair, toilet repair, and fixture installation in Saskatchewan, SaskHandy can capture practical service searches with clear intent.",
+        "Small plumbing problems like leaky faucets, fixture replacements, and basic toilet issues often need quick practical help before they become bigger headaches.",
+        "SaskHandy makes it easier for homeowners to post the job, compare bids, and find local help for smaller plumbing repair and maintenance tasks across Saskatchewan.",
       ]}
       bottomTitle="Need leaky faucet or fixture repair in Saskatoon or Regina?"
       bottomParagraph="SaskHandy is building local and service-focused pages so homeowners searching for plumbing help can find city-relevant options more easily."

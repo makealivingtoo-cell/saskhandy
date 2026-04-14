@@ -25,10 +25,10 @@ export default function FurnitureAssemblySaskatchewanPage() {
         "TV stand assembly",
         "Nursery furniture setup",
       ]}
-      whyTitle="Why homeowners book furniture assembly through SaskHandy"
+      whyTitle="Why homeowners use SaskHandy for furniture assembly"
       whyParagraphs={[
-        "Furniture assembly is one of the most common handyman requests because it saves time, avoids mistakes, and helps homeowners get the job done cleanly and quickly.",
-        "Instead of spending hours on instructions, missing pieces, and trial-and-error setup, homeowners can use SaskHandy to find local help for straightforward furniture assembly jobs across Saskatchewan.",
+        "Furniture assembly is one of the most common handyman jobs because it saves time, reduces frustration, and helps homeowners avoid mistakes during setup.",
+        "Whether it is a bed frame, desk, bookshelf, dresser, or IKEA furniture build, SaskHandy gives homeowners a clearer way to find local help for practical assembly jobs across Saskatchewan.",
       ]}
       bottomTitle="Need furniture assembly in Saskatoon, Regina, or nearby?"
       bottomParagraph="We are building stronger visibility for furniture assembly and handyman help across Saskatchewan, including Saskatoon, Regina, Moose Jaw, Prince Albert, Warman, and Martensville."

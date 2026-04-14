@@ -25,10 +25,10 @@ export default function MartensvilleHandymanServicesPage() {
         "Seasonal maintenance",
         "General home repairs",
       ]}
-      whyTitle="Why a Martensville page strengthens local reach"
+      whyTitle="Why Martensville homeowners use SaskHandy"
       whyParagraphs={[
-        "Martensville is a strong supporting location for Saskatoon-area visibility, and a dedicated page helps target city-based search intent more clearly.",
-        "For homeowners looking for practical repair and maintenance help, a local page can make SaskHandy more visible for the right searches.",
+        "Martensville homeowners often need local help for practical home jobs like TV mounting, furniture assembly, painting, drywall repair, and seasonal maintenance.",
+        "SaskHandy is built to make those jobs easier to manage by giving homeowners a clearer way to compare bids and choose local help.",
       ]}
       bottomTitle="Need local handyman services in Martensville?"
       bottomParagraph="SaskHandy is expanding its local service footprint across Saskatchewan, including city-specific pages for communities like Martensville."
