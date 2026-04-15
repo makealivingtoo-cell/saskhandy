@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
+import { trackCompleteRegistration } from "@/lib/metaPixel";
 import { Eye, EyeOff, Hammer, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -38,6 +39,8 @@ export default function SignUp() {
 
   const signUp = trpc.auth.signUp.useMutation({
     onSuccess: (data: any) => {
+      trackCompleteRegistration("website");
+
       if (data?.emailSent === false) {
         toast.warning(
           "Account created, but verification email could not be sent yet. You can resend it on the next screen."
@@ -54,9 +57,13 @@ export default function SignUp() {
   });
 
   const resendVerification = trpc.auth.resendVerification.useMutation({
-    onSuccess: () => {
-      toast.success("Verification email sent again.");
-      navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+    onSuccess: (data: any) => {
+      if (data?.emailSent) {
+        toast.success("Verification email sent.");
+        navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+      } else {
+        toast.error("We could not send the verification email right now.");
+      }
     },
     onError: (err) => {
       toast.error(err.message);
