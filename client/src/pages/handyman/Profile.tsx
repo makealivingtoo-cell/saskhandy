@@ -34,6 +34,34 @@ export default function HandymanProfile() {
   const [hourlyRate, setHourlyRate] = useState("");
   const [uploading, setUploading] = useState(false);
 
+  const updateProfile = trpc.handymanProfiles.createOrUpdate.useMutation({
+    onSuccess: async () => {
+      toast.success("Profile updated.");
+      await utils.handymanProfiles.get.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const connectStripe = trpc.handymanProfiles.connectStripe.useMutation({
+    onSuccess: (data) => {
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      toast.error("Could not start Stripe onboarding.");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const refreshStripeStatus = trpc.handymanProfiles.refreshStripeStatus.useMutation({
+    onSuccess: async () => {
+      await utils.handymanProfiles.get.invalidate();
+      toast.success("Stripe payout status updated.");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate("/sign-in");
@@ -48,23 +76,28 @@ export default function HandymanProfile() {
   useEffect(() => {
     if (profile) {
       setBio(profile.bio ?? "");
+
       try {
         const cats = JSON.parse(profile.categories ?? "[]");
         setSelectedCategories(Array.isArray(cats) ? cats : []);
       } catch {
         setSelectedCategories([]);
       }
+
       setHourlyRate(profile.hourlyRate ? String(parseFloat(profile.hourlyRate)) : "");
     }
   }, [profile]);
 
-  const updateProfile = trpc.handymanProfiles.createOrUpdate.useMutation({
-    onSuccess: async () => {
-      toast.success("Profile updated.");
-      await utils.handymanProfiles.get.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeStatus = params.get("stripe");
+
+    if (stripeStatus === "return" || stripeStatus === "refresh") {
+      refreshStripeStatus.mutate();
+      window.history.replaceState({}, "", "/handyman/profile");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
@@ -95,12 +128,7 @@ export default function HandymanProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const allowedTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-    ];
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload a PDF, JPG, or PNG file.");
@@ -166,15 +194,25 @@ export default function HandymanProfile() {
     ? "verified"
     : "pending";
 
+  const stripeReady = !!profile?.stripePayoutsEnabled && !!profile?.stripeDetailsSubmitted;
+
   const profileCompletion = useMemo(() => {
     let score = 0;
     if (bio.trim()) score += 20;
     if (selectedCategories.length > 0) score += 20;
     if (hourlyRate.trim()) score += 20;
-    if (profile?.insuranceCertUrl) score += 20;
-    if (profile?.insuranceVerified) score += 20;
-    return score;
-  }, [bio, selectedCategories.length, hourlyRate, profile?.insuranceCertUrl, profile?.insuranceVerified]);
+    if (profile?.insuranceCertUrl) score += 15;
+    if (profile?.insuranceVerified) score += 15;
+    if (stripeReady) score += 10;
+    return Math.min(score, 100);
+  }, [
+    bio,
+    selectedCategories.length,
+    hourlyRate,
+    profile?.insuranceCertUrl,
+    profile?.insuranceVerified,
+    stripeReady,
+  ]);
 
   return (
     <AppLayout title="My Profile">
@@ -186,21 +224,32 @@ export default function HandymanProfile() {
                 {user?.name?.charAt(0)?.toUpperCase()}
               </span>
             </div>
+
             <div>
               <h2 className="font-semibold text-foreground text-lg">{user?.name}</h2>
+
               <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                 {profile?.rating && parseFloat(profile.rating) > 0 ? (
                   <StarRatingDisplay rating={parseFloat(profile.rating)} size="sm" showValue />
                 ) : (
                   <span className="text-xs text-muted-foreground">No ratings yet</span>
                 )}
+
                 <span className="text-xs text-muted-foreground">
                   {profile?.totalJobs ?? 0} jobs completed
                 </span>
+
                 {profile?.insuranceVerified && (
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
                     Insurance Verified
+                  </span>
+                )}
+
+                {stripeReady && (
+                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Stripe Payouts Ready
                   </span>
                 )}
               </div>
@@ -310,6 +359,52 @@ export default function HandymanProfile() {
               </div>
             </div>
           </div>
+
+          <div
+            className={`rounded-lg p-4 mt-4 ${
+              stripeReady
+                ? "bg-emerald-50 border border-emerald-200"
+                : "bg-amber-50 border border-amber-200"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                <p
+                  className={`text-sm font-medium ${
+                    stripeReady ? "text-emerald-800" : "text-amber-800"
+                  }`}
+                >
+                  {stripeReady ? "Stripe payouts connected" : "Connect Stripe to receive payouts"}
+                </p>
+
+                <p className={`text-xs ${stripeReady ? "text-emerald-700" : "text-amber-700"}`}>
+                  {stripeReady
+                    ? "You can receive automatic payouts after completed jobs."
+                    : "Complete Stripe onboarding so SaskHandy can send your 80% payout after jobs are completed."}
+                </p>
+
+                {profile?.stripeAccountId && !stripeReady && (
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    Stripe account created. Setup may still need to be completed.
+                  </p>
+                )}
+              </div>
+
+              <Button
+                size="sm"
+                type="button"
+                onClick={() => connectStripe.mutate()}
+                disabled={connectStripe.isPending || refreshStripeStatus.isPending}
+              >
+                {connectStripe.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                {profile?.stripeAccountId ? "Continue Stripe Setup" : "Connect Stripe"}
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 space-y-6">
@@ -355,7 +450,9 @@ export default function HandymanProfile() {
           <div className="space-y-2">
             <Label htmlFor="rate">Hourly Rate</Label>
             <div className="relative max-w-40">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                $
+              </span>
               <Input
                 id="rate"
                 type="number"
@@ -387,7 +484,10 @@ export default function HandymanProfile() {
             <h3 className="font-semibold text-foreground mb-4">Reviews ({reviews.length})</h3>
             <div className="space-y-4">
               {reviews.map((review) => (
-                <div key={review.id} className="border-b border-border/40 last:border-0 pb-4 last:pb-0">
+                <div
+                  key={review.id}
+                  className="border-b border-border/40 last:border-0 pb-4 last:pb-0"
+                >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-foreground">
                       {review.reviewerName ?? "User"}

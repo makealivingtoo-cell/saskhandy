@@ -10,6 +10,10 @@ export const stripe = new Stripe(secretKey, {
   apiVersion: "2025-03-31.basil",
 });
 
+function getAppUrl() {
+  return process.env.APP_URL || "https://saskhandy.com";
+}
+
 export async function createPaymentIntent(params: {
   amount: number;
   jobId: number;
@@ -22,11 +26,8 @@ export async function createPaymentIntent(params: {
   const paymentIntent = await stripe.paymentIntents.create({
     amount: Math.round(params.amount * 100),
     currency: "cad",
-
-    // Keep this card-only for now so the modal does not get expanded
-    // by Klarna, Affirm, Link, and other extra payment method forms.
     payment_method_types: ["card"],
-
+    transfer_group: `job_${params.jobId}`,
     metadata: {
       jobId: String(params.jobId),
       homeownerEmail: params.homeownerEmail,
@@ -55,4 +56,70 @@ export function constructWebhookEvent(body: string | Buffer, signature: string) 
   }
 
   return stripe.webhooks.constructEvent(body, signature, webhookSecret);
+}
+
+export async function createConnectedAccount(params: {
+  email?: string | null;
+  userId: number;
+}) {
+  const account = await stripe.accounts.create({
+    type: "express",
+    country: "CA",
+    email: params.email ?? undefined,
+    capabilities: {
+      card_payments: {
+        requested: true,
+      },
+      transfers: {
+        requested: true,
+      },
+    },
+    metadata: {
+      userId: String(params.userId),
+      platform: "SaskHandy",
+    },
+  });
+
+  return account;
+}
+
+export async function createConnectedAccountOnboardingLink(params: {
+  accountId: string;
+}) {
+  const appUrl = getAppUrl();
+
+  const accountLink = await stripe.accountLinks.create({
+    account: params.accountId,
+    refresh_url: `${appUrl}/handyman/profile?stripe=refresh`,
+    return_url: `${appUrl}/handyman/profile?stripe=return`,
+    type: "account_onboarding",
+  });
+
+  return accountLink;
+}
+
+export async function retrieveConnectedAccount(accountId: string) {
+  return await stripe.accounts.retrieve(accountId);
+}
+
+export async function createHandymanTransfer(params: {
+  amount: number;
+  jobId: number;
+  paymentId: number;
+  destinationAccountId: string;
+}) {
+  const transfer = await stripe.transfers.create({
+    amount: Math.round(params.amount * 100),
+    currency: "cad",
+    destination: params.destinationAccountId,
+    transfer_group: `job_${params.jobId}`,
+    metadata: {
+      jobId: String(params.jobId),
+      paymentId: String(params.paymentId),
+      type: "handyman_payout",
+      platform: "SaskHandy",
+    },
+  });
+
+  return transfer;
 }

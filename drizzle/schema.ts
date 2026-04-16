@@ -67,6 +67,12 @@ export const handymanProfiles = mysqlTable("handyman_profiles", {
   backgroundCheckPassed: boolean("backgroundCheckPassed").default(false).notNull(),
   insuranceVerified: boolean("insuranceVerified").default(false).notNull(),
   insuranceCertUrl: text("insuranceCertUrl"),
+
+  stripeAccountId: varchar("stripeAccountId", { length: 255 }),
+  stripeChargesEnabled: boolean("stripeChargesEnabled").default(false).notNull(),
+  stripePayoutsEnabled: boolean("stripePayoutsEnabled").default(false).notNull(),
+  stripeDetailsSubmitted: boolean("stripeDetailsSubmitted").default(false).notNull(),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -133,6 +139,14 @@ export const payments = mysqlTable("payments", {
   handymanPayout: decimal("handymanPayout", { precision: 10, scale: 2 }).notNull(),
   stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
   stripeTransferId: varchar("stripeTransferId", { length: 255 }),
+  stripeTransferStatus: mysqlEnum("stripeTransferStatus", [
+    "not_started",
+    "pending",
+    "paid",
+    "failed",
+  ])
+    .default("not_started")
+    .notNull(),
   status: mysqlEnum("status", ["pending", "completed", "failed", "refunded"])
     .default("pending")
     .notNull(),

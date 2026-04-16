@@ -216,6 +216,28 @@ export async function updateHandymanProfile(userId: number, data: Partial<Insert
   return getHandymanProfile(userId);
 }
 
+export async function updateHandymanStripeAccount(
+  userId: number,
+  data: {
+    stripeAccountId?: string | null;
+    stripeChargesEnabled?: boolean;
+    stripePayoutsEnabled?: boolean;
+    stripeDetailsSubmitted?: boolean;
+  }
+) {
+  const db = await getDb();
+
+  await db
+    .update(handymanProfiles)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(handymanProfiles.userId, userId));
+
+  return getHandymanProfile(userId);
+}
+
 export async function getHandymanProfilesForAdmin() {
   const db = await getDb();
 
@@ -233,6 +255,10 @@ export async function getHandymanProfilesForAdmin() {
       backgroundCheckPassed: handymanProfiles.backgroundCheckPassed,
       insuranceVerified: handymanProfiles.insuranceVerified,
       insuranceCertUrl: handymanProfiles.insuranceCertUrl,
+      stripeAccountId: handymanProfiles.stripeAccountId,
+      stripeChargesEnabled: handymanProfiles.stripeChargesEnabled,
+      stripePayoutsEnabled: handymanProfiles.stripePayoutsEnabled,
+      stripeDetailsSubmitted: handymanProfiles.stripeDetailsSubmitted,
       createdAt: handymanProfiles.createdAt,
       updatedAt: handymanProfiles.updatedAt,
       userName: users.name,
@@ -450,6 +476,18 @@ export async function updatePayment(paymentId: number, data: Partial<InsertPayme
       updatedAt: new Date(),
     })
     .where(eq(payments.id, paymentId));
+}
+
+export async function updatePaymentByJob(jobId: number, data: Partial<InsertPayment>) {
+  const db = await getDb();
+
+  await db
+    .update(payments)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(payments.jobId, jobId));
 }
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────

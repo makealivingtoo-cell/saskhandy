@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
-import { DollarSign, Loader2, TrendingUp } from "lucide-react";
+import { AlertTriangle, DollarSign, Loader2, TrendingUp } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
@@ -42,10 +42,29 @@ export default function HandymanEarnings() {
 
   const completedPayments = earningsData?.payments.filter((p) => p.status === "completed") ?? [];
   const totalEarned = parseFloat(earningsData?.totalEarnings ?? "0");
+  const stripeReady = !!profile?.stripePayoutsEnabled && !!profile?.stripeDetailsSubmitted;
 
   return (
     <AppLayout title="Earnings">
       <div className="max-w-3xl mx-auto space-y-6">
+        {!stripeReady && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-amber-800 text-sm mb-1">
+                  Connect Stripe to receive payouts
+                </h3>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  You can complete jobs, but automatic payouts cannot be sent until your Stripe
+                  payout account is connected and approved. Go to your profile to complete Stripe
+                  onboarding.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-border/60 p-5">
             <div className="flex items-center gap-3 mb-2">
@@ -65,11 +84,9 @@ export default function HandymanEarnings() {
               <div className="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 text-amber-600" />
               </div>
-              <p className="text-xs text-muted-foreground">In Progress</p>
+              <p className="text-xs text-muted-foreground">Completed Jobs</p>
             </div>
-            <p className="text-2xl font-bold text-foreground">
-              {profile?.totalJobs ?? 0}
-            </p>
+            <p className="text-2xl font-bold text-foreground">{profile?.totalJobs ?? 0}</p>
             <p className="text-xs text-muted-foreground mt-0.5">completed jobs</p>
           </div>
 
@@ -94,8 +111,9 @@ export default function HandymanEarnings() {
           <h3 className="font-semibold text-primary text-sm mb-2">How Earnings Work</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
             For every job, you receive <strong className="text-foreground">80%</strong> of the
-            agreed bid amount. The remaining 20% is SaskHandy&apos;s platform fee. Payment is
-            released after the homeowner marks the job complete.
+            agreed bid amount. The remaining 20% is SaskHandy&apos;s platform fee. After the
+            homeowner marks the job complete, SaskHandy sends your payout through your connected
+            Stripe account.
           </p>
         </div>
 
@@ -120,9 +138,22 @@ export default function HandymanEarnings() {
                       <p className="text-sm font-medium text-foreground">Job #{payment.jobId}</p>
                       <StatusBadge status={payment.status} />
                     </div>
+
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(payment.createdAt), "MMM d, yyyy")}
                     </p>
+
+                    {payment.stripeTransferStatus && (
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Transfer status: {payment.stripeTransferStatus}
+                      </p>
+                    )}
+
+                    {payment.stripeTransferId && (
+                      <p className="text-[11px] text-muted-foreground mt-1 break-all">
+                        Stripe transfer: {payment.stripeTransferId}
+                      </p>
+                    )}
                   </div>
 
                   <div className="text-right">
