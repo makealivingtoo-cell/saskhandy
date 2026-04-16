@@ -22,7 +22,11 @@ function PaymentForm({ amount, onSuccess, onCancel }: PaymentFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
+
+    if (!stripe || !elements) {
+      toast.error("Stripe is still loading. Please try again.");
+      return;
+    }
 
     setProcessing(true);
 
@@ -51,32 +55,34 @@ function PaymentForm({ amount, onSuccess, onCancel }: PaymentFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement />
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-        <Shield className="w-3.5 h-3.5 text-primary shrink-0" />
+      <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+        <Shield className="h-3.5 w-3.5 shrink-0 text-primary" />
         <span>
           $<strong>{amount.toFixed(2)} CAD</strong> will be held in secure escrow and released
           only after the homeowner confirms the work is complete.
         </span>
       </div>
 
-      <div className="flex gap-2">
-        <Button type="submit" className="flex-1" disabled={!stripe || processing}>
-          {processing ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <CreditCard className="w-4 h-4 mr-2" />
-              Pay ${amount.toFixed(2)} CAD
-            </>
-          )}
-        </Button>
+      <div className="sticky bottom-0 -mx-1 bg-white pt-3">
+        <div className="flex gap-2">
+          <Button type="submit" className="flex-1" disabled={!stripe || processing}>
+            {processing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Pay ${amount.toFixed(2)} CAD
+              </>
+            )}
+          </Button>
 
-        <Button type="button" variant="outline" onClick={onCancel} disabled={processing}>
-          Cancel
-        </Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={processing}>
+            Cancel
+          </Button>
+        </div>
       </div>
     </form>
   );
@@ -131,6 +137,7 @@ export function StripePaymentModal({
     }
 
     createIntent.mutate({ jobId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   const handleSuccess = async () => {
@@ -155,54 +162,58 @@ export function StripePaymentModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-border/60 p-5">
           <div>
-            <h2 className="font-semibold text-foreground text-lg">Complete Payment</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h2 className="text-lg font-semibold text-foreground">Complete Payment</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Secure escrow payment via Stripe
             </p>
           </div>
+
           <button
+            type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
-        ) : !stripePromise ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground">
-              Stripe is not configured correctly. Add your publishable key first.
-            </p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={onClose}>
-              Close
-            </Button>
-          </div>
-        ) : clientSecret ? (
-          <Elements stripe={stripePromise} options={elementOptions}>
-            <PaymentForm amount={amount} onSuccess={handleSuccess} onCancel={onClose} />
-          </Elements>
-        ) : (
-          <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground">
-              Failed to initialize payment. Please try again.
-            </p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={onClose}>
-              Close
-            </Button>
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto p-5">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : !stripePromise ? (
+            <div className="py-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Stripe is not configured correctly. Add your publishable key first.
+              </p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          ) : clientSecret ? (
+            <Elements stripe={stripePromise} options={elementOptions}>
+              <PaymentForm amount={amount} onSuccess={handleSuccess} onCancel={onClose} />
+            </Elements>
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Failed to initialize payment. Please try again.
+              </p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          )}
 
-        <p className="text-xs text-center text-muted-foreground mt-4">
-          Test card: 4242 4242 4242 4242 · Any future date · Any CVC
-        </p>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Test card: 4242 4242 4242 4242 · Any future date · Any CVC
+          </p>
+        </div>
       </div>
     </div>
   );

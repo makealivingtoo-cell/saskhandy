@@ -22,9 +22,11 @@ export async function createPaymentIntent(params: {
   const paymentIntent = await stripe.paymentIntents.create({
     amount: Math.round(params.amount * 100),
     currency: "cad",
-    automatic_payment_methods: {
-      enabled: true,
-    },
+
+    // Keep this card-only for now so the modal does not get expanded
+    // by Klarna, Affirm, Link, and other extra payment method forms.
+    payment_method_types: ["card"],
+
     metadata: {
       jobId: String(params.jobId),
       homeownerEmail: params.homeownerEmail,
