@@ -9,6 +9,7 @@ import {
   handymanProfiles,
   jobs,
   payments,
+  payoutRequests,
   reviews,
   supportTicketMessages,
   supportTickets,
@@ -19,6 +20,7 @@ import {
   type InsertHandymanProfile,
   type InsertJob,
   type InsertPayment,
+  type InsertPayoutRequest,
   type InsertReview,
   type InsertUser,
 } from "../drizzle/schema";
@@ -488,6 +490,78 @@ export async function updatePaymentByJob(jobId: number, data: Partial<InsertPaym
       updatedAt: new Date(),
     })
     .where(eq(payments.jobId, jobId));
+}
+
+// ─── Payout Requests ──────────────────────────────────────────────────────────
+export async function createPayoutRequest(data: InsertPayoutRequest) {
+  const db = await getDb();
+  const result = await db.insert(payoutRequests).values(data);
+  return Number((result as any).insertId);
+}
+
+export async function getPayoutRequestById(id: number) {
+  const db = await getDb();
+  const rows = await db.select().from(payoutRequests).where(eq(payoutRequests.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getPayoutRequestsByHandyman(handymanId: number) {
+  const db = await getDb();
+  return db
+    .select()
+    .from(payoutRequests)
+    .where(eq(payoutRequests.handymanId, handymanId))
+    .orderBy(desc(payoutRequests.createdAt));
+}
+
+export async function getAllPayoutRequests() {
+  const db = await getDb();
+  return db.select().from(payoutRequests).orderBy(desc(payoutRequests.createdAt));
+}
+
+export async function updatePayoutRequest(
+  payoutRequestId: number,
+  data: Partial<InsertPayoutRequest>
+) {
+  const db = await getDb();
+  await db
+    .update(payoutRequests)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(payoutRequests.id, payoutRequestId));
+}
+
+export async function getHandymanPayoutSummary(handymanId: number) {
+  const completedPayments = await getPaymentsByHandyman(handymanId);
+  const requests = await getPayoutRequestsByHandyman(handymanId);
+
+  const completedEarnings = completedPayments.reduce((sum, payment) => {
+    if (payment.status !== "completed") return sum;
+    return sum + parseFloat(payment.handymanPayout);
+  }, 0);
+
+  const pendingPayouts = requests.reduce((sum, request) => {
+    if (request.status !== "pending") return sum;
+    return sum + parseFloat(request.amount);
+  }, 0);
+
+  const paidPayouts = requests.reduce((sum, request) => {
+    if (request.status !== "paid") return sum;
+    return sum + parseFloat(request.amount);
+  }, 0);
+
+  const availableBalance = Math.max(completedEarnings - pendingPayouts - paidPayouts, 0);
+
+  return {
+    completedEarnings: completedEarnings.toFixed(2),
+    pendingPayouts: pendingPayouts.toFixed(2),
+    paidPayouts: paidPayouts.toFixed(2),
+    availableBalance: availableBalance.toFixed(2),
+    payoutRequests: requests,
+    completedPayments,
+  };
 }
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────

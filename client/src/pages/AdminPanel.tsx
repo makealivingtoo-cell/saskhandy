@@ -24,7 +24,7 @@ import { toast } from "sonner";
 export default function AdminPanel() {
   const { user, isAuthenticated } = useAuth();
 
-  const { data: stats } = trpc.admin.getStats.useQuery(undefined, {
+  const { data: stats, refetch: refetchStats } = trpc.admin.getStats.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
 
@@ -52,6 +52,14 @@ export default function AdminPanel() {
   });
 
   const {
+    data: payoutRequests,
+    isLoading: payoutRequestsLoading,
+    refetch: refetchPayoutRequests,
+  } = trpc.admin.getPayoutRequests.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+  });
+
+  const {
     data: flaggedUsers,
     isLoading: flaggedLoading,
   } = trpc.admin.getFlaggedUsers.useQuery(undefined, {
@@ -60,6 +68,8 @@ export default function AdminPanel() {
 
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<number, string>>({});
+  const [payoutAdminNotes, setPayoutAdminNotes] = useState<Record<number, string>>({});
+  const [updatingPayoutId, setUpdatingPayoutId] = useState<number | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   const resolveDispute = trpc.disputes.resolve.useMutation({
@@ -79,6 +89,21 @@ export default function AdminPanel() {
       refetchInsurance();
     },
     onError: (err) => toast.error(err.message),
+  });
+
+  const updatePayoutRequestStatus = trpc.admin.updatePayoutRequestStatus.useMutation({
+    onSuccess: async (_, variables) => {
+      toast.success(
+        variables.status === "paid" ? "Payout marked as paid." : "Payout request rejected."
+      );
+      setUpdatingPayoutId(null);
+      await refetchPayoutRequests();
+      await refetchStats();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      setUpdatingPayoutId(null);
+    },
   });
 
   const deleteUser = trpc.admin.deleteUser.useMutation({
@@ -114,18 +139,55 @@ export default function AdminPanel() {
   const verifiedInsurance =
     insuranceQueue?.filter((p) => p.insuranceCertUrl && p.insuranceVerified) ?? [];
 
+  const pendingPayoutRequests = payoutRequests?.filter((p) => p.status === "pending") ?? [];
+  const resolvedPayoutRequests = payoutRequests?.filter((p) => p.status !== "pending") ?? [];
+
   return (
     <AppLayout title="Admin Panel">
       <div className="space-y-8">
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
           {[
-            { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "bg-blue-50 text-blue-600" },
-            { label: "Homeowners", value: stats?.homeowners ?? 0, icon: Users, color: "bg-purple-50 text-purple-600" },
-            { label: "Handymen", value: stats?.handymen ?? 0, icon: Briefcase, color: "bg-amber-50 text-amber-600" },
-            { label: "Open Jobs", value: stats?.openJobs ?? 0, icon: Briefcase, color: "bg-emerald-50 text-emerald-600" },
-            { label: "Open Disputes", value: stats?.openDisputes ?? 0, icon: AlertTriangle, color: "bg-red-50 text-red-600" },
+            {
+              label: "Total Users",
+              value: stats?.totalUsers ?? 0,
+              icon: Users,
+              color: "bg-blue-50 text-blue-600",
+            },
+            {
+              label: "Homeowners",
+              value: stats?.homeowners ?? 0,
+              icon: Users,
+              color: "bg-purple-50 text-purple-600",
+            },
+            {
+              label: "Handymen",
+              value: stats?.handymen ?? 0,
+              icon: Briefcase,
+              color: "bg-amber-50 text-amber-600",
+            },
+            {
+              label: "Open Jobs",
+              value: stats?.openJobs ?? 0,
+              icon: Briefcase,
+              color: "bg-emerald-50 text-emerald-600",
+            },
+            {
+              label: "Open Disputes",
+              value: stats?.openDisputes ?? 0,
+              icon: AlertTriangle,
+              color: "bg-red-50 text-red-600",
+            },
+            {
+              label: "Payout Requests",
+              value: stats?.pendingPayoutRequests ?? pendingPayoutRequests.length,
+              icon: DollarSign,
+              color: "bg-primary/10 text-primary",
+            },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-border/60 p-4 flex items-center gap-3">
+            <div
+              key={s.label}
+              className="bg-white rounded-xl border border-border/60 p-4 flex items-center gap-3"
+            >
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${s.color}`}>
                 <s.icon className="w-4 h-4" />
               </div>
@@ -140,7 +202,204 @@ export default function AdminPanel() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
-              Insurance Review <span className="text-muted-foreground font-normal">({pendingInsurance.length})</span>
+              Payout Requests{" "}
+              <span className="text-muted-foreground font-normal">
+                ({pendingPayoutRequests.length})
+              </span>
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => refetchPayoutRequests()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {payoutRequestsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : pendingPayoutRequests.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No pending payout requests.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingPayoutRequests.map((request) => (
+                <div key={request.id} className="bg-white rounded-xl border border-primary/20 p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <DollarSign className="w-4 h-4 text-primary" />
+                        <p className="font-semibold text-foreground text-sm">
+                          Payout Request #{request.id}
+                        </p>
+                        <StatusBadge status={request.status} />
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        Requested by {request.handymanName ?? "Unnamed handyman"} on{" "}
+                        {format(new Date(request.createdAt), "MMM d, yyyy")}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Account email: {request.handymanEmail ?? "No email"}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Payout email: {request.payoutEmail}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-foreground">
+                        ${parseFloat(request.amount).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">requested payout</p>
+                    </div>
+                  </div>
+
+                  {request.notes && (
+                    <div className="bg-muted/50 rounded-lg p-3 mb-4">
+                      <p className="text-xs font-medium text-foreground mb-1">
+                        Handyman Notes / Details:
+                      </p>
+                      <p className="text-sm text-muted-foreground">{request.notes}</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder="Admin notes, payout reference, e-transfer confirmation, or rejection reason..."
+                      value={payoutAdminNotes[request.id] ?? ""}
+                      onChange={(e) =>
+                        setPayoutAdminNotes((prev) => ({
+                          ...prev,
+                          [request.id]: e.target.value,
+                        }))
+                      }
+                      rows={3}
+                      className="resize-none"
+                    />
+
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            `Mark payout request #${request.id} as paid? Make sure the manual payment has already been sent.`
+                          );
+
+                          if (!confirmed) return;
+
+                          setUpdatingPayoutId(request.id);
+                          updatePayoutRequestStatus.mutate({
+                            payoutRequestId: request.id,
+                            status: "paid",
+                            adminNotes: payoutAdminNotes[request.id] ?? "",
+                          });
+                        }}
+                        disabled={updatePayoutRequestStatus.isPending}
+                      >
+                        {updatePayoutRequestStatus.isPending && updatingPayoutId === request.id ? (
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Mark Paid
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            `Reject payout request #${request.id}?`
+                          );
+
+                          if (!confirmed) return;
+
+                          setUpdatingPayoutId(request.id);
+                          updatePayoutRequestStatus.mutate({
+                            payoutRequestId: request.id,
+                            status: "rejected",
+                            adminNotes: payoutAdminNotes[request.id] ?? "",
+                          });
+                        }}
+                        disabled={updatePayoutRequestStatus.isPending}
+                      >
+                        {updatePayoutRequestStatus.isPending && updatingPayoutId === request.id ? (
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {resolvedPayoutRequests.length > 0 && (
+          <div>
+            <h2 className="text-base font-semibold text-foreground mb-4">
+              Past Payout Requests{" "}
+              <span className="text-muted-foreground font-normal">
+                ({resolvedPayoutRequests.length})
+              </span>
+            </h2>
+
+            <div className="space-y-3">
+              {resolvedPayoutRequests.map((request) => (
+                <div key={request.id} className="bg-white rounded-xl border border-border/60 p-4">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-medium text-foreground">
+                          Payout Request #{request.id} — {request.handymanName ?? "Unnamed handyman"}
+                        </p>
+                        <StatusBadge status={request.status} />
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        Requested {format(new Date(request.createdAt), "MMM d, yyyy")}
+                        {request.paidAt
+                          ? ` · Paid ${format(new Date(request.paidAt), "MMM d, yyyy")}`
+                          : ""}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Payout email: {request.payoutEmail}
+                      </p>
+
+                      {request.adminNotes && (
+                        <p className="text-xs text-muted-foreground mt-2 bg-muted/50 rounded px-3 py-2">
+                          {request.adminNotes}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <p className="font-bold text-foreground">
+                        ${parseFloat(request.amount).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground capitalize">{request.status}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Insurance Review{" "}
+              <span className="text-muted-foreground font-normal">({pendingInsurance.length})</span>
             </h2>
             <Button variant="outline" size="sm" onClick={() => refetchInsurance()}>
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
@@ -209,7 +468,8 @@ export default function AdminPanel() {
         {verifiedInsurance.length > 0 && (
           <div>
             <h2 className="text-base font-semibold text-foreground mb-4">
-              Verified Insurance <span className="text-muted-foreground font-normal">({verifiedInsurance.length})</span>
+              Verified Insurance{" "}
+              <span className="text-muted-foreground font-normal">({verifiedInsurance.length})</span>
             </h2>
 
             <div className="space-y-3">
@@ -262,7 +522,8 @@ export default function AdminPanel() {
 
         <div>
           <h2 className="text-base font-semibold text-foreground mb-4">
-            Flagged Users <span className="text-muted-foreground font-normal">({flaggedUsers?.length ?? 0})</span>
+            Flagged Users{" "}
+            <span className="text-muted-foreground font-normal">({flaggedUsers?.length ?? 0})</span>
           </h2>
 
           {flaggedLoading ? (
@@ -305,7 +566,8 @@ export default function AdminPanel() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
-              Open Disputes <span className="text-muted-foreground font-normal">({openDisputes.length})</span>
+              Open Disputes{" "}
+              <span className="text-muted-foreground font-normal">({openDisputes.length})</span>
             </h2>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
@@ -409,7 +671,8 @@ export default function AdminPanel() {
         {resolvedDisputes.length > 0 && (
           <div>
             <h2 className="text-base font-semibold text-foreground mb-4">
-              Resolved Disputes <span className="text-muted-foreground font-normal">({resolvedDisputes.length})</span>
+              Resolved Disputes{" "}
+              <span className="text-muted-foreground font-normal">({resolvedDisputes.length})</span>
             </h2>
             <div className="space-y-3">
               {resolvedDisputes.map((dispute) => (
@@ -423,7 +686,8 @@ export default function AdminPanel() {
                         <StatusBadge status={dispute.status} />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Resolved on {format(new Date(dispute.updatedAt ?? dispute.createdAt), "MMM d, yyyy")}
+                        Resolved on{" "}
+                        {format(new Date(dispute.updatedAt ?? dispute.createdAt), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>

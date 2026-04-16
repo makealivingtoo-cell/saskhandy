@@ -157,6 +157,26 @@ export const payments = mysqlTable("payments", {
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = typeof payments.$inferInsert;
 
+// ─── Payout Requests ──────────────────────────────────────────────────────────
+export const payoutRequests = mysqlTable("payout_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  handymanId: int("handymanId").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  payoutEmail: varchar("payoutEmail", { length: 320 }).notNull(),
+  notes: text("notes"),
+  adminNotes: text("adminNotes"),
+  status: mysqlEnum("status", ["pending", "paid", "rejected"])
+    .default("pending")
+    .notNull(),
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  paidAt: timestamp("paidAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PayoutRequest = typeof payoutRequests.$inferSelect;
+export type InsertPayoutRequest = typeof payoutRequests.$inferInsert;
+
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 export const reviews = mysqlTable("reviews", {
   id: int("id").autoincrement().primaryKey(),

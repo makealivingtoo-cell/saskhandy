@@ -1,12 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { stripeRouter } from "./stripeRouter";
-import {
-  createConnectedAccount,
-  createConnectedAccountOnboardingLink,
-  createHandymanTransfer,
-  retrieveConnectedAccount,
-  stripe,
-} from "./stripe";
+import { stripe } from "./stripe";
 import { createMessage, getMessagesForJob, markMessageAsRead, getUnreadCount } from "./db-messages";
 import { sendNotification } from "./notifications";
 import { sendVerificationEmail } from "./email";
@@ -20,6 +14,7 @@ import {
   createJob,
   createLocalUser,
   createPayment,
+  createPayoutRequest,
   createReview,
   deleteEmailVerificationTokenById,
   deleteEmailVerificationTokensForUser,
@@ -27,11 +22,13 @@ import {
   deleteUserById,
   getAllDisputes,
   getAllHandymanProfiles,
+  getAllPayoutRequests,
   getAllUsers,
   getBidById,
   getBidsForHandyman,
   getBidsForJob,
   getDisputeByJob,
+  getHandymanPayoutSummary,
   getHandymanProfile,
   getHandymanProfilesForAdmin,
   getJobById,
@@ -40,6 +37,8 @@ import {
   getOpenJobs,
   getPaymentByJob,
   getPaymentsByHandyman,
+  getPayoutRequestById,
+  getPayoutRequestsByHandyman,
   getReviewForJob,
   getReviewsForUser,
   getUserByEmail,
@@ -52,10 +51,10 @@ import {
   setHandymanInsuranceVerification,
   updateBidStatus,
   updateHandymanProfile,
-  updateHandymanStripeAccount,
   updateJob,
   updateJobStatus,
   updatePayment,
+  updatePayoutRequest,
   updateUserType,
   upsertUser,
 } from "./db";
@@ -178,65 +177,20 @@ async function releasePaymentToHandyman(params: {
     return { released: false, reason: "Payment is not pending." };
   }
 
+  await updatePayment(payment.id, {
+    status: "completed",
+    stripeTransferStatus: "not_started",
+  } as any);
+
   const profile = await getHandymanProfile(params.handymanId);
 
-  if (!profile?.stripeAccountId) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message:
-        "This handyman has not connected a Stripe payout account yet. Ask them to complete Stripe onboarding before releasing payment.",
-    });
-  }
-
-  const account = await retrieveConnectedAccount(profile.stripeAccountId);
-
-  await updateHandymanStripeAccount(params.handymanId, {
-    stripeChargesEnabled: account.charges_enabled,
-    stripePayoutsEnabled: account.payouts_enabled,
-    stripeDetailsSubmitted: account.details_submitted,
-  });
-
-  if (!account.payouts_enabled || !account.details_submitted) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message:
-        "This handyman's Stripe payout account is not ready yet. Ask them to finish Stripe onboarding before releasing payment.",
-    });
-  }
-
-  if (!payment.stripeTransferId) {
-    await updatePayment(payment.id, {
-      stripeTransferStatus: "pending",
-    } as any);
-
-    const transfer = await createHandymanTransfer({
-      amount: parseFloat(payment.handymanPayout),
-      jobId: params.jobId,
-      paymentId: payment.id,
-      destinationAccountId: profile.stripeAccountId,
-    });
-
-    await updatePayment(payment.id, {
-      status: "completed",
-      stripeTransferId: transfer.id,
-      stripeTransferStatus: "paid",
-    } as any);
-  } else {
-    await updatePayment(payment.id, {
-      status: "completed",
-      stripeTransferStatus: "paid",
-    } as any);
-  }
-
-  const freshProfile = await getHandymanProfile(params.handymanId);
-
-  if (freshProfile) {
+  if (profile) {
     const newEarnings = (
-      parseFloat(freshProfile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)
+      parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)
     ).toFixed(2);
 
     await updateHandymanProfile(params.handymanId, {
-      totalJobs: (freshProfile.totalJobs ?? 0) + 1,
+      totalJobs: (profile.totalJobs ?? 0) + 1,
       totalEarnings: newEarnings,
     });
   }
@@ -492,78 +446,6 @@ const handymanProfilesRouter = router({
 
       return { success: true };
     }),
-
-  connectStripe: protectedProcedure.mutation(async ({ ctx }) => {
-    if (ctx.user.userType !== "handyman" && ctx.user.role !== "admin") {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Only handymen can connect a payout account.",
-      });
-    }
-
-    let profile = await getHandymanProfile(ctx.user.id);
-
-    if (!profile) {
-      profile = await createHandymanProfile({
-        userId: ctx.user.id,
-        categories: "[]",
-      });
-    }
-
-    let stripeAccountId = profile?.stripeAccountId ?? null;
-
-    if (!stripeAccountId) {
-      const account = await createConnectedAccount({
-        email: ctx.user.email,
-        userId: ctx.user.id,
-      });
-
-      stripeAccountId = account.id;
-
-      await updateHandymanStripeAccount(ctx.user.id, {
-        stripeAccountId,
-        stripeChargesEnabled: account.charges_enabled,
-        stripePayoutsEnabled: account.payouts_enabled,
-        stripeDetailsSubmitted: account.details_submitted,
-      });
-    }
-
-    const accountLink = await createConnectedAccountOnboardingLink({
-      accountId: stripeAccountId,
-    });
-
-    return {
-      url: accountLink.url,
-    };
-  }),
-
-  refreshStripeStatus: protectedProcedure.mutation(async ({ ctx }) => {
-    const profile = await getHandymanProfile(ctx.user.id);
-
-    if (!profile?.stripeAccountId) {
-      return {
-        connected: false,
-        chargesEnabled: false,
-        payoutsEnabled: false,
-        detailsSubmitted: false,
-      };
-    }
-
-    const account = await retrieveConnectedAccount(profile.stripeAccountId);
-
-    await updateHandymanStripeAccount(ctx.user.id, {
-      stripeChargesEnabled: account.charges_enabled,
-      stripePayoutsEnabled: account.payouts_enabled,
-      stripeDetailsSubmitted: account.details_submitted,
-    });
-
-    return {
-      connected: true,
-      chargesEnabled: account.charges_enabled,
-      payoutsEnabled: account.payouts_enabled,
-      detailsSubmitted: account.details_submitted,
-    };
-  }),
 });
 
 const jobsRouter = router({
@@ -952,13 +834,69 @@ const paymentsRouter = router({
     }),
 
   getHandymanEarnings: protectedProcedure.query(async ({ ctx }) => {
-    const paymentList = await getPaymentsByHandyman(ctx.user.id);
-    const total = paymentList.reduce((sum, p) => {
-      if (p.status !== "completed") return sum;
-      return sum + parseFloat(p.handymanPayout);
-    }, 0);
+    const summary = await getHandymanPayoutSummary(ctx.user.id);
 
-    return { payments: paymentList, totalEarnings: total.toFixed(2) };
+    return {
+      payments: summary.completedPayments,
+      payoutRequests: summary.payoutRequests,
+      completedEarnings: summary.completedEarnings,
+      pendingPayouts: summary.pendingPayouts,
+      paidPayouts: summary.paidPayouts,
+      availableBalance: summary.availableBalance,
+      totalEarnings: summary.completedEarnings,
+    };
+  }),
+
+  requestPayout: protectedProcedure
+    .input(
+      z.object({
+        amount: z.number().positive(),
+        payoutEmail: z.string().email(),
+        notes: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman" && ctx.user.role !== "admin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only handymen can request payouts.",
+        });
+      }
+
+      const summary = await getHandymanPayoutSummary(ctx.user.id);
+      const availableBalance = parseFloat(summary.availableBalance);
+      const requestedAmount = Number(input.amount.toFixed(2));
+
+      if (requestedAmount <= 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payout amount must be greater than zero.",
+        });
+      }
+
+      if (requestedAmount > availableBalance) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `You only have $${availableBalance.toFixed(2)} available to request.`,
+        });
+      }
+
+      const payoutRequestId = await createPayoutRequest({
+        handymanId: ctx.user.id,
+        amount: requestedAmount.toFixed(2),
+        payoutEmail: input.payoutEmail.trim(),
+        notes: input.notes?.trim() || undefined,
+        status: "pending",
+      });
+
+      return {
+        success: true,
+        payoutRequestId,
+      };
+    }),
+
+  getMyPayoutRequests: protectedProcedure.query(async ({ ctx }) => {
+    return getPayoutRequestsByHandyman(ctx.user.id);
   }),
 
   updateStripeIntent: protectedProcedure
@@ -1303,6 +1241,7 @@ const adminRouter = router({
     const userList = await getAllUsers();
     const openJobList = await getOpenJobs(1000);
     const disputeList = await getAllDisputes();
+    const payoutRequestList = await getAllPayoutRequests();
 
     return {
       totalUsers: userList.length,
@@ -1310,6 +1249,7 @@ const adminRouter = router({
       handymen: userList.filter((u) => u.userType === "handyman").length,
       openJobs: openJobList.length,
       openDisputes: disputeList.filter((d) => d.status === "open").length,
+      pendingPayoutRequests: payoutRequestList.filter((p) => p.status === "pending").length,
     };
   }),
 
@@ -1329,6 +1269,65 @@ const adminRouter = router({
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
 
       await setHandymanInsuranceVerification(input.userId, input.insuranceVerified);
+      return { success: true };
+    }),
+
+  getPayoutRequests: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+
+    const payoutRequestList = await getAllPayoutRequests();
+
+    const enriched = await Promise.all(
+      payoutRequestList.map(async (request) => {
+        const user = await getUserById(request.handymanId);
+        return {
+          ...request,
+          handymanName: user?.name ?? null,
+          handymanEmail: user?.email ?? null,
+        };
+      })
+    );
+
+    return enriched;
+  }),
+
+  updatePayoutRequestStatus: protectedProcedure
+    .input(
+      z.object({
+        payoutRequestId: z.number(),
+        status: z.enum(["paid", "rejected"]),
+        adminNotes: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const payoutRequest = await getPayoutRequestById(input.payoutRequestId);
+
+      if (!payoutRequest) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payout request not found.",
+        });
+      }
+
+      if (payoutRequest.status !== "pending") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only pending payout requests can be updated.",
+        });
+      }
+
+      await updatePayoutRequest(input.payoutRequestId, {
+        status: input.status,
+        adminNotes: input.adminNotes?.trim() || undefined,
+        paidAt: input.status === "paid" ? new Date() : null,
+      } as any);
+
       return { success: true };
     }),
 
@@ -1418,7 +1417,7 @@ const supportRouter = router({
         id: "payments",
         title: "How do payments work?",
         answer:
-          "When a homeowner accepts a bid, payment is collected and held in escrow. Funds are released after the job is marked complete.",
+          "When a homeowner accepts a bid, payment is collected through Stripe and held by SaskHandy until the job is marked complete.",
       },
       {
         id: "awaiting-payment",
@@ -1442,7 +1441,7 @@ const supportRouter = router({
         id: "payouts",
         title: "When does a handyman get paid?",
         answer:
-          "After the homeowner marks the job complete, SaskHandy sends the handyman payout through the handyman’s connected Stripe account.",
+          "After completed jobs, handymen can request a manual payout. Payout requests should be submitted by end of day Friday, and approved payouts are processed on Saturday.",
       },
     ];
   }),
