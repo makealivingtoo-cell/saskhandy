@@ -17,9 +17,11 @@ import { nanoid } from "nanoid";
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer();
+
     server.listen(port, () => {
       server.close(() => resolve(true));
     });
+
     server.on("error", () => resolve(false));
   });
 }
@@ -30,7 +32,113 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
       return port;
     }
   }
+
   throw new Error(`No available port found starting from ${startPort}`);
+}
+
+function getJobIdFromPaymentIntent(intent: any) {
+  const rawJobId = intent?.metadata?.jobId;
+  const jobId = Number.parseInt(rawJobId ?? "0", 10);
+
+  if (!Number.isFinite(jobId) || jobId <= 0) {
+    return null;
+  }
+
+  return jobId;
+}
+
+async function markPaymentSucceeded(intent: any) {
+  const jobId = getJobIdFromPaymentIntent(intent);
+
+  if (!jobId) {
+    console.warn("[Webhook] payment_intent.succeeded missing valid jobId metadata:", intent.id);
+    return;
+  }
+
+  const db = await getDb();
+
+  await db
+    .update(payments)
+    .set({
+      status: "pending",
+      stripePaymentIntentId: intent.id,
+      updatedAt: new Date(),
+    })
+    .where(eq(payments.jobId, jobId));
+
+  await db
+    .update(jobs)
+    .set({
+      status: "in_progress",
+      updatedAt: new Date(),
+    })
+    .where(eq(jobs.id, jobId));
+
+  console.log(`[Webhook] Payment succeeded for job ${jobId}. Job moved to in_progress.`);
+}
+
+async function markPaymentFailed(intent: any) {
+  const jobId = getJobIdFromPaymentIntent(intent);
+
+  if (!jobId) {
+    console.warn("[Webhook] payment_intent.payment_failed missing valid jobId metadata:", intent.id);
+    return;
+  }
+
+  const db = await getDb();
+
+  await db
+    .update(payments)
+    .set({
+      status: "failed",
+      stripePaymentIntentId: intent.id,
+      updatedAt: new Date(),
+    })
+    .where(eq(payments.jobId, jobId));
+
+  await db
+    .update(jobs)
+    .set({
+      status: "awaiting_payment",
+      updatedAt: new Date(),
+    })
+    .where(eq(jobs.id, jobId));
+
+  console.warn(
+    "[Webhook] Payment failed:",
+    intent.id,
+    intent.last_payment_error?.message ?? "Unknown error"
+  );
+}
+
+async function markPaymentCanceled(intent: any) {
+  const jobId = getJobIdFromPaymentIntent(intent);
+
+  if (!jobId) {
+    console.warn("[Webhook] payment_intent.canceled missing valid jobId metadata:", intent.id);
+    return;
+  }
+
+  const db = await getDb();
+
+  await db
+    .update(payments)
+    .set({
+      status: "failed",
+      stripePaymentIntentId: intent.id,
+      updatedAt: new Date(),
+    })
+    .where(eq(payments.jobId, jobId));
+
+  await db
+    .update(jobs)
+    .set({
+      status: "awaiting_payment",
+      updatedAt: new Date(),
+    })
+    .where(eq(jobs.id, jobId));
+
+  console.warn("[Webhook] Payment canceled:", intent.id);
 }
 
 async function startServer() {
@@ -41,71 +149,55 @@ async function startServer() {
     "/api/stripe/webhook",
     express.raw({ type: "application/json" }),
     async (req, res) => {
-      const sig = req.headers["stripe-signature"] as string;
+      const signature = req.headers["stripe-signature"];
+
+      if (!signature || Array.isArray(signature)) {
+        console.error("[Webhook] Missing or invalid Stripe signature header");
+        return res.status(400).send("Webhook Error: Missing or invalid Stripe signature");
+      }
+
       let event;
 
       try {
-        event = constructWebhookEvent(req.body as Buffer, sig);
+        event = constructWebhookEvent(req.body as Buffer, signature);
       } catch (err: any) {
         console.error("[Webhook] Signature verification failed:", err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
-      if (event.id.startsWith("evt_test_")) {
-        return res.json({ verified: true });
-      }
+      try {
+        switch (event.type) {
+          case "payment_intent.succeeded": {
+            const intent = event.data.object as any;
+            await markPaymentSucceeded(intent);
+            break;
+          }
 
-      const db = await getDb();
+          case "payment_intent.payment_failed": {
+            const intent = event.data.object as any;
+            await markPaymentFailed(intent);
+            break;
+          }
 
-      if (event.type === "payment_intent.succeeded") {
-        const intent = event.data.object as any;
-        const jobId = parseInt(intent.metadata?.jobId ?? "0");
+          case "payment_intent.canceled": {
+            const intent = event.data.object as any;
+            await markPaymentCanceled(intent);
+            break;
+          }
 
-        if (jobId && db) {
-          await db
-            .update(payments)
-            .set({
-              status: "pending",
-              stripePaymentIntentId: intent.id,
-            })
-            .where(eq(payments.jobId, jobId));
-
-          await db
-            .update(jobs)
-            .set({ status: "in_progress" })
-            .where(eq(jobs.id, jobId));
-
-          console.log(`[Webhook] Payment succeeded for job ${jobId}`);
-        }
-      }
-
-      if (event.type === "payment_intent.payment_failed") {
-        const intent = event.data.object as any;
-        const jobId = parseInt(intent.metadata?.jobId ?? "0");
-
-        if (jobId && db) {
-          await db
-            .update(payments)
-            .set({
-              status: "failed",
-              stripePaymentIntentId: intent.id,
-            })
-            .where(eq(payments.jobId, jobId));
-
-          await db
-            .update(jobs)
-            .set({ status: "awaiting_payment" })
-            .where(eq(jobs.id, jobId));
+          default:
+            console.log(`[Webhook] Ignored event type: ${event.type}`);
+            break;
         }
 
-        console.warn(
-          "[Webhook] Payment failed:",
-          intent.id,
-          intent.last_payment_error?.message ?? "Unknown error"
-        );
+        return res.json({ received: true });
+      } catch (err: any) {
+        console.error("[Webhook] Handler failed:", err?.message ?? err);
+        return res.status(500).json({
+          error: "Webhook handler failed",
+          message: err?.message ?? "Unknown error",
+        });
       }
-
-      res.json({ received: true });
     }
   );
 
@@ -132,10 +224,10 @@ async function startServer() {
         req.file.mimetype as string
       );
 
-      res.json({ url, key });
+      return res.json({ url, key });
     } catch (err: any) {
       console.error("[Upload] Error:", err.message);
-      res.status(500).json({ error: "Upload failed" });
+      return res.status(500).json({ error: "Upload failed" });
     }
   });
 
@@ -153,7 +245,7 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
+  const preferredPort = Number.parseInt(process.env.PORT || "3000", 10);
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {

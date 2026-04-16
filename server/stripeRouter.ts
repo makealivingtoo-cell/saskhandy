@@ -9,12 +9,19 @@ export const stripeRouter = router({
     .input(z.object({ jobId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
+
       if (!job) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job not found",
+        });
       }
 
       if (job.homeownerId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not allowed" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not allowed",
+        });
       }
 
       if (!job.selectedBidId || !job.selectedHandymanId) {
@@ -25,6 +32,7 @@ export const stripeRouter = router({
       }
 
       const payment = await getPaymentByJob(input.jobId);
+
       if (!payment) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -33,10 +41,20 @@ export const stripeRouter = router({
       }
 
       const bid = await getBidById(job.selectedBidId);
+
       if (!bid) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Accepted bid not found",
+        });
+      }
+
+      const amount = Number.parseFloat(payment.amount);
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid payment amount",
         });
       }
 
@@ -53,9 +71,12 @@ export const stripeRouter = router({
 
         if (
           existingIntent.client_secret &&
-          ["requires_payment_method", "requires_confirmation", "requires_action", "processing"].includes(
-            existingIntent.status
-          )
+          [
+            "requires_payment_method",
+            "requires_confirmation",
+            "requires_action",
+            "processing",
+          ].includes(existingIntent.status)
         ) {
           return {
             clientSecret: existingIntent.client_secret,
@@ -66,7 +87,7 @@ export const stripeRouter = router({
       }
 
       const result = await createPaymentIntent({
-        amount: parseFloat(payment.amount),
+        amount,
         jobId: input.jobId,
         homeownerEmail: ctx.user.email ?? "",
         homeownerName: ctx.user.name ?? "",
@@ -77,6 +98,7 @@ export const stripeRouter = router({
 
       await updatePayment(payment.id, {
         stripePaymentIntentId: result.paymentIntentId,
+        status: "pending",
       });
 
       return {
