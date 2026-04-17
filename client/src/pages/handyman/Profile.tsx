@@ -42,26 +42,6 @@ export default function HandymanProfile() {
     onError: (err) => toast.error(err.message),
   });
 
-  const connectStripe = trpc.handymanProfiles.connectStripe.useMutation({
-    onSuccess: (data) => {
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
-
-      toast.error("Could not start Stripe onboarding.");
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const refreshStripeStatus = trpc.handymanProfiles.refreshStripeStatus.useMutation({
-    onSuccess: async () => {
-      await utils.handymanProfiles.get.invalidate();
-      toast.success("Stripe payout status updated.");
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate("/sign-in");
@@ -87,17 +67,6 @@ export default function HandymanProfile() {
       setHourlyRate(profile.hourlyRate ? String(parseFloat(profile.hourlyRate)) : "");
     }
   }, [profile]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const stripeStatus = params.get("stripe");
-
-    if (stripeStatus === "return" || stripeStatus === "refresh") {
-      refreshStripeStatus.mutate();
-      window.history.replaceState({}, "", "/handyman/profile");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
@@ -194,16 +163,14 @@ export default function HandymanProfile() {
     ? "verified"
     : "pending";
 
-  const stripeReady = !!profile?.stripePayoutsEnabled && !!profile?.stripeDetailsSubmitted;
-
   const profileCompletion = useMemo(() => {
     let score = 0;
-    if (bio.trim()) score += 20;
-    if (selectedCategories.length > 0) score += 20;
-    if (hourlyRate.trim()) score += 20;
+    if (bio.trim()) score += 25;
+    if (selectedCategories.length > 0) score += 25;
+    if (hourlyRate.trim()) score += 25;
     if (profile?.insuranceCertUrl) score += 15;
-    if (profile?.insuranceVerified) score += 15;
-    if (stripeReady) score += 10;
+    if (profile?.insuranceVerified) score += 10;
+
     return Math.min(score, 100);
   }, [
     bio,
@@ -211,7 +178,6 @@ export default function HandymanProfile() {
     hourlyRate,
     profile?.insuranceCertUrl,
     profile?.insuranceVerified,
-    stripeReady,
   ]);
 
   return (
@@ -243,13 +209,6 @@ export default function HandymanProfile() {
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
                     Insurance Verified
-                  </span>
-                )}
-
-                {stripeReady && (
-                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    Stripe Payouts Ready
                   </span>
                 )}
               </div>
@@ -360,50 +319,13 @@ export default function HandymanProfile() {
             </div>
           </div>
 
-          <div
-            className={`rounded-lg p-4 mt-4 ${
-              stripeReady
-                ? "bg-emerald-50 border border-emerald-200"
-                : "bg-amber-50 border border-amber-200"
-            }`}
-          >
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="min-w-0">
-                <p
-                  className={`text-sm font-medium ${
-                    stripeReady ? "text-emerald-800" : "text-amber-800"
-                  }`}
-                >
-                  {stripeReady ? "Stripe payouts connected" : "Connect Stripe to receive payouts"}
-                </p>
-
-                <p className={`text-xs ${stripeReady ? "text-emerald-700" : "text-amber-700"}`}>
-                  {stripeReady
-                    ? "You can receive automatic payouts after completed jobs."
-                    : "Complete Stripe onboarding so SaskHandy can send your 80% payout after jobs are completed."}
-                </p>
-
-                {profile?.stripeAccountId && !stripeReady && (
-                  <p className="text-[11px] text-muted-foreground mt-2">
-                    Stripe account created. Setup may still need to be completed.
-                  </p>
-                )}
-              </div>
-
-              <Button
-                size="sm"
-                type="button"
-                onClick={() => connectStripe.mutate()}
-                disabled={connectStripe.isPending || refreshStripeStatus.isPending}
-              >
-                {connectStripe.isPending ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                )}
-                {profile?.stripeAccountId ? "Continue Stripe Setup" : "Connect Stripe"}
-              </Button>
-            </div>
+          <div className="rounded-lg p-4 mt-4 bg-primary/5 border border-primary/20">
+            <p className="text-sm font-medium text-primary">Manual payouts</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              SaskHandy currently processes handyman payouts manually. Submit payout requests from
+              the Earnings page before end of day Friday. Approved payouts are processed on
+              Saturday.
+            </p>
           </div>
         </div>
 

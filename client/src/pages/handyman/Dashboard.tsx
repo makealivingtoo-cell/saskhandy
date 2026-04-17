@@ -6,18 +6,13 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
 import {
-  Bell,
   Briefcase,
-  CheckCircle,
   DollarSign,
   Loader2,
-  MessageSquare,
   Search,
   Shield,
-  ShieldAlert,
   Star,
   TrendingUp,
-  Wallet,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
@@ -49,32 +44,16 @@ function StatCard({
   );
 }
 
-function NotificationIcon({ type }: { type: string }) {
-  if (type === "new_message") return <MessageSquare className="w-4 h-4 text-primary" />;
-  if (type === "new_bid" || type === "bid_accepted") {
-    return <Briefcase className="w-4 h-4 text-primary" />;
-  }
-  if (type === "payment_received" || type === "payout_requested") {
-    return <DollarSign className="w-4 h-4 text-primary" />;
-  }
-  if (type === "payout_paid" || type === "payout_rejected") {
-    return <Wallet className="w-4 h-4 text-primary" />;
-  }
-  if (type === "job_completed" || type === "dispute_resolved") {
-    return <CheckCircle className="w-4 h-4 text-primary" />;
-  }
-  if (type === "dispute_opened") return <ShieldAlert className="w-4 h-4 text-primary" />;
-  return <Bell className="w-4 h-4 text-primary" />;
-}
-
 export default function HandymanDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
-  const utils = trpc.useUtils();
 
-  const { data: profile, isLoading: profileLoading } = trpc.handymanProfiles.get.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const { data: profile, isLoading: profileLoading } = trpc.handymanProfiles.get.useQuery(
+    undefined,
+    {
+      enabled: isAuthenticated,
+    }
+  );
 
   const { data: myBids, isLoading: bidsLoading } = trpc.bids.getForHandyman.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -82,23 +61,6 @@ export default function HandymanDashboard() {
 
   const { data: earnings } = trpc.payments.getHandymanEarnings.useQuery(undefined, {
     enabled: isAuthenticated,
-  });
-
-  const { data: notifications = [], isLoading: notificationsLoading } =
-    trpc.notifications.getMine.useQuery(
-      { limit: 5 },
-      {
-        enabled: isAuthenticated,
-        refetchInterval: 10000,
-        refetchOnWindowFocus: true,
-      }
-    );
-
-  const markNotificationRead = trpc.notifications.markRead.useMutation({
-    onSuccess: async () => {
-      await utils.notifications.getMine.invalidate();
-      await utils.notifications.getUnreadCount.invalidate();
-    },
   });
 
   useEffect(() => {
@@ -112,7 +74,13 @@ export default function HandymanDashboard() {
       return;
     }
 
-    if (!loading && isAuthenticated && user?.userType === "handyman" && !profileLoading && !profile) {
+    if (
+      !loading &&
+      isAuthenticated &&
+      user?.userType === "handyman" &&
+      !profileLoading &&
+      !profile
+    ) {
       navigate("/onboarding");
     }
   }, [loading, isAuthenticated, user, profileLoading, profile, navigate]);
@@ -124,9 +92,12 @@ export default function HandymanDashboard() {
     if (!profile) return 0;
 
     let categories: string[] = [];
+
     try {
       categories = JSON.parse(profile.categories ?? "[]");
-    } catch {}
+    } catch {
+      categories = [];
+    }
 
     let score = 0;
     if (profile.bio?.trim()) score += 20;
@@ -155,6 +126,7 @@ export default function HandymanDashboard() {
           <h1 className="text-2xl font-serif text-foreground">
             Welcome back, {user?.name?.split(" ")[0]}
           </h1>
+
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {profile?.rating && parseFloat(profile.rating) > 0 ? (
               <StarRatingDisplay rating={parseFloat(profile.rating)} size="sm" showValue />
@@ -192,12 +164,14 @@ export default function HandymanDashboard() {
           <p className="text-sm font-medium text-foreground">Profile completion</p>
           <p className="text-sm font-semibold text-foreground">{profileCompletion}%</p>
         </div>
+
         <div className="h-2 rounded-full bg-muted overflow-hidden mb-3">
           <div
             className="h-full bg-primary rounded-full transition-all"
             style={{ width: `${profileCompletion}%` }}
           />
         </div>
+
         <p className="text-xs text-muted-foreground">
           A more complete profile makes homeowners more likely to trust your bids.
         </p>
@@ -211,18 +185,21 @@ export default function HandymanDashboard() {
           color="bg-emerald-50 text-emerald-600"
           sub="ready to request"
         />
+
         <StatCard
           label="Active Bids"
           value={pendingBids.length}
           icon={Briefcase}
           color="bg-blue-50 text-blue-600"
         />
+
         <StatCard
           label="Jobs Won"
           value={acceptedBids.length}
           icon={TrendingUp}
           color="bg-amber-50 text-amber-600"
         />
+
         <StatCard
           label="Rating"
           value={profile?.rating ? parseFloat(profile.rating).toFixed(1) : "—"}
@@ -230,76 +207,6 @@ export default function HandymanDashboard() {
           color="bg-purple-50 text-purple-600"
           sub={profile?.totalJobs ? `${profile.totalJobs} jobs completed` : undefined}
         />
-      </div>
-
-      <div className="bg-white rounded-xl border border-border/60 p-5 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Recent Notifications</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Messages, payouts, accepted bids, and job updates will appear here.
-            </p>
-          </div>
-          <Bell className="w-5 h-5 text-muted-foreground" />
-        </div>
-
-        {notificationsLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="bg-muted/40 rounded-lg p-6 text-center">
-            <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-medium text-foreground">No notifications yet</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              You’ll see payout, message, and job updates here.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {notifications.map((notification) => {
-              const href = notification.link || "/handyman/dashboard";
-
-              return (
-                <Link key={notification.id} href={href}>
-                  <div
-                    onClick={() => {
-                      if (!notification.read) {
-                        markNotificationRead.mutate({ notificationId: notification.id });
-                      }
-                    }}
-                    className="flex items-start gap-3 rounded-lg border border-border/50 p-3 hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <NotificationIcon type={notification.type} />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-medium text-foreground">
-                          {notification.title}
-                        </p>
-                        {!notification.read && (
-                          <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1.5" />
-                        )}
-                      </div>
-
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                        {notification.message}
-                      </p>
-
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notification.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {profileCompletion < 100 && (
@@ -310,6 +217,7 @@ export default function HandymanDashboard() {
               Add missing details to increase trust and improve your chances of winning bids.
             </p>
           </div>
+
           <Button
             asChild
             size="sm"
@@ -324,6 +232,7 @@ export default function HandymanDashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-foreground">Recent Bids</h2>
+
           <Link href="/handyman/bids">
             <span className="text-sm text-primary hover:underline cursor-pointer">View all</span>
           </Link>
@@ -340,6 +249,7 @@ export default function HandymanDashboard() {
             <p className="text-sm text-muted-foreground mb-5">
               Browse available jobs and start placing competitive bids.
             </p>
+
             <Button asChild>
               <Link href="/handyman/browse">
                 <Search className="w-4 h-4 mr-2" />
@@ -360,6 +270,7 @@ export default function HandymanDashboard() {
                         </p>
                         <StatusBadge status={bid.status} />
                       </div>
+
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         {bid.jobLocation && <span>{bid.jobLocation}</span>}
                         <span>
@@ -367,6 +278,7 @@ export default function HandymanDashboard() {
                         </span>
                       </div>
                     </div>
+
                     <div className="text-right shrink-0">
                       <p className="font-bold text-foreground">${bid.bidAmount}</p>
                       <p className="text-xs text-muted-foreground">your bid</p>
