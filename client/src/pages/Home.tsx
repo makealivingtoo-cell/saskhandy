@@ -77,19 +77,21 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="container flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white">
+        <div className="container flex items-center justify-between gap-3 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white">
               <Hammer className="h-5 w-5" />
             </div>
 
-            <div className="leading-tight">
-              <div className="text-2xl font-bold tracking-tight">SaskHandy</div>
-              <div className="text-sm text-slate-500">Local help for home jobs</div>
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                SaskHandy
+              </div>
+              <div className="text-xs text-slate-500 sm:text-sm">Local help for home jobs</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-5">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-5">
             <Link
               href="/about"
               className="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 md:inline"
@@ -106,16 +108,18 @@ export default function HomePage() {
 
             <Link
               href="/sign-in"
-              className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+              className="whitespace-nowrap text-sm font-medium text-slate-600 transition hover:text-slate-900"
             >
               Sign in
             </Link>
 
             <Button
               asChild
-              className="rounded-full bg-emerald-700 px-6 text-sm font-semibold hover:bg-emerald-800"
+              className="rounded-full bg-emerald-700 px-4 text-sm font-semibold hover:bg-emerald-800 sm:px-6"
             >
-              <Link href="/sign-up">Get Started</Link>
+              <Link href="/sign-up" className="whitespace-nowrap">
+                Get Started
+              </Link>
             </Button>
           </div>
         </div>

@@ -1,19 +1,37 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Hammer, MapPin, ShieldCheck, Star } from "lucide-react";
 import { Link } from "wouter";
 
 const services = [
   "Furniture assembly in Saskatoon",
-  "TV mounting and wall installations",
-  "Drywall patching and repairs",
-  "Minor plumbing help",
-  "Small electrical jobs",
-  "Painting and touch-ups",
-  "Door, trim, and hardware fixes",
-  "Seasonal yard help",
+  "TV mounting in Saskatoon",
+  "Leaky faucet repair",
+  "Light fixture installation",
+  "Drywall patch repair",
+  "Interior painting touch-ups",
+  "Yard work and seasonal cleanup",
+  "Fence and gutter repair",
 ];
 
 export default function SaskatoonHandymanServicesPage() {
+  useEffect(() => {
+    document.title = "Handyman Services in Saskatoon | SaskHandy";
+
+    const metaDescription = document.querySelector('meta[name="description"]');
+    const content =
+      "Looking for handyman services in Saskatoon? Find local help for furniture assembly, TV mounting, plumbing repairs, electrical help, drywall repair, painting, and yard work with SaskHandy.";
+
+    if (metaDescription) {
+      metaDescription.setAttribute("content", content);
+    } else {
+      const meta = document.createElement("meta");
+      meta.name = "description";
+      meta.content = content;
+      document.head.appendChild(meta);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <header className="border-b border-slate-200 bg-white">
@@ -45,14 +63,19 @@ export default function SaskatoonHandymanServicesPage() {
                 </div>
 
                 <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                  Handyman Services in Saskatoon
+                  Handyman Services in Saskatoon for Home Repairs, TV Mounting, Plumbing Help, and More
                 </h1>
 
                 <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                  Looking for handyman services in Saskatoon? SaskHandy helps homeowners in Saskatoon
-                  post home repair jobs, compare bids from local handymen, and manage the job process
-                  in one place. From small repairs to practical installation work, the goal is to make
-                  hiring local help simpler and more trustworthy.
+                  Looking for handyman services in Saskatoon? SaskHandy helps homeowners in
+                  Saskatoon find local help for furniture assembly, TV mounting, drywall patch
+                  repair, leaky faucet repair, light fixture installation, interior painting
+                  touch-ups, yard work, and other everyday home repair jobs.
+                </p>
+
+                <p className="mt-4 max-w-3xl text-slate-600 leading-8">
+                  Instead of relying on scattered listings or social media posts, you can post a
+                  job, compare bids, message local handymen, and manage the work in one place.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -64,7 +87,7 @@ export default function SaskatoonHandymanServicesPage() {
                   </Button>
 
                   <Button asChild size="lg" variant="outline" className="rounded-full">
-                    <Link href="/saskatchewan-handyman-services">View Saskatchewan Page</Link>
+                    <Link href="/saskatchewan-handyman-services">Saskatchewan Services</Link>
                   </Button>
                 </div>
               </div>
@@ -82,14 +105,14 @@ export default function SaskatoonHandymanServicesPage() {
           </div>
         </section>
 
-        <section className="bg-white border-b border-slate-200">
+        <section className="border-b border-slate-200 bg-white">
           <div className="container py-14">
             <h2 className="text-2xl font-bold tracking-tight text-slate-950">
               Popular handyman jobs in Saskatoon
             </h2>
             <p className="mt-3 max-w-2xl text-slate-600 leading-7">
-              Many Saskatoon homeowners need help with practical home maintenance and repair work
-              that is too small for a large contractor but still important to get done properly.
+              Many Saskatoon homeowners need practical local help for installation, maintenance,
+              repair, and seasonal home jobs.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -110,25 +133,27 @@ export default function SaskatoonHandymanServicesPage() {
             <div className="grid gap-6 md:grid-cols-3">
               <div className="rounded-[28px] border border-slate-200 p-6">
                 <ShieldCheck className="h-8 w-8 text-emerald-700" />
-                <h2 className="mt-4 text-xl font-semibold text-slate-900">Compare bids locally</h2>
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">Compare local bids</h2>
                 <p className="mt-2 text-slate-600 leading-7">
-                  Post your job once and compare responses from handymen serving Saskatoon and nearby areas.
+                  Post your job once and compare responses from handymen serving Saskatoon and
+                  nearby areas.
                 </p>
               </div>
 
               <div className="rounded-[28px] border border-slate-200 p-6">
                 <Star className="h-8 w-8 text-emerald-700" />
-                <h2 className="mt-4 text-xl font-semibold text-slate-900">Choose with more confidence</h2>
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">Reviews and trust</h2>
                 <p className="mt-2 text-slate-600 leading-7">
-                  Reviews, profiles, and clearer communication help homeowners make better hiring decisions.
+                  Profiles, ratings, and clearer communication help homeowners choose with more confidence.
                 </p>
               </div>
 
               <div className="rounded-[28px] border border-slate-200 p-6">
                 <Hammer className="h-8 w-8 text-emerald-700" />
-                <h2 className="mt-4 text-xl font-semibold text-slate-900">Better for everyday home jobs</h2>
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">Better for everyday jobs</h2>
                 <p className="mt-2 text-slate-600 leading-7">
-                  SaskHandy is designed around the smaller repair and maintenance jobs that homeowners often struggle to book.
+                  SaskHandy is designed for the real jobs homeowners search for, from TV wall
+                  mounting to drywall patching and light fixture installation.
                 </p>
               </div>
             </div>
@@ -139,12 +164,12 @@ export default function SaskatoonHandymanServicesPage() {
           <div className="container py-16">
             <div className="max-w-3xl">
               <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                Saskatoon handyman help, without the usual mess
+                Saskatoon handyman help without the usual back-and-forth
               </h2>
               <p className="mt-4 text-slate-600 leading-8">
-                Instead of searching through scattered listings or relying on social media posts,
-                homeowners in Saskatoon can use one place to post jobs, compare bids, and move
-                forward with more clarity.
+                If you are searching for a local Saskatoon handyman for repairs, maintenance, TV
+                mounting, plumbing help, electrical help, painting, or yard work, SaskHandy is
+                built to make the hiring process simpler.
               </p>
 
               <div className="mt-8">

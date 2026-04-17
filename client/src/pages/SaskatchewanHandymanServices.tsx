@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Hammer, MapPin, ShieldCheck, Star, Wrench } from "lucide-react";
 import { Link } from "wouter";
@@ -7,8 +8,8 @@ const cities = [
   "Regina",
   "Prince Albert",
   "Moose Jaw",
-  "Martensville",
   "Warman",
+  "Martensville",
   "Yorkton",
   "Swift Current",
 ];
@@ -16,15 +17,32 @@ const cities = [
 const services = [
   "Furniture assembly",
   "TV mounting",
-  "Drywall patching",
-  "Door and trim repairs",
-  "Minor plumbing help",
-  "Small electrical jobs",
-  "Yard work and seasonal cleanup",
-  "Painting and touch-ups",
+  "Plumbing repairs",
+  "Electrical help",
+  "Yard work and maintenance",
+  "Drywall patch repair",
+  "Interior painting",
+  "Fence and gutter repair",
 ];
 
 export default function SaskatchewanHandymanServicesPage() {
+  useEffect(() => {
+    document.title = "Saskatchewan Handyman Services | SaskHandy";
+
+    const metaDescription = document.querySelector('meta[name="description"]');
+    const content =
+      "Find Saskatchewan handyman services for furniture assembly, TV mounting, plumbing repairs, electrical help, yard work, drywall repair, painting, and more with SaskHandy.";
+
+    if (metaDescription) {
+      metaDescription.setAttribute("content", content);
+    } else {
+      const meta = document.createElement("meta");
+      meta.name = "description";
+      meta.content = content;
+      document.head.appendChild(meta);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <header className="border-b border-slate-200 bg-white">
@@ -56,14 +74,20 @@ export default function SaskatchewanHandymanServicesPage() {
                 </div>
 
                 <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                  Saskatchewan Handyman Services
+                  Saskatchewan Handyman Services for Repairs, Installations, and Home Maintenance
                 </h1>
 
                 <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                  SaskHandy helps homeowners across Saskatchewan connect with local handymen for
-                  repairs, installations, yard work, furniture assembly, painting, and other everyday
-                  home jobs. Whether you are in Saskatoon, Regina, or a growing community nearby, you
-                  can post a job, compare bids, and manage everything in one place.
+                  SaskHandy helps homeowners across Saskatchewan find local handyman services for
+                  furniture assembly, TV mounting, plumbing repairs, small electrical help, yard
+                  work, drywall patch repair, interior painting, fence repair, gutter cleaning,
+                  and other practical home jobs.
+                </p>
+
+                <p className="mt-4 max-w-3xl text-slate-600 leading-8">
+                  Whether you are in Saskatoon, Regina, Prince Albert, Moose Jaw, Warman, or
+                  Martensville, you can post a job, compare bids, message local handymen, and move
+                  forward with more confidence in one place.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -75,7 +99,7 @@ export default function SaskatchewanHandymanServicesPage() {
                   </Button>
 
                   <Button asChild size="lg" variant="outline" className="rounded-full">
-                    <Link href="/saskatoon-handyman-services">View Saskatoon Page</Link>
+                    <Link href="/saskatoon-handyman-services">Saskatoon Services</Link>
                   </Button>
                 </div>
               </div>
@@ -93,24 +117,24 @@ export default function SaskatchewanHandymanServicesPage() {
           </div>
         </section>
 
-        <section className="bg-white border-b border-slate-200">
+        <section className="border-b border-slate-200 bg-white">
           <div className="container py-14">
             <h2 className="text-2xl font-bold tracking-tight text-slate-950">
-              Areas we talk about on SaskHandy
+              Popular handyman services in Saskatchewan
             </h2>
             <p className="mt-3 max-w-2xl text-slate-600 leading-7">
-              We are building content and visibility around handyman services in major Saskatchewan
-              cities and surrounding communities.
+              These are some of the most common service categories homeowners look for when they
+              need local handyman help in Saskatchewan.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              {cities.map((city) => (
-                <span
-                  key={city}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700"
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {services.map((service) => (
+                <div
+                  key={service}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
                 >
-                  {city}
-                </span>
+                  {service}
+                </div>
               ))}
             </div>
           </div>
@@ -121,51 +145,45 @@ export default function SaskatchewanHandymanServicesPage() {
             <div className="grid gap-10 lg:grid-cols-2">
               <div>
                 <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                  Common handyman jobs in Saskatchewan
+                  Why homeowners use SaskHandy
                 </h2>
                 <p className="mt-4 text-slate-600 leading-8">
-                  Homeowners often need help with the small and medium-sized jobs that pile up over
-                  time. SaskHandy is designed for those practical jobs that need reliable local
-                  help without the usual back-and-forth.
+                  Instead of chasing random numbers, searching scattered listings, or posting in
+                  local Facebook groups, homeowners can use SaskHandy to compare bids, review
+                  profiles, keep messages in one place, and manage the job process more clearly.
                 </p>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {services.map((service) => (
-                    <div
-                      key={service}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-                    >
-                      {service}
-                    </div>
-                  ))}
-                </div>
+                <p className="mt-4 text-slate-600 leading-8">
+                  This works especially well for the small-to-medium jobs that often sit on a
+                  homeowner’s to-do list, including wall mounting, touch-up painting, minor repairs,
+                  leaky faucet fixes, light fixture installation, and seasonal yard maintenance.
+                </p>
               </div>
 
               <div className="space-y-5">
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <ShieldCheck className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Compare local bids</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Secure payments and clearer process</h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    Instead of messaging random contacts across different platforms, post once and
-                    receive bids from local handymen.
+                    Post once, compare bids, and keep the payment flow inside the platform instead
+                    of handling everything manually.
                   </p>
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <Star className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Build trust with reviews</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Reviews, profiles, and trust</h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    Ratings and reviews help homeowners make better decisions and help handymen grow
-                    their reputation over time.
+                    Ratings and profile details help homeowners choose local handymen with more
+                    confidence.
                   </p>
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <Wrench className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">One place to manage the job</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Built for practical home jobs</h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    Keep job details, bids, messages, and payment flow inside the platform from
-                    start to finish.
+                    SaskHandy is focused on the everyday home repair and maintenance jobs that
+                    homeowners actually search for.
                   </p>
                 </div>
               </div>
@@ -175,29 +193,38 @@ export default function SaskatchewanHandymanServicesPage() {
 
         <section className="border-t border-slate-200 bg-[#f7faf8]">
           <div className="container py-16">
-            <div className="max-w-3xl">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                Looking for a city-specific page?
-              </h2>
-              <p className="mt-4 text-slate-600 leading-8">
-                We are also building local pages to better serve homeowners searching for handyman
-                services in specific Saskatchewan cities.
-              </p>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+              Major Saskatchewan locations
+            </h2>
+            <p className="mt-4 max-w-3xl text-slate-600 leading-8">
+              We are building stronger visibility for local handyman services in major Saskatchewan
+              cities and surrounding communities.
+            </p>
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href="/saskatoon-handyman-services"
-                  className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:text-emerald-800"
+            <div className="mt-6 flex flex-wrap gap-3">
+              {cities.map((city) => (
+                <span
+                  key={city}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
                 >
-                  Saskatoon Handyman Services
-                </Link>
-                <Link
-                  href="/regina-handyman-services"
-                  className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:text-emerald-800"
-                >
-                  Regina Handyman Services
-                </Link>
-              </div>
+                  {city}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/saskatoon-handyman-services"
+                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:text-emerald-800"
+              >
+                Saskatoon Handyman Services
+              </Link>
+              <Link
+                href="/regina-handyman-services"
+                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:text-emerald-800"
+              >
+                Regina Handyman Services
+              </Link>
             </div>
           </div>
         </section>
