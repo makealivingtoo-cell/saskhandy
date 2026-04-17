@@ -8,6 +8,7 @@ import {
   emailVerificationTokens,
   handymanProfiles,
   jobs,
+  notifications,
   payments,
   payoutRequests,
   reviews,
@@ -19,6 +20,7 @@ import {
   type InsertEmailVerificationToken,
   type InsertHandymanProfile,
   type InsertJob,
+  type InsertNotification,
   type InsertPayment,
   type InsertPayoutRequest,
   type InsertReview,
@@ -562,6 +564,61 @@ export async function getHandymanPayoutSummary(handymanId: number) {
     payoutRequests: requests,
     completedPayments,
   };
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+export async function createNotification(data: InsertNotification) {
+  const db = await getDb();
+  const result = await db.insert(notifications).values(data);
+  return Number((result as any).insertId);
+}
+
+export async function getNotificationsForUser(userId: number, limit = 20) {
+  const db = await getDb();
+
+  return db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+
+  const rows = await db
+    .select({
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+
+  return Number(rows[0]?.count ?? 0);
+}
+
+export async function markNotificationRead(notificationId: number, userId: number) {
+  const db = await getDb();
+
+  await db
+    .update(notifications)
+    .set({
+      read: true,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+
+  await db
+    .update(notifications)
+    .set({
+      read: true,
+      updatedAt: new Date(),
+    })
+    .where(eq(notifications.userId, userId));
 }
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────

@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
 import { createMessage, getMessagesForJob, markMessageAsRead, getUnreadCount } from "./db-messages";
-import { sendNotification } from "./notifications";
 import { sendVerificationEmail } from "./email";
 import { z } from "zod";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
@@ -13,6 +12,7 @@ import {
   createHandymanProfile,
   createJob,
   createLocalUser,
+  createNotification,
   createPayment,
   createPayoutRequest,
   createReview,
@@ -34,6 +34,7 @@ import {
   getJobById,
   getJobsByHomeowner,
   getJobsForHandyman,
+  getNotificationsForUser,
   getOpenJobs,
   getPaymentByJob,
   getPaymentsByHandyman,
@@ -41,9 +42,12 @@ import {
   getPayoutRequestsByHandyman,
   getReviewForJob,
   getReviewsForUser,
+  getUnreadNotificationCount,
   getUserByEmail,
   getUserById,
   getValidEmailVerificationToken,
+  markAllNotificationsRead,
+  markNotificationRead,
   markUserEmailVerified,
   recalculateHandymanRating,
   rejectOtherBids,
@@ -158,6 +162,34 @@ async function createAndSendVerification(user: {
       token,
     };
   }
+}
+
+async function notifyUser(params: {
+  userId: number;
+  type:
+    | "new_bid"
+    | "bid_accepted"
+    | "new_message"
+    | "payment_received"
+    | "job_completed"
+    | "dispute_opened"
+    | "dispute_resolved"
+    | "payout_requested"
+    | "payout_paid"
+    | "payout_rejected"
+    | "system";
+  title: string;
+  message: string;
+  link?: string;
+}) {
+  await createNotification({
+    userId: params.userId,
+    type: params.type,
+    title: params.title,
+    message: params.message,
+    link: params.link,
+    read: false,
+  });
 }
 
 async function releasePaymentToHandyman(params: {
@@ -402,7 +434,9 @@ const handymanProfilesRouter = router({
     .query(async ({ input }) => {
       const profile = await getHandymanProfile(input.userId);
       const user = await getUserById(input.userId);
+
       if (!profile || !user) return null;
+
       return {
         ...profile,
         userName: user?.name,
@@ -639,9 +673,12 @@ const jobsRouter = router({
       await updateJobStatus(input.jobId, input.status);
 
       if (input.status === "completed" && job.selectedHandymanId) {
-        await sendNotification("job_completed", {
-          jobId: job.id,
-          jobTitle: job.title,
+        await notifyUser({
+          userId: job.selectedHandymanId,
+          type: "job_completed",
+          title: "Job completed",
+          message: `Your job "${job.title}" was marked complete. Your earnings are now available for payout request.`,
+          link: "/handyman/earnings",
         });
       }
 
@@ -697,12 +734,12 @@ const bidsRouter = router({
         availability: input.availability,
       });
 
-      await sendNotification("new_bid_received", {
-        jobId: job.id,
-        jobTitle: job.title,
-        userName: ctx.user.name ?? "A handyman",
-        bidAmount: input.bidAmount,
-        message: input.message,
+      await notifyUser({
+        userId: job.homeownerId,
+        type: "new_bid",
+        title: "New bid received",
+        message: `${ctx.user.name ?? "A handyman"} placed a bid on "${job.title}".`,
+        link: `/jobs/${job.id}`,
       });
 
       return { bidId };
@@ -788,10 +825,12 @@ const bidsRouter = router({
         status: "pending",
       });
 
-      await sendNotification("bid_accepted", {
-        jobId: job.id,
-        jobTitle: job.title,
-        bidAmount: amount,
+      await notifyUser({
+        userId: bid.handymanId,
+        type: "bid_accepted",
+        title: "Bid accepted",
+        message: `Your bid for "${job.title}" was accepted. Waiting for homeowner payment.`,
+        link: "/handyman/dashboard",
       });
 
       return { success: true, amount, platformFee, handymanPayout };
@@ -889,6 +928,14 @@ const paymentsRouter = router({
         status: "pending",
       });
 
+      await notifyUser({
+        userId: ctx.user.id,
+        type: "payout_requested",
+        title: "Payout request submitted",
+        message: `Your payout request for $${requestedAmount.toFixed(2)} has been submitted for review.`,
+        link: "/handyman/earnings",
+      });
+
       return {
         success: true,
         payoutRequestId,
@@ -910,6 +957,18 @@ const paymentsRouter = router({
       }
 
       await updatePayment(payment.id, { stripePaymentIntentId: input.stripePaymentIntentId });
+
+      const job = await getJobById(input.jobId);
+      if (job?.selectedHandymanId) {
+        await notifyUser({
+          userId: job.selectedHandymanId,
+          type: "payment_received",
+          title: "Homeowner payment received",
+          message: `The homeowner payment for "${job.title}" has been received. You can begin the job.`,
+          link: "/handyman/dashboard",
+        });
+      }
+
       return { success: true };
     }),
 });
@@ -1011,18 +1070,25 @@ const disputesRouter = router({
       }
 
       await updateJobStatus(input.jobId, "disputed");
+
       const disputeId = await createDispute({
         jobId: input.jobId,
         initiatedBy: ctx.user.id,
         reason: input.reason,
       });
 
-      await sendNotification("dispute_opened", {
-        jobId: job.id,
-        jobTitle: job.title,
-        userName: ctx.user.name ?? "A user",
-        message: input.reason,
-      });
+      const otherUserId =
+        job.homeownerId === ctx.user.id ? job.selectedHandymanId : job.homeownerId;
+
+      if (otherUserId) {
+        await notifyUser({
+          userId: otherUserId,
+          type: "dispute_opened",
+          title: "Dispute opened",
+          message: `A dispute was opened for "${job.title}".`,
+          link: `/jobs/${job.id}`,
+        });
+      }
 
       return { disputeId };
     }),
@@ -1097,6 +1163,22 @@ const disputesRouter = router({
               });
 
               await updateJobStatus(job.id, "completed");
+
+              await notifyUser({
+                userId: job.selectedHandymanId,
+                type: "dispute_resolved",
+                title: "Dispute resolved",
+                message: `A dispute for "${job.title}" was resolved and payment was released.`,
+                link: "/handyman/earnings",
+              });
+
+              await notifyUser({
+                userId: job.homeownerId,
+                type: "dispute_resolved",
+                title: "Dispute resolved",
+                message: `The dispute for "${job.title}" was resolved and payment was released to the handyman.`,
+                link: `/jobs/${job.id}`,
+              });
             } else {
               if (payment.stripePaymentIntentId) {
                 try {
@@ -1111,6 +1193,24 @@ const disputesRouter = router({
 
               await updatePayment(payment.id, { status: "refunded" });
               await updateJobStatus(job.id, "cancelled");
+
+              await notifyUser({
+                userId: job.homeownerId,
+                type: "dispute_resolved",
+                title: "Dispute resolved",
+                message: `The dispute for "${job.title}" was resolved and your payment was refunded.`,
+                link: `/jobs/${job.id}`,
+              });
+
+              if (job.selectedHandymanId) {
+                await notifyUser({
+                  userId: job.selectedHandymanId,
+                  type: "dispute_resolved",
+                  title: "Dispute resolved",
+                  message: `The dispute for "${job.title}" was resolved and the homeowner was refunded.`,
+                  link: "/handyman/dashboard",
+                });
+              }
             }
           }
         }
@@ -1144,6 +1244,18 @@ const messagesRouter = router({
         senderId: ctx.user.id,
         content: input.content,
       });
+
+      const recipientUserId = isHomeowner ? job.selectedHandymanId : job.homeownerId;
+
+      if (recipientUserId) {
+        await notifyUser({
+          userId: recipientUserId,
+          type: "new_message",
+          title: "New message",
+          message: `You have a new message about "${job.title}".`,
+          link: "/messages",
+        });
+      }
 
       return { messageId: msg?.id };
     }),
@@ -1188,6 +1300,30 @@ const messagesRouter = router({
     .query(async ({ ctx, input }) => {
       return getUnreadCount(input.jobId, ctx.user.id);
     }),
+});
+
+const notificationsRouter = router({
+  getMine: protectedProcedure
+    .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
+    .query(async ({ ctx, input }) => {
+      return getNotificationsForUser(ctx.user.id, input?.limit ?? 20);
+    }),
+
+  getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+    return getUnreadNotificationCount(ctx.user.id);
+  }),
+
+  markRead: protectedProcedure
+    .input(z.object({ notificationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await markNotificationRead(input.notificationId, ctx.user.id);
+      return { success: true };
+    }),
+
+  markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+    await markAllNotificationsRead(ctx.user.id);
+    return { success: true };
+  }),
 });
 
 const adminRouter = router({
@@ -1327,6 +1463,17 @@ const adminRouter = router({
         adminNotes: input.adminNotes?.trim() || undefined,
         paidAt: input.status === "paid" ? new Date() : null,
       } as any);
+
+      await notifyUser({
+        userId: payoutRequest.handymanId,
+        type: input.status === "paid" ? "payout_paid" : "payout_rejected",
+        title: input.status === "paid" ? "Payout marked paid" : "Payout request rejected",
+        message:
+          input.status === "paid"
+            ? `Your payout request for $${parseFloat(payoutRequest.amount).toFixed(2)} has been marked as paid.`
+            : `Your payout request for $${parseFloat(payoutRequest.amount).toFixed(2)} was rejected.`,
+        link: "/handyman/earnings",
+      });
 
       return { success: true };
     }),
@@ -1475,6 +1622,7 @@ const supportRouter = router({
     if (ctx.user.role !== "admin") {
       throw new TRPCError({ code: "FORBIDDEN" });
     }
+
     return getAllSupportTickets();
   }),
 
@@ -1559,6 +1707,7 @@ export const appRouter = router({
   reviews: reviewsRouter,
   disputes: disputesRouter,
   messages: messagesRouter,
+  notifications: notificationsRouter,
   admin: adminRouter,
   support: supportRouter,
   stripe: stripeRouter,

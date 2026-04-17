@@ -1,24 +1,31 @@
 import { eq, desc } from "drizzle-orm";
-import { messages, Message, InsertMessage } from "../drizzle/schema";
+import { messages, type Message, type InsertMessage } from "../drizzle/schema";
 import { getDb } from "./db";
 
 export async function createMessage(data: InsertMessage): Promise<Message | null> {
   const db = await getDb();
-  if (!db) return null;
+
   const result = await db.insert(messages).values(data);
-  return getMessageById(result[0].insertId);
+  const insertId = Number((result as any).insertId);
+
+  if (!insertId) {
+    return null;
+  }
+
+  return getMessageById(insertId);
 }
 
 export async function getMessageById(id: number): Promise<Message | null> {
   const db = await getDb();
-  if (!db) return null;
+
   const result = await db.select().from(messages).where(eq(messages.id, id)).limit(1);
+
   return result.length > 0 ? result[0] : null;
 }
 
 export async function getMessagesForJob(jobId: number): Promise<Message[]> {
   const db = await getDb();
-  if (!db) return [];
+
   return db
     .select()
     .from(messages)
@@ -28,12 +35,18 @@ export async function getMessagesForJob(jobId: number): Promise<Message[]> {
 
 export async function markMessageAsRead(messageId: number, userId: number): Promise<void> {
   const db = await getDb();
-  if (!db) return;
 
   const msg = await getMessageById(messageId);
   if (!msg) return;
 
-  const readByArray = msg.readBy ? JSON.parse(msg.readBy) : [];
+  let readByArray: number[] = [];
+
+  try {
+    readByArray = msg.readBy ? JSON.parse(msg.readBy) : [];
+  } catch {
+    readByArray = [];
+  }
+
   if (!readByArray.includes(userId)) {
     readByArray.push(userId);
   }
@@ -46,15 +59,18 @@ export async function markMessageAsRead(messageId: number, userId: number): Prom
 
 export async function getUnreadCount(jobId: number, userId: number): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
 
-  const jobMessages = await db
-    .select()
-    .from(messages)
-    .where(eq(messages.jobId, jobId));
+  const jobMessages = await db.select().from(messages).where(eq(messages.jobId, jobId));
 
   return jobMessages.filter((msg) => {
-    const readByArray = msg.readBy ? JSON.parse(msg.readBy) : [];
+    let readByArray: number[] = [];
+
+    try {
+      readByArray = msg.readBy ? JSON.parse(msg.readBy) : [];
+    } catch {
+      readByArray = [];
+    }
+
     return !readByArray.includes(userId) && msg.senderId !== userId;
   }).length;
 }

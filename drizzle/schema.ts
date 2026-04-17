@@ -177,6 +177,36 @@ export const payoutRequests = mysqlTable("payout_requests", {
 export type PayoutRequest = typeof payoutRequests.$inferSelect;
 export type InsertPayoutRequest = typeof payoutRequests.$inferInsert;
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", [
+    "new_bid",
+    "bid_accepted",
+    "new_message",
+    "payment_received",
+    "job_completed",
+    "dispute_opened",
+    "dispute_resolved",
+    "payout_requested",
+    "payout_paid",
+    "payout_rejected",
+    "system",
+  ])
+    .default("system")
+    .notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  link: varchar("link", { length: 500 }),
+  read: boolean("read").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 export const reviews = mysqlTable("reviews", {
   id: int("id").autoincrement().primaryKey(),
