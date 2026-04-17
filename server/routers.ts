@@ -1,8 +1,24 @@
 import { TRPCError } from "@trpc/server";
 import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
-import { createMessage, getMessagesForJob, markMessageAsRead, getUnreadCount } from "./db-messages";
-import { sendVerificationEmail } from "./email";
+import {
+  createMessage,
+  getMessagesForJob,
+  markMessageAsRead,
+  getUnreadCount,
+} from "./db-messages";
+import {
+  sendVerificationEmail,
+  sendNewBidEmail,
+  sendBidAcceptedEmail,
+  sendPaymentReceivedEmail,
+  sendNewMessageEmail,
+  sendJobCompletedEmail,
+  sendPayoutPaidEmail,
+  sendPayoutRejectedEmail,
+  sendDisputeOpenedEmail,
+  sendDisputeResolvedEmail,
+} from "./email";
 import { z } from "zod";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
@@ -37,7 +53,6 @@ import {
   getNotificationsForUser,
   getOpenJobs,
   getPaymentByJob,
-  getPaymentsByHandyman,
   getPayoutRequestById,
   getPayoutRequestsByHandyman,
   getReviewForJob,
@@ -113,6 +128,14 @@ function verifyPassword(password: string, stored: string) {
   if (derived.length !== hashBuffer.length) return false;
 
   return timingSafeEqual(derived, hashBuffer);
+}
+
+async function safeSendEmail(label: string, fn: () => Promise<void>) {
+  try {
+    await fn();
+  } catch (error: any) {
+    console.error(`[Email] ${label} failed:`, error?.message ?? error);
+  }
 }
 
 async function createAndSendVerification(user: {
@@ -680,6 +703,17 @@ const jobsRouter = router({
           message: `Your job "${job.title}" was marked complete. Your earnings are now available for payout request.`,
           link: "/handyman/earnings",
         });
+
+        const handyman = await getUserById(job.selectedHandymanId);
+        if (handyman?.email) {
+          void safeSendEmail("sendJobCompletedEmail", () =>
+            sendJobCompletedEmail({
+              to: handyman.email,
+              handymanName: handyman.name,
+              jobTitle: job.title,
+            })
+          );
+        }
       }
 
       return { success: true };
@@ -741,6 +775,20 @@ const bidsRouter = router({
         message: `${ctx.user.name ?? "A handyman"} placed a bid on "${job.title}".`,
         link: `/jobs/${job.id}`,
       });
+
+      const homeowner = await getUserById(job.homeownerId);
+      if (homeowner?.email) {
+        void safeSendEmail("sendNewBidEmail", () =>
+          sendNewBidEmail({
+            to: homeowner.email,
+            homeownerName: homeowner.name,
+            handymanName: ctx.user.name,
+            jobTitle: job.title,
+            bidAmount: input.bidAmount,
+            jobId: job.id,
+          })
+        );
+      }
 
       return { bidId };
     }),
@@ -832,6 +880,19 @@ const bidsRouter = router({
         message: `Your bid for "${job.title}" was accepted. Waiting for homeowner payment.`,
         link: "/handyman/dashboard",
       });
+
+      const handyman = await getUserById(bid.handymanId);
+      if (handyman?.email) {
+        void safeSendEmail("sendBidAcceptedEmail", () =>
+          sendBidAcceptedEmail({
+            to: handyman.email,
+            handymanName: handyman.name,
+            jobTitle: job.title,
+            bidAmount: amount,
+            jobId: job.id,
+          })
+        );
+      }
 
       return { success: true, amount, platformFee, handymanPayout };
     }),
@@ -967,6 +1028,17 @@ const paymentsRouter = router({
           message: `The homeowner payment for "${job.title}" has been received. You can begin the job.`,
           link: "/handyman/dashboard",
         });
+
+        const handyman = await getUserById(job.selectedHandymanId);
+        if (handyman?.email) {
+          void safeSendEmail("sendPaymentReceivedEmail", () =>
+            sendPaymentReceivedEmail({
+              to: handyman.email,
+              handymanName: handyman.name,
+              jobTitle: job.title,
+            })
+          );
+        }
       }
 
       return { success: true };
@@ -1088,6 +1160,19 @@ const disputesRouter = router({
           message: `A dispute was opened for "${job.title}".`,
           link: `/jobs/${job.id}`,
         });
+
+        const otherUser = await getUserById(otherUserId);
+        if (otherUser?.email) {
+          void safeSendEmail("sendDisputeOpenedEmail", () =>
+            sendDisputeOpenedEmail({
+              to: otherUser.email,
+              recipientName: otherUser.name,
+              jobTitle: job.title,
+              reason: input.reason,
+              jobId: job.id,
+            })
+          );
+        }
       }
 
       return { disputeId };
@@ -1179,6 +1264,35 @@ const disputesRouter = router({
                 message: `The dispute for "${job.title}" was resolved and payment was released to the handyman.`,
                 link: `/jobs/${job.id}`,
               });
+
+              const homeowner = await getUserById(job.homeownerId);
+              const handyman = job.selectedHandymanId
+                ? await getUserById(job.selectedHandymanId)
+                : null;
+
+              if (homeowner?.email) {
+                void safeSendEmail("sendDisputeResolvedEmail-homeowner", () =>
+                  sendDisputeResolvedEmail({
+                    to: homeowner.email,
+                    recipientName: homeowner.name,
+                    jobTitle: job.title,
+                    outcome: "Payment was released to the handyman.",
+                    jobId: job.id,
+                  })
+                );
+              }
+
+              if (handyman?.email) {
+                void safeSendEmail("sendDisputeResolvedEmail-handyman", () =>
+                  sendDisputeResolvedEmail({
+                    to: handyman.email,
+                    recipientName: handyman.name,
+                    jobTitle: job.title,
+                    outcome: "Payment was released.",
+                    jobId: job.id,
+                  })
+                );
+              }
             } else {
               if (payment.stripePaymentIntentId) {
                 try {
@@ -1210,6 +1324,35 @@ const disputesRouter = router({
                   message: `The dispute for "${job.title}" was resolved and the homeowner was refunded.`,
                   link: "/handyman/dashboard",
                 });
+              }
+
+              const homeowner = await getUserById(job.homeownerId);
+              const handyman = job.selectedHandymanId
+                ? await getUserById(job.selectedHandymanId)
+                : null;
+
+              if (homeowner?.email) {
+                void safeSendEmail("sendDisputeResolvedEmail-homeowner", () =>
+                  sendDisputeResolvedEmail({
+                    to: homeowner.email,
+                    recipientName: homeowner.name,
+                    jobTitle: job.title,
+                    outcome: "Your payment was refunded.",
+                    jobId: job.id,
+                  })
+                );
+              }
+
+              if (handyman?.email) {
+                void safeSendEmail("sendDisputeResolvedEmail-handyman", () =>
+                  sendDisputeResolvedEmail({
+                    to: handyman.email,
+                    recipientName: handyman.name,
+                    jobTitle: job.title,
+                    outcome: "The homeowner was refunded.",
+                    jobId: job.id,
+                  })
+                );
               }
             }
           }
@@ -1255,6 +1398,19 @@ const messagesRouter = router({
           message: `You have a new message about "${job.title}".`,
           link: "/messages",
         });
+
+        const recipient = await getUserById(recipientUserId);
+        if (recipient?.email) {
+          void safeSendEmail("sendNewMessageEmail", () =>
+            sendNewMessageEmail({
+              to: recipient.email,
+              recipientName: recipient.name,
+              senderName: ctx.user.name,
+              jobTitle: job.title,
+              jobId: job.id,
+            })
+          );
+        }
       }
 
       return { messageId: msg?.id };
@@ -1474,6 +1630,28 @@ const adminRouter = router({
             : `Your payout request for $${parseFloat(payoutRequest.amount).toFixed(2)} was rejected.`,
         link: "/handyman/earnings",
       });
+
+      const handyman = await getUserById(payoutRequest.handymanId);
+      if (handyman?.email) {
+        if (input.status === "paid") {
+          void safeSendEmail("sendPayoutPaidEmail", () =>
+            sendPayoutPaidEmail({
+              to: handyman.email,
+              handymanName: handyman.name,
+              amount: parseFloat(payoutRequest.amount),
+            })
+          );
+        } else {
+          void safeSendEmail("sendPayoutRejectedEmail", () =>
+            sendPayoutRejectedEmail({
+              to: handyman.email,
+              handymanName: handyman.name,
+              amount: parseFloat(payoutRequest.amount),
+              adminNotes: input.adminNotes ?? null,
+            })
+          );
+        }
+      }
 
       return { success: true };
     }),
