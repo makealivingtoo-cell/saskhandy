@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { JOB_CATEGORIES } from "@shared/constants";
 import { ArrowLeft, Loader2, MapPin, Sparkles } from "lucide-react";
@@ -54,9 +60,9 @@ export default function PostJob() {
   });
 
   const createJob = trpc.jobs.create.useMutation({
-    onSuccess: ({ jobId }) => {
-      toast.success("Job posted! Handymen can now bid on your job.");
-      navigate(`/jobs/${jobId}`);
+    onSuccess: () => {
+      toast.success("Job posted.");
+      navigate("/dashboard");
     },
     onError: (err) => toast.error(err.message),
   });
@@ -275,8 +281,8 @@ export default function PostJob() {
                 </span>
                 <Input
                   type="number"
-                  min="10"
-                  step="10"
+                  min="1"
+                  step="1"
                   placeholder="Min"
                   value={budgetMin}
                   onChange={(e) => setBudgetMin(e.target.value)}
@@ -291,7 +297,7 @@ export default function PostJob() {
                 <Input
                   type="number"
                   min="1"
-                  step="10"
+                  step="1"
                   placeholder="Max"
                   value={budgetMax}
                   onChange={(e) => setBudgetMax(e.target.value)}
