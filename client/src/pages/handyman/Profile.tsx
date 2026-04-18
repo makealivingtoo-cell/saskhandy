@@ -68,6 +68,23 @@ export default function HandymanProfile() {
     }
   }, [profile]);
 
+  const profileCompletion = useMemo(() => {
+    let score = 0;
+    if (bio.trim()) score += 25;
+    if (selectedCategories.length > 0) score += 25;
+    if (hourlyRate.trim()) score += 25;
+    if (profile?.insuranceCertUrl) score += 15;
+    if (profile?.insuranceVerified) score += 10;
+
+    return Math.min(score, 100);
+  }, [
+    bio,
+    selectedCategories.length,
+    hourlyRate,
+    profile?.insuranceCertUrl,
+    profile?.insuranceVerified,
+  ]);
+
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
@@ -162,23 +179,6 @@ export default function HandymanProfile() {
     : profile.insuranceVerified
     ? "verified"
     : "pending";
-
-  const profileCompletion = useMemo(() => {
-    let score = 0;
-    if (bio.trim()) score += 25;
-    if (selectedCategories.length > 0) score += 25;
-    if (hourlyRate.trim()) score += 25;
-    if (profile?.insuranceCertUrl) score += 15;
-    if (profile?.insuranceVerified) score += 10;
-
-    return Math.min(score, 100);
-  }, [
-    bio,
-    selectedCategories.length,
-    hourlyRate,
-    profile?.insuranceCertUrl,
-    profile?.insuranceVerified,
-  ]);
 
   return (
     <AppLayout title="My Profile">
