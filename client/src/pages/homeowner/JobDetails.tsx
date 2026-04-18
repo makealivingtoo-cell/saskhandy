@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  Image as ImageIcon,
   Loader2,
   MapPin,
   MessageSquare,
@@ -26,7 +27,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 function getBidInsuranceVerified(bid: any) {
   return bid?.handymanInsuranceVerified === true;
@@ -131,6 +132,11 @@ export default function JobDetails() {
     onError: (err) => toast.error(err.message),
   });
 
+  const jobPhotos = useMemo(() => {
+    if (!job?.photos) return [];
+    return Array.isArray(job.photos) ? job.photos : [];
+  }, [job?.photos]);
+
   if (jobLoading) {
     return (
       <AppLayout>
@@ -206,6 +212,33 @@ export default function JobDetails() {
             </div>
           </div>
         </div>
+
+        {jobPhotos.length > 0 && (
+          <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <ImageIcon className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Job Photos</h2>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {jobPhotos.map((photoUrl, index) => (
+                <a
+                  key={`${photoUrl}-${index}`}
+                  href={photoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-xl overflow-hidden border border-border/60 bg-muted hover:opacity-95 transition"
+                >
+                  <img
+                    src={photoUrl}
+                    alt={`Job photo ${index + 1}`}
+                    className="w-full h-32 sm:h-40 object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
           <MapView

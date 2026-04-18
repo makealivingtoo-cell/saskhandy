@@ -46,6 +46,28 @@ export async function getDb() {
   return dbInstance;
 }
 
+function stringifyPhotos(photos?: string[] | null) {
+  if (!photos || photos.length === 0) return null;
+  return JSON.stringify(photos);
+}
+
+function parsePhotos(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeJob<T extends { photos?: string | null }>(job: T) {
+  return {
+    ...job,
+    photos: parsePhotos(job.photos),
+  };
+}
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 export async function getUserById(id: number) {
   const db = await getDb();
@@ -168,7 +190,12 @@ export async function getValidEmailVerificationToken(token: string) {
   const rows = await db
     .select()
     .from(emailVerificationTokens)
-    .where(and(eq(emailVerificationTokens.token, token), gt(emailVerificationTokens.expiresAt, new Date())))
+    .where(
+      and(
+        eq(emailVerificationTokens.token, token),
+        gt(emailVerificationTokens.expiresAt, new Date())
+      )
+    )
     .limit(1);
 
   return rows[0] ?? null;
@@ -308,83 +335,105 @@ export async function recalculateHandymanRating(userId: number) {
 }
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
-export async function createJob(data: InsertJob) {
+export async function createJob(
+  data: Omit<InsertJob, "photos"> & { photos?: string[] | null }
+) {
   const db = await getDb();
-  const result = await db.insert(jobs).values(data);
+  const result = await db.insert(jobs).values({
+    ...data,
+    photos: stringifyPhotos(data.photos),
+  });
   return Number((result as any).insertId);
 }
 
 export async function getJobById(id: number) {
   const db = await getDb();
   const rows = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
-  return rows[0] ?? null;
+  return rows[0] ? normalizeJob(rows[0]) : null;
 }
 
 export async function getJobsByHomeowner(homeownerId: number) {
   const db = await getDb();
-  return db
+  const rows = await db
     .select()
     .from(jobs)
     .where(eq(jobs.homeownerId, homeownerId))
     .orderBy(desc(jobs.updatedAt));
+
+  return rows.map(normalizeJob);
 }
 
 export async function getOpenJobs(limit = 20, offset = 0, category?: string) {
   const db = await getDb();
 
   if (category) {
-    return db
+    const rows = await db
       .select()
       .from(jobs)
       .where(and(eq(jobs.status, "open"), eq(jobs.category, category)))
       .orderBy(desc(jobs.createdAt))
       .limit(limit)
       .offset(offset);
+
+    return rows.map(normalizeJob);
   }
 
-  return db
+  const rows = await db
     .select()
     .from(jobs)
     .where(eq(jobs.status, "open"))
     .orderBy(desc(jobs.createdAt))
     .limit(limit)
     .offset(offset);
+
+  return rows.map(normalizeJob);
 }
 
 export async function getJobsForHandyman(handymanId: number) {
   const db = await getDb();
-  return db
+  const rows = await db
     .select()
     .from(jobs)
     .where(eq(jobs.selectedHandymanId, handymanId))
     .orderBy(desc(jobs.updatedAt));
+
+  return rows.map(normalizeJob);
 }
 
-export async function updateJob(id: number, data: Partial<InsertJob>) {
+export async function updateJob(
+  id: number,
+  data: Partial<Omit<InsertJob, "photos">> & { photos?: string[] | null }
+) {
   const db = await getDb();
-  await db
-    .update(jobs)
-    .set({
-      ...data,
-      updatedAt: new Date(),
-    })
-    .where(eq(jobs.id, id));
+  const updateData: any = {
+    ...data,
+    updatedAt: new Date(),
+  };
+
+  if ("photos" in data) {
+    updateData.photos = stringifyPhotos(data.photos);
+  }
+
+  await db.update(jobs).set(updateData).where(eq(jobs.id, id));
 }
 
 export async function updateJobStatus(
   jobId: number,
   status: "open" | "awaiting_payment" | "in_progress" | "completed" | "disputed" | "cancelled",
-  extra?: Partial<InsertJob>
+  extra?: Partial<Omit<InsertJob, "photos">> & { photos?: string[] | null }
 ) {
   const db = await getDb();
-  await db
-    .update(jobs)
-    .set({
-      status,
-      ...(extra ?? {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(jobs.id, jobId));
+  const updateData: any = {
+    status,
+    ...(extra ?? {}),
+    updatedAt: new Date(),
+  };
+
+  if (extra && "photos" in extra) {
+    updateData.photos = stringifyPhotos(extra.photos);
+  }
+
+  await db.update(jobs).set(updateData).where(eq(jobs.id, jobId));
 }
 
 export async function deleteJobById(jobId: number) {

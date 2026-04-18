@@ -88,6 +88,7 @@ export const jobs = mysqlTable("jobs", {
   description: text("description").notNull(),
   category: varchar("category", { length: 100 }).notNull(),
   location: varchar("location", { length: 255 }).notNull(),
+  photos: text("photos"), // JSON string array of uploaded image URLs
   budgetMin: decimal("budgetMin", { precision: 10, scale: 2 }),
   budgetMax: decimal("budgetMax", { precision: 10, scale: 2 }),
   status: mysqlEnum("status", [

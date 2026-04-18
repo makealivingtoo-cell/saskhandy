@@ -513,6 +513,7 @@ const jobsRouter = router({
         description: z.string().min(10),
         category: z.string(),
         location: z.string().min(2),
+        photos: z.array(z.string().url()).max(8).optional(),
         budgetMin: z.number().positive(),
         budgetMax: z.number().positive(),
       })
@@ -531,6 +532,7 @@ const jobsRouter = router({
         description: input.description,
         category: input.category,
         location: input.location,
+        photos: input.photos ?? [],
         budgetMin: input.budgetMin.toFixed(2),
         budgetMax: input.budgetMax.toFixed(2),
         expiresAt,
@@ -547,6 +549,7 @@ const jobsRouter = router({
         description: z.string().min(10),
         category: z.string(),
         location: z.string().min(2),
+        photos: z.array(z.string().url()).max(8).optional(),
         budgetMin: z.number().positive(),
         budgetMax: z.number().positive(),
       })
@@ -572,6 +575,7 @@ const jobsRouter = router({
         description: input.description,
         category: input.category,
         location: input.location,
+        photos: input.photos ?? [],
         budgetMin: input.budgetMin.toFixed(2),
         budgetMax: input.budgetMax.toFixed(2),
       });
