@@ -275,7 +275,7 @@ export default function PostJob() {
                 </span>
                 <Input
                   type="number"
-                  min="1"
+                  min="10"
                   step="10"
                   placeholder="Min"
                   value={budgetMin}
