@@ -18,6 +18,7 @@ import {
   sendPayoutRejectedEmail,
   sendDisputeOpenedEmail,
   sendDisputeResolvedEmail,
+  sendNewJobPostedEmail,
 } from "./email";
 import { z } from "zod";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
@@ -537,6 +538,43 @@ const jobsRouter = router({
         budgetMax: input.budgetMax.toFixed(2),
         expiresAt,
       });
+
+      const handymanProfiles = await getAllHandymanProfiles();
+
+      const matchingProfiles = handymanProfiles.filter((profile) => {
+        try {
+          const categories = JSON.parse(profile.categories ?? "[]");
+          return Array.isArray(categories) && categories.includes(input.category);
+        } catch {
+          return false;
+        }
+      });
+
+      for (const profile of matchingProfiles) {
+        const handyman = await getUserById(profile.userId);
+        if (!handyman) continue;
+
+        await notifyUser({
+          userId: handyman.id,
+          type: "system",
+          title: "New job posted",
+          message: `A new ${input.category} job was posted: "${input.title}".`,
+          link: `/jobs/${jobId}`,
+        });
+
+        if (handyman.email) {
+          void safeSendEmail("sendNewJobPostedEmail", () =>
+            sendNewJobPostedEmail({
+              to: handyman.email,
+              handymanName: handyman.name,
+              jobTitle: input.title,
+              category: input.category,
+              location: input.location,
+              jobId,
+            })
+          );
+        }
+      }
 
       return { jobId };
     }),
