@@ -44,6 +44,14 @@ export default function AdminPanel() {
   });
 
   const {
+    data: jobs,
+    refetch: refetchJobs,
+    isLoading: jobsLoading,
+  } = trpc.admin.getJobs.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+  });
+
+  const {
     data: insuranceQueue,
     isLoading: insuranceLoading,
     refetch: refetchInsurance,
@@ -71,6 +79,7 @@ export default function AdminPanel() {
   const [payoutAdminNotes, setPayoutAdminNotes] = useState<Record<number, string>>({});
   const [updatingPayoutId, setUpdatingPayoutId] = useState<number | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
 
   const resolveDispute = trpc.disputes.resolve.useMutation({
     onSuccess: () => {
@@ -115,6 +124,19 @@ export default function AdminPanel() {
     onError: (err) => {
       toast.error(err.message);
       setDeletingUserId(null);
+    },
+  });
+
+  const deleteJob = trpc.admin.deleteJob.useMutation({
+    onSuccess: async () => {
+      toast.success("Job deleted.");
+      setDeletingJobId(null);
+      await refetchJobs();
+      await refetchStats();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      setDeletingJobId(null);
     },
   });
 
@@ -188,7 +210,9 @@ export default function AdminPanel() {
               key={s.label}
               className="bg-white rounded-xl border border-border/60 p-4 flex items-center gap-3"
             >
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${s.color}`}>
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${s.color}`}
+              >
                 <s.icon className="w-4 h-4" />
               </div>
               <div>
@@ -703,6 +727,117 @@ export default function AdminPanel() {
         )}
 
         <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Jobs <span className="text-muted-foreground font-normal">({jobs?.length ?? 0})</span>
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => refetchJobs()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {jobsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : !jobs || jobs.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <Briefcase className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No jobs found.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-border/60 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/40 bg-muted/30">
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                        Title
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                        Homeowner
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                        Category
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                        Status
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                        Created
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {jobs.map((job) => (
+                      <tr key={job.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="font-medium text-foreground">{job.title}</p>
+                            <p className="text-xs text-muted-foreground">{job.location}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="text-foreground text-sm">{job.homeownerName ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">{job.homeownerEmail ?? "—"}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{job.category}</td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={job.status} />
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">
+                          {format(new Date(job.createdAt), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2 flex-wrap">
+                            <Button asChild size="sm" variant="outline">
+                              <a href={`/jobs/${job.id}`} target="_blank" rel="noreferrer">
+                                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                View
+                              </a>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                              onClick={() => {
+                                const confirmed = window.confirm(
+                                  `Delete job "${job.title}"? This will permanently remove the job and related records.`
+                                );
+
+                                if (!confirmed) return;
+
+                                setDeletingJobId(job.id);
+                                deleteJob.mutate({ jobId: job.id });
+                              }}
+                              disabled={deleteJob.isPending}
+                            >
+                              {deleteJob.isPending && deletingJobId === job.id ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
           <h2 className="text-base font-semibold text-foreground mb-4">
             Users <span className="text-muted-foreground font-normal">({users?.length ?? 0})</span>
           </h2>
@@ -711,12 +846,24 @@ export default function AdminPanel() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/40 bg-muted/30">
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Name</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Email</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Type</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Role</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Joined</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Actions</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Name
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Email
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Type
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Role
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Joined
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">

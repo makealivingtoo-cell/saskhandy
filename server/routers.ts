@@ -23,6 +23,7 @@ import {
 import { z } from "zod";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
+  adminDeleteJobById,
   createBid,
   createDispute,
   createEmailVerificationToken,
@@ -39,6 +40,7 @@ import {
   deleteUserById,
   getAllDisputes,
   getAllHandymanProfiles,
+  getAllJobsForAdmin,
   getAllPayoutRequests,
   getAllUsers,
   getBidById,
@@ -1529,6 +1531,39 @@ const adminRouter = router({
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     return getAllUsers();
   }),
+
+  getJobs: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+
+    return getAllJobsForAdmin();
+  }),
+
+  deleteJob: protectedProcedure
+    .input(
+      z.object({
+        jobId: z.number(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const job = await getJobById(input.jobId);
+
+      if (!job) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job not found",
+        });
+      }
+
+      await adminDeleteJobById(input.jobId);
+
+      return { success: true };
+    }),
 
   deleteUser: protectedProcedure
     .input(

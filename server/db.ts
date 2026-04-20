@@ -8,6 +8,7 @@ import {
   emailVerificationTokens,
   handymanProfiles,
   jobs,
+  messages,
   notifications,
   payments,
   payoutRequests,
@@ -400,6 +401,39 @@ export async function getJobsForHandyman(handymanId: number) {
   return rows.map(normalizeJob);
 }
 
+export async function getAllJobsForAdmin() {
+  const db = await getDb();
+
+  const rows = await db
+    .select({
+      id: jobs.id,
+      homeownerId: jobs.homeownerId,
+      title: jobs.title,
+      description: jobs.description,
+      category: jobs.category,
+      location: jobs.location,
+      photos: jobs.photos,
+      budgetMin: jobs.budgetMin,
+      budgetMax: jobs.budgetMax,
+      status: jobs.status,
+      selectedHandymanId: jobs.selectedHandymanId,
+      selectedBidId: jobs.selectedBidId,
+      createdAt: jobs.createdAt,
+      updatedAt: jobs.updatedAt,
+      expiresAt: jobs.expiresAt,
+      homeownerName: users.name,
+      homeownerEmail: users.email,
+    })
+    .from(jobs)
+    .leftJoin(users, eq(jobs.homeownerId, users.id))
+    .orderBy(desc(jobs.updatedAt));
+
+  return rows.map((row) => ({
+    ...row,
+    photos: parsePhotos(row.photos),
+  }));
+}
+
 export async function updateJob(
   id: number,
   data: Partial<Omit<InsertJob, "photos">> & { photos?: string[] | null }
@@ -438,6 +472,32 @@ export async function updateJobStatus(
 
 export async function deleteJobById(jobId: number) {
   const db = await getDb();
+  await db.delete(jobs).where(eq(jobs.id, jobId));
+}
+
+export async function adminDeleteJobById(jobId: number) {
+  const db = await getDb();
+
+  const relatedSupportTickets = await db
+    .select({ id: supportTickets.id })
+    .from(supportTickets)
+    .where(eq(supportTickets.jobId, jobId));
+
+  const supportTicketIds = relatedSupportTickets.map((ticket) => ticket.id);
+
+  if (supportTicketIds.length > 0) {
+    await db
+      .delete(supportTicketMessages)
+      .where(inArray(supportTicketMessages.ticketId, supportTicketIds));
+  }
+
+  await db.delete(supportTickets).where(eq(supportTickets.jobId, jobId));
+  await db.delete(messages).where(eq(messages.jobId, jobId));
+  await db.delete(bids).where(eq(bids.jobId, jobId));
+  await db.delete(reviews).where(eq(reviews.jobId, jobId));
+  await db.delete(disputes).where(eq(disputes.jobId, jobId));
+  await db.delete(payments).where(eq(payments.jobId, jobId));
+  await db.delete(notifications).where(eq(notifications.link, `/jobs/${jobId}`));
   await db.delete(jobs).where(eq(jobs.id, jobId));
 }
 
