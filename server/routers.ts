@@ -20,6 +20,7 @@ import {
   sendDisputeResolvedEmail,
   sendNewJobPostedEmail,
 } from "./email";
+import { syncUserToBrevo } from "./brevo";
 import { z } from "zod";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
@@ -138,6 +139,14 @@ async function safeSendEmail(label: string, fn: () => Promise<void>) {
     await fn();
   } catch (error: any) {
     console.error(`[Email] ${label} failed:`, error?.message ?? error);
+  }
+}
+
+async function safeSyncBrevo(label: string, fn: () => Promise<void>) {
+  try {
+    await fn();
+  } catch (error: any) {
+    console.error(`[Brevo] ${label} failed:`, error?.message ?? error);
   }
 }
 
@@ -308,6 +317,17 @@ const authRouter = router({
         });
       }
 
+      if (user.email) {
+        await safeSyncBrevo("signUp", () =>
+          syncUserToBrevo({
+            email: user.email,
+            name: user.name,
+            userType: input.userType,
+            marketingOptIn: input.marketingOptIn,
+          })
+        );
+      }
+
       const verificationResult = await createAndSendVerification(user);
 
       return {
@@ -444,6 +464,17 @@ const authRouter = router({
             categories: "[]",
           });
         }
+      }
+
+      if (ctx.user.email) {
+        await safeSyncBrevo("setUserType", () =>
+          syncUserToBrevo({
+            email: ctx.user.email,
+            name: ctx.user.name,
+            userType: input.userType,
+            marketingOptIn: ctx.user.marketingOptIn,
+          })
+        );
       }
 
       return { success: true };
@@ -1253,7 +1284,7 @@ const disputesRouter = router({
     );
 
     return enriched;
-  }),
+    }),
 
   resolve: protectedProcedure
     .input(
