@@ -177,6 +177,38 @@ export async function sendVerificationEmail(params: {
   });
 }
 
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  name?: string | null;
+  token: string;
+}) {
+  const resetUrl =
+    `${APP_URL}/reset-password?token=${encodeURIComponent(params.token)}` +
+    `&email=${encodeURIComponent(params.to)}`;
+
+  await sendEmail({
+    to: params.to,
+    subject: "Reset your SaskHandy password",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+        <h2>Reset your password</h2>
+        <p>Hello ${params.name ? escapeHtml(params.name) : ""},</p>
+        <p>We received a request to reset your SaskHandy password. Click the button below to choose a new password.</p>
+        <p>
+          <a href="${resetUrl}" style="display:inline-block;padding:12px 18px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;">
+            Reset Password
+          </a>
+        </p>
+        <p>If the button does not work, use this link:</p>
+        <p><a href="${resetUrl}">${resetUrl}</a></p>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+      </div>
+    `,
+    text: `Reset your SaskHandy password: ${resetUrl}`,
+  });
+}
+
 export async function sendNewBidEmail(params: {
   to: string;
   homeownerName?: string | null;

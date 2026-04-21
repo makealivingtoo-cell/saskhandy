@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   bids,
   disputes,
@@ -10,6 +10,7 @@ import {
   jobs,
   messages,
   notifications,
+  passwordResetTokens,
   payments,
   payoutRequests,
   reviews,
@@ -22,6 +23,7 @@ import {
   type InsertHandymanProfile,
   type InsertJob,
   type InsertNotification,
+  type InsertPasswordResetToken,
   type InsertPayment,
   type InsertPayoutRequest,
   type InsertReview,
@@ -179,6 +181,17 @@ export async function updateUserType(userId: number, userType: "homeowner" | "ha
   await db.update(users).set({ userType }).where(eq(users.id, userId));
 }
 
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  const db = await getDb();
+  await db
+    .update(users)
+    .set({
+      passwordHash,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+}
+
 // ─── Email Verification Tokens ────────────────────────────────────────────────
 export async function createEmailVerificationToken(data: InsertEmailVerificationToken) {
   const db = await getDb();
@@ -210,6 +223,45 @@ export async function deleteEmailVerificationTokensForUser(userId: number) {
 export async function deleteEmailVerificationTokenById(id: number) {
   const db = await getDb();
   await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, id));
+}
+
+// ─── Password Reset Tokens ────────────────────────────────────────────────────
+export async function createPasswordResetToken(data: InsertPasswordResetToken) {
+  const db = await getDb();
+  const result = await db.insert(passwordResetTokens).values(data);
+  return Number((result as any).insertId);
+}
+
+export async function deletePasswordResetTokensForUser(userId: number) {
+  const db = await getDb();
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+}
+
+export async function getValidPasswordResetToken(token: string) {
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(
+      and(
+        eq(passwordResetTokens.token, token),
+        gt(passwordResetTokens.expiresAt, new Date()),
+        isNull(passwordResetTokens.usedAt)
+      )
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function markPasswordResetTokenUsed(id: number) {
+  const db = await getDb();
+  await db
+    .update(passwordResetTokens)
+    .set({
+      usedAt: new Date(),
+    })
+    .where(eq(passwordResetTokens.id, id));
 }
 
 // ─── Handyman Profiles ────────────────────────────────────────────────────────

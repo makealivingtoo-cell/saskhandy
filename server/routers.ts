@@ -9,6 +9,7 @@ import {
 } from "./db-messages";
 import {
   sendVerificationEmail,
+  sendPasswordResetEmail,
   sendNewBidEmail,
   sendBidAcceptedEmail,
   sendPaymentReceivedEmail,
@@ -32,12 +33,14 @@ import {
   createJob,
   createLocalUser,
   createNotification,
+  createPasswordResetToken,
   createPayment,
   createPayoutRequest,
   createReview,
   deleteEmailVerificationTokenById,
   deleteEmailVerificationTokensForUser,
   deleteJobById,
+  deletePasswordResetTokensForUser,
   deleteUserById,
   getAllDisputes,
   getAllHandymanProfiles,
@@ -65,8 +68,10 @@ import {
   getUserByEmail,
   getUserById,
   getValidEmailVerificationToken,
+  getValidPasswordResetToken,
   markAllNotificationsRead,
   markNotificationRead,
+  markPasswordResetTokenUsed,
   markUserEmailVerified,
   recalculateHandymanRating,
   rejectOtherBids,
@@ -78,6 +83,7 @@ import {
   updateJobStatus,
   updatePayment,
   updatePayoutRequest,
+  updateUserPassword,
   updateUserType,
   upsertUser,
 } from "./db";
@@ -196,6 +202,48 @@ async function createAndSendVerification(user: {
       emailSent: false,
       token,
     };
+  }
+}
+
+async function createAndSendPasswordReset(user: {
+  id: number;
+  email: string | null;
+  name: string | null;
+}) {
+  if (!user.email) {
+    return { emailSent: false };
+  }
+
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  await deletePasswordResetTokensForUser(user.id);
+
+  await createPasswordResetToken({
+    userId: user.id,
+    email: user.email,
+    token,
+    expiresAt,
+    usedAt: null,
+  });
+
+  try {
+    await sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      token,
+    });
+
+    return { emailSent: true };
+  } catch (error: any) {
+    console.error("Password reset email failed.");
+    console.error("Error message:", error?.message);
+    console.error("Error code:", error?.code);
+    console.error("Error command:", error?.command);
+    console.error("Error response:", error?.response);
+    console.error("Full error object:", error);
+
+    return { emailSent: false };
   }
 }
 
@@ -377,6 +425,63 @@ const authRouter = router({
         success: true,
         emailSent: verificationResult.emailSent,
       };
+    }),
+
+  requestPasswordReset: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const email = normalizeEmail(input.email);
+      const user = await getUserByEmail(email);
+
+      if (!user || !user.passwordHash || !user.email) {
+        return { success: true, emailSent: false };
+      }
+
+      const result = await createAndSendPasswordReset(user);
+
+      return {
+        success: true,
+        emailSent: result.emailSent,
+      };
+    }),
+
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(10),
+        password: z.string().min(6).max(100),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const resetToken = await getValidPasswordResetToken(input.token);
+
+      if (!resetToken) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This password reset link is invalid or expired.",
+        });
+      }
+
+      const user = await getUserById(resetToken.userId);
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found.",
+        });
+      }
+
+      const newPasswordHash = hashPassword(input.password);
+
+      await updateUserPassword(user.id, newPasswordHash);
+      await markPasswordResetTokenUsed(resetToken.id);
+      await deletePasswordResetTokensForUser(user.id);
+
+      return { success: true };
     }),
 
   signIn: publicProcedure
@@ -1284,7 +1389,7 @@ const disputesRouter = router({
     );
 
     return enriched;
-    }),
+  }),
 
   resolve: protectedProcedure
     .input(

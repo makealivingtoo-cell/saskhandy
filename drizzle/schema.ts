@@ -47,11 +47,24 @@ export const emailVerificationTokens = mysqlTable("email_verification_tokens", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const passwordResetTokens = mysqlTable("password_reset_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
 // ─── Handyman Profiles ────────────────────────────────────────────────────────
 export const handymanProfiles = mysqlTable("handyman_profiles", {
@@ -88,7 +101,7 @@ export const jobs = mysqlTable("jobs", {
   description: text("description").notNull(),
   category: varchar("category", { length: 100 }).notNull(),
   location: varchar("location", { length: 255 }).notNull(),
-  photos: text("photos"), // JSON string array of uploaded image URLs
+  photos: text("photos"),
   budgetMin: decimal("budgetMin", { precision: 10, scale: 2 }),
   budgetMax: decimal("budgetMax", { precision: 10, scale: 2 }),
   status: mysqlEnum("status", [
