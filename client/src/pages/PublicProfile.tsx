@@ -8,17 +8,56 @@ import { useParams } from "wouter";
 
 export default function PublicProfile() {
   const { userId } = useParams();
-  const uid = parseInt(userId ?? "0");
+  const uid = Number.parseInt(userId ?? "0", 10);
 
   const { data: profile, isLoading: profileLoading } = trpc.handymanProfiles.getById.useQuery(
     { userId: uid },
-    { enabled: !!uid }
+    { enabled: uid > 0 }
   );
 
   const { data: reviews, isLoading: reviewsLoading } = trpc.reviews.getForUser.useQuery(
     { userId: uid },
-    { enabled: !!uid }
+    { enabled: uid > 0 }
   );
+
+  const categories = useMemo<string[]>(() => {
+    if (!profile?.categories) return [];
+
+    try {
+      const parsed = JSON.parse(profile.categories);
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+    } catch {
+      return [];
+    }
+  }, [profile?.categories]);
+
+  const profileCompletion = useMemo(() => {
+    if (!profile) return 0;
+
+    let score = 0;
+    if (profile.bio?.trim()) score += 20;
+    if (categories.length > 0) score += 20;
+    if (profile.hourlyRate) score += 20;
+    if (profile.insuranceCertUrl) score += 20;
+    if (profile.insuranceVerified) score += 20;
+
+    return score;
+  }, [
+    profile,
+    categories.length,
+  ]);
+
+  const safeReviews = reviews ?? [];
+
+  if (!uid) {
+    return (
+      <AppLayout>
+        <div className="text-center py-20">
+          <p className="text-muted-foreground">Invalid profile.</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (profileLoading) {
     return (
@@ -40,20 +79,10 @@ export default function PublicProfile() {
     );
   }
 
-  let categories: string[] = [];
-  try {
-    categories = JSON.parse(profile.categories ?? "[]");
-  } catch {}
-
-  const profileCompletion = useMemo(() => {
-    let score = 0;
-    if (profile.bio?.trim()) score += 20;
-    if (categories.length > 0) score += 20;
-    if (profile.hourlyRate) score += 20;
-    if (profile.insuranceCertUrl) score += 20;
-    if (profile.insuranceVerified) score += 20;
-    return score;
-  }, [profile.bio, profile.hourlyRate, profile.insuranceCertUrl, profile.insuranceVerified, categories.length]);
+  const displayName = profile.userName?.trim() || "Handyman";
+  const displayInitial = displayName.charAt(0).toUpperCase() || "H";
+  const ratingValue = profile.rating ? Number.parseFloat(profile.rating) : 0;
+  const hourlyRateValue = profile.hourlyRate ? Number.parseFloat(profile.hourlyRate) : null;
 
   return (
     <AppLayout>
@@ -61,14 +90,12 @@ export default function PublicProfile() {
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-8">
           <div className="flex items-start gap-5">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-              <span className="text-2xl font-bold text-primary">
-                {profile.userName?.charAt(0)?.toUpperCase()}
-              </span>
+              <span className="text-2xl font-bold text-primary">{displayInitial}</span>
             </div>
 
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-xl font-serif text-foreground">{profile.userName}</h1>
+                <h1 className="text-xl font-serif text-foreground">{displayName}</h1>
 
                 {profile.insuranceVerified && (
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
@@ -86,8 +113,8 @@ export default function PublicProfile() {
               </div>
 
               <div className="flex items-center gap-4 mb-3 flex-wrap">
-                {profile.rating && parseFloat(profile.rating) > 0 ? (
-                  <StarRatingDisplay rating={parseFloat(profile.rating)} showValue />
+                {ratingValue > 0 ? (
+                  <StarRatingDisplay rating={ratingValue} showValue />
                 ) : (
                   <span className="text-sm text-muted-foreground">No ratings yet</span>
                 )}
@@ -98,9 +125,9 @@ export default function PublicProfile() {
                 </span>
               </div>
 
-              {profile.hourlyRate && (
+              {hourlyRateValue !== null && !Number.isNaN(hourlyRateValue) && (
                 <p className="text-sm font-medium text-foreground">
-                  ${parseFloat(profile.hourlyRate).toFixed(0)}/hr
+                  ${hourlyRateValue.toFixed(0)}/hr
                 </p>
               )}
             </div>
@@ -119,7 +146,7 @@ export default function PublicProfile() {
             </div>
           </div>
 
-          {profile.bio && (
+          {profile.bio?.trim() && (
             <div className="mt-5 pt-5 border-t border-border/40">
               <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
             </div>
@@ -146,8 +173,8 @@ export default function PublicProfile() {
           <div className="flex items-center gap-2 mb-5">
             <Star className="w-4 h-4 text-amber-500" />
             <h2 className="font-semibold text-foreground">Reviews</h2>
-            {reviews && reviews.length > 0 && (
-              <span className="text-sm text-muted-foreground">({reviews.length})</span>
+            {safeReviews.length > 0 && (
+              <span className="text-sm text-muted-foreground">({safeReviews.length})</span>
             )}
           </div>
 
@@ -155,35 +182,50 @@ export default function PublicProfile() {
             <div className="flex justify-center py-6">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
             </div>
-          ) : !reviews || reviews.length === 0 ? (
+          ) : safeReviews.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No reviews yet.</p>
           ) : (
             <div className="space-y-5">
-              {reviews.map((review) => (
-                <div key={review.id} className="border-b border-border/40 last:border-0 pb-5 last:pb-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-muted rounded-full flex items-center justify-center">
-                        <span className="text-xs font-semibold text-muted-foreground">
-                          {review.reviewerName?.charAt(0)?.toUpperCase()}
-                        </span>
+              {safeReviews.map((review) => {
+                const reviewName = review.reviewerName?.trim() || "User";
+                const reviewInitial = reviewName.charAt(0).toUpperCase() || "U";
+
+                let formattedDate = "";
+                try {
+                  formattedDate = format(new Date(review.createdAt), "MMM d, yyyy");
+                } catch {
+                  formattedDate = "";
+                }
+
+                return (
+                  <div
+                    key={review.id}
+                    className="border-b border-border/40 last:border-0 pb-5 last:pb-0"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 bg-muted rounded-full flex items-center justify-center">
+                          <span className="text-xs font-semibold text-muted-foreground">
+                            {reviewInitial}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-foreground">{reviewName}</span>
                       </div>
-                      <span className="text-sm font-medium text-foreground">
-                        {review.reviewerName ?? "User"}
-                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <StarRatingDisplay rating={review.rating} size="sm" />
+                        {formattedDate && (
+                          <span className="text-xs text-muted-foreground">{formattedDate}</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <StarRatingDisplay rating={review.rating} size="sm" />
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(review.createdAt), "MMM d, yyyy")}
-                      </span>
-                    </div>
+
+                    {review.comment?.trim() && (
+                      <p className="text-sm text-muted-foreground ml-9">{review.comment}</p>
+                    )}
                   </div>
-                  {review.comment && (
-                    <p className="text-sm text-muted-foreground ml-9">{review.comment}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
