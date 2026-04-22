@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getAllUsers } from "../db";
+import { getAllUsers } from "./db";
 import { syncUserToBrevo } from "../brevo";
 
 async function main() {
