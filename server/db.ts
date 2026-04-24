@@ -71,22 +71,57 @@ function normalizeJob<T extends { photos?: string | null }>(job: T) {
   };
 }
 
+const authUserSelect = {
+  id: users.id,
+  openId: users.openId,
+  name: users.name,
+  email: users.email,
+  passwordHash: users.passwordHash,
+  loginMethod: users.loginMethod,
+  role: users.role,
+  userType: users.userType,
+  emailVerified: users.emailVerified,
+  emailVerifiedAt: users.emailVerifiedAt,
+  termsVersionAccepted: users.termsVersionAccepted,
+  termsAcceptedAt: users.termsAcceptedAt,
+  privacyVersionAccepted: users.privacyVersionAccepted,
+  privacyAcceptedAt: users.privacyAcceptedAt,
+  ageConfirmedAt: users.ageConfirmedAt,
+  marketingOptIn: users.marketingOptIn,
+  marketingOptInAt: users.marketingOptInAt,
+  createdAt: users.createdAt,
+  updatedAt: users.updatedAt,
+  lastSignedIn: users.lastSignedIn,
+};
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 export async function getUserById(id: number) {
   const db = await getDb();
-  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const rows = await db
+    .select(authUserSelect)
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
   return rows[0] ?? null;
 }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
-  const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const rows = await db
+    .select(authUserSelect)
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
   return rows[0] ?? null;
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  const rows = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const rows = await db
+    .select(authUserSelect)
+    .from(users)
+    .where(eq(users.openId, openId))
+    .limit(1);
   return rows[0] ?? null;
 }
 
