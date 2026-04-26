@@ -156,6 +156,30 @@ async function safeSyncBrevo(label: string, fn: () => Promise<void>) {
   }
 }
 
+async function safeGetUserByEmail(email: string) {
+  try {
+    return await getUserByEmail(email);
+  } catch (error: any) {
+    console.error("[Auth] getUserByEmail failed:", error?.message ?? error);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Unable to process your request right now. Please try again shortly.",
+    });
+  }
+}
+
+async function safeGetUserById(userId: number) {
+  try {
+    return await getUserById(userId);
+  } catch (error: any) {
+    console.error("[Auth] getUserById failed:", error?.message ?? error);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Unable to process your request right now. Please try again shortly.",
+    });
+  }
+}
+
 async function createAndSendVerification(user: {
   id: number;
   email: string | null;
@@ -333,7 +357,7 @@ const authRouter = router({
     )
     .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
-      const existing = await getUserByEmail(email);
+      const existing = await safeGetUserByEmail(email);
 
       if (existing) {
         throw new TRPCError({
@@ -409,7 +433,7 @@ const authRouter = router({
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
-      const user = await getUserByEmail(email);
+      const user = await safeGetUserByEmail(email);
 
       if (!user) {
         return { success: true, emailSent: false };
@@ -435,7 +459,7 @@ const authRouter = router({
     )
     .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
-      const user = await getUserByEmail(email);
+      const user = await safeGetUserByEmail(email);
 
       if (!user || !user.passwordHash || !user.email) {
         return { success: true, emailSent: false };
@@ -466,7 +490,7 @@ const authRouter = router({
         });
       }
 
-      const user = await getUserById(resetToken.userId);
+      const user = await safeGetUserById(resetToken.userId);
 
       if (!user) {
         throw new TRPCError({
@@ -493,7 +517,7 @@ const authRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const email = normalizeEmail(input.email);
-      const user = await getUserByEmail(email);
+      const user = await safeGetUserByEmail(email);
 
       if (!user || !user.passwordHash) {
         throw new TRPCError({
@@ -527,7 +551,7 @@ const authRouter = router({
         });
       }
 
-      const refreshedUser = await getUserByEmail(email);
+      const refreshedUser = await safeGetUserByEmail(email);
 
       if (!refreshedUser) {
         throw new TRPCError({
@@ -577,7 +601,7 @@ const authRouter = router({
             email: ctx.user.email,
             name: ctx.user.name,
             userType: input.userType,
-            marketingOptIn: ctx.user.marketingOptIn,
+            marketingOptIn: (ctx.user as any).marketingOptIn ?? false,
           })
         );
       }
@@ -595,7 +619,7 @@ const handymanProfilesRouter = router({
     .input(z.object({ userId: z.number() }))
     .query(async ({ input }) => {
       const profile = await getHandymanProfile(input.userId);
-      const user = await getUserById(input.userId);
+      const user = await safeGetUserById(input.userId);
 
       if (!profile || !user) return null;
 
@@ -689,7 +713,7 @@ const jobsRouter = router({
       });
 
       for (const profile of matchingProfiles) {
-        const handyman = await getUserById(profile.userId);
+        const handyman = await safeGetUserById(profile.userId);
         if (!handyman) continue;
 
         await notifyUser({
@@ -828,7 +852,7 @@ const jobsRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const homeowner = await getUserById(job.homeownerId);
+      const homeowner = await safeGetUserById(job.homeownerId);
       return { ...job, homeownerName: homeowner?.name };
     }),
 
@@ -884,7 +908,7 @@ const jobsRouter = router({
           link: "/handyman/earnings",
         });
 
-        const handyman = await getUserById(job.selectedHandymanId);
+        const handyman = await safeGetUserById(job.selectedHandymanId);
         if (handyman?.email) {
           void safeSendEmail("sendJobCompletedEmail", () =>
             sendJobCompletedEmail({
@@ -956,7 +980,7 @@ const bidsRouter = router({
         link: `/jobs/${job.id}`,
       });
 
-      const homeowner = await getUserById(job.homeownerId);
+      const homeowner = await safeGetUserById(job.homeownerId);
       if (homeowner?.email) {
         void safeSendEmail("sendNewBidEmail", () =>
           sendNewBidEmail({
@@ -980,7 +1004,7 @@ const bidsRouter = router({
 
       const enriched = await Promise.all(
         bidList.map(async (bid) => {
-          const user = await getUserById(bid.handymanId);
+          const user = await safeGetUserById(bid.handymanId);
           const profile = await getHandymanProfile(bid.handymanId);
 
           return {
@@ -1061,7 +1085,7 @@ const bidsRouter = router({
         link: "/handyman/dashboard",
       });
 
-      const handyman = await getUserById(bid.handymanId);
+      const handyman = await safeGetUserById(bid.handymanId);
       if (handyman?.email) {
         void safeSendEmail("sendBidAcceptedEmail", () =>
           sendBidAcceptedEmail({
@@ -1209,7 +1233,7 @@ const paymentsRouter = router({
           link: "/handyman/dashboard",
         });
 
-        const handyman = await getUserById(job.selectedHandymanId);
+        const handyman = await safeGetUserById(job.selectedHandymanId);
         if (handyman?.email) {
           void safeSendEmail("sendPaymentReceivedEmail", () =>
             sendPaymentReceivedEmail({
@@ -1280,7 +1304,7 @@ const reviewsRouter = router({
 
       const enriched = await Promise.all(
         reviewList.map(async (r) => {
-          const reviewer = await getUserById(r.reviewerId);
+          const reviewer = await safeGetUserById(r.reviewerId);
           return { ...r, reviewerName: reviewer?.name };
         })
       );
@@ -1341,7 +1365,7 @@ const disputesRouter = router({
           link: `/jobs/${job.id}`,
         });
 
-        const otherUser = await getUserById(otherUserId);
+        const otherUser = await safeGetUserById(otherUserId);
         if (otherUser?.email) {
           void safeSendEmail("sendDisputeOpenedEmail", () =>
             sendDisputeOpenedEmail({
@@ -1383,7 +1407,7 @@ const disputesRouter = router({
     const enriched = await Promise.all(
       disputeList.map(async (d) => {
         const job = await getJobById(d.jobId);
-        const initiator = await getUserById(d.initiatedBy);
+        const initiator = await safeGetUserById(d.initiatedBy);
         return { ...d, jobTitle: job?.title, initiatorName: initiator?.name };
       })
     );
@@ -1445,9 +1469,9 @@ const disputesRouter = router({
                 link: `/jobs/${job.id}`,
               });
 
-              const homeowner = await getUserById(job.homeownerId);
+              const homeowner = await safeGetUserById(job.homeownerId);
               const handyman = job.selectedHandymanId
-                ? await getUserById(job.selectedHandymanId)
+                ? await safeGetUserById(job.selectedHandymanId)
                 : null;
 
               if (homeowner?.email) {
@@ -1506,9 +1530,9 @@ const disputesRouter = router({
                 });
               }
 
-              const homeowner = await getUserById(job.homeownerId);
+              const homeowner = await safeGetUserById(job.homeownerId);
               const handyman = job.selectedHandymanId
-                ? await getUserById(job.selectedHandymanId)
+                ? await safeGetUserById(job.selectedHandymanId)
                 : null;
 
               if (homeowner?.email) {
@@ -1579,7 +1603,7 @@ const messagesRouter = router({
           link: "/messages",
         });
 
-        const recipient = await getUserById(recipientUserId);
+        const recipient = await safeGetUserById(recipientUserId);
         if (recipient?.email) {
           void safeSendEmail("sendNewMessageEmail", () =>
             sendNewMessageEmail({
@@ -1613,7 +1637,7 @@ const messagesRouter = router({
 
       const enriched = await Promise.all(
         jobMessages.map(async (msg) => {
-          const sender = await getUserById(msg.senderId);
+          const sender = await safeGetUserById(msg.senderId);
           return {
             ...msg,
             senderName: sender?.name,
@@ -1719,7 +1743,7 @@ const adminRouter = router({
         });
       }
 
-      const user = await getUserById(input.userId);
+      const user = await safeGetUserById(input.userId);
 
       if (!user) {
         throw new TRPCError({
@@ -1786,7 +1810,7 @@ const adminRouter = router({
 
     const enriched = await Promise.all(
       payoutRequestList.map(async (request) => {
-        const user = await getUserById(request.handymanId);
+        const user = await safeGetUserById(request.handymanId);
         return {
           ...request,
           handymanName: user?.name ?? null,
@@ -1844,7 +1868,7 @@ const adminRouter = router({
         link: "/handyman/earnings",
       });
 
-      const handyman = await getUserById(payoutRequest.handymanId);
+      const handyman = await safeGetUserById(payoutRequest.handymanId);
       if (handyman?.email) {
         if (input.status === "paid") {
           void safeSendEmail("sendPayoutPaidEmail", () =>
