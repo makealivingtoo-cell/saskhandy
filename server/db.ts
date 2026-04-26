@@ -71,6 +71,11 @@ function normalizeJob<T extends { photos?: string | null }>(job: T) {
   };
 }
 
+/**
+ * Keep auth lookups minimal.
+ * Do NOT include optional legal/marketing fields here.
+ * This reduces the chance of auth breaking if production schema drifts.
+ */
 const authUserSelect = {
   id: users.id,
   openId: users.openId,
@@ -82,13 +87,6 @@ const authUserSelect = {
   userType: users.userType,
   emailVerified: users.emailVerified,
   emailVerifiedAt: users.emailVerifiedAt,
-  termsVersionAccepted: users.termsVersionAccepted,
-  termsAcceptedAt: users.termsAcceptedAt,
-  privacyVersionAccepted: users.privacyVersionAccepted,
-  privacyAcceptedAt: users.privacyAcceptedAt,
-  ageConfirmedAt: users.ageConfirmedAt,
-  marketingOptIn: users.marketingOptIn,
-  marketingOptInAt: users.marketingOptInAt,
   createdAt: users.createdAt,
   updatedAt: users.updatedAt,
   lastSignedIn: users.lastSignedIn,
