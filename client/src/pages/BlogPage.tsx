@@ -96,32 +96,44 @@ export default function BlogPage() {
       <main>
         <section className="bg-[#f7faf8]">
           <div className="container py-16 md:py-20">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-                Saskatchewan Home Repair Blog
-              </p>
+            <div className="grid items-center gap-10 lg:grid-cols-2">
+              <div className="max-w-3xl">
+                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                  Saskatchewan Home Repair Blog
+                </p>
 
-              <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                Home Repair Tips and Handyman Hiring Advice for Saskatchewan Homeowners
-              </h1>
+                <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
+                  Home Repair Tips and Handyman Hiring Advice for Saskatchewan Homeowners
+                </h1>
 
-              <p className="mt-5 text-lg leading-8 text-slate-600">
-                The SaskHandy Blog helps homeowners find practical answers about home repairs,
-                handyman services, small maintenance jobs, furniture assembly, TV mounting, yard
-                work, drywall repairs, painting, plumbing help, electrical help, and hiring local
-                handymen in Saskatchewan.
-              </p>
+                <p className="mt-5 text-lg leading-8 text-slate-600">
+                  The SaskHandy Blog helps homeowners find practical answers about home repairs,
+                  handyman services, small maintenance jobs, furniture assembly, TV mounting, yard
+                  work, drywall repairs, painting, plumbing help, electrical help, and hiring local
+                  handymen in Saskatchewan.
+                </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button asChild className="rounded-full bg-emerald-700 hover:bg-emerald-800">
-                  <Link href="/sign-up">Post a Job</Link>
-                </Button>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Button asChild className="rounded-full bg-emerald-700 hover:bg-emerald-800">
+                    <Link href="/sign-up">Post a Job</Link>
+                  </Button>
 
-                <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/saskatchewan-handyman-services">
-                    Explore Handyman Services
-                  </Link>
-                </Button>
+                  <Button asChild variant="outline" className="rounded-full">
+                    <Link href="/saskatchewan-handyman-services">
+                      Explore Handyman Services
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
+                  <img
+                    src="/images/hero-handyman.jpg"
+                    alt="Handyman working on a home repair project"
+                    className="block h-[420px] w-full object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -161,9 +173,7 @@ export default function BlogPage() {
                     Homeowner Tips
                   </p>
 
-                  <h2 className="mt-3 text-xl font-semibold text-slate-900">
-                    {post.title}
-                  </h2>
+                  <h2 className="mt-3 text-xl font-semibold text-slate-900">{post.title}</h2>
 
                   <p className="mt-3 leading-7 text-slate-600">{post.excerpt}</p>
 
