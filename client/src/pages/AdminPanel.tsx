@@ -18,8 +18,19 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+
+function parseCategories(categories?: string | null): string[] {
+  if (!categories) return [];
+
+  try {
+    const parsed = JSON.parse(categories);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 export default function AdminPanel() {
   const { user, isAuthenticated } = useAuth();
@@ -164,6 +175,11 @@ export default function AdminPanel() {
   const pendingPayoutRequests = payoutRequests?.filter((p) => p.status === "pending") ?? [];
   const resolvedPayoutRequests = payoutRequests?.filter((p) => p.status !== "pending") ?? [];
 
+  const allHandymen = useMemo(
+    () => insuranceQueue?.filter((p) => p.userEmail || p.userName || p.categories || p.bio) ?? [],
+    [insuranceQueue]
+  );
+
   return (
     <AppLayout title="Admin Panel">
       <div className="space-y-8">
@@ -221,6 +237,84 @@ export default function AdminPanel() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div>
+          <h2 className="text-base font-semibold text-foreground mb-4">
+            Handymen Overview{" "}
+            <span className="text-muted-foreground font-normal">({allHandymen.length})</span>
+          </h2>
+
+          {insuranceLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : allHandymen.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <Briefcase className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No handyman profiles found yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {allHandymen.map((profile) => {
+                const categories = parseCategories(profile.categories);
+
+                return (
+                  <div
+                    key={`overview-${profile.userId}`}
+                    className="bg-white rounded-xl border border-border/60 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex-1 min-w-[220px]">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-foreground">
+                            {profile.userName ?? "Unnamed handyman"}
+                          </p>
+                          {profile.insuranceVerified && (
+                            <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+                              Insurance Verified
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {profile.userEmail ?? "No email"}
+                        </p>
+
+                        {profile.hourlyRate && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Hourly Rate:{" "}
+                            <span className="text-foreground font-medium">
+                              ${profile.hourlyRate}/hr
+                            </span>
+                          </p>
+                        )}
+
+                        {categories.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {categories.map((category) => (
+                              <span
+                                key={`${profile.userId}-${category}`}
+                                className="text-[11px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium"
+                              >
+                                {category}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {profile.bio && (
+                          <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                            Bio: {profile.bio}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div>
@@ -442,49 +536,81 @@ export default function AdminPanel() {
             </div>
           ) : (
             <div className="space-y-4">
-              {pendingInsurance.map((profile) => (
-                <div key={profile.userId} className="bg-white rounded-xl border border-border/60 p-5">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div>
-                      <p className="font-semibold text-foreground text-sm">
-                        {profile.userName ?? "Unnamed handyman"}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {profile.userEmail ?? "No email"}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Submitted {format(new Date(profile.updatedAt), "MMM d, yyyy")}
-                      </p>
-                    </div>
+              {pendingInsurance.map((profile) => {
+                const categories = parseCategories(profile.categories);
 
-                    <div className="flex gap-2 flex-wrap">
-                      {profile.insuranceCertUrl && (
-                        <Button asChild variant="outline" size="sm">
-                          <a href={profile.insuranceCertUrl} target="_blank" rel="noreferrer">
-                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                            View File
-                          </a>
+                return (
+                  <div key={profile.userId} className="bg-white rounded-xl border border-border/60 p-5">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex-1 min-w-[220px]">
+                        <p className="font-semibold text-foreground text-sm">
+                          {profile.userName ?? "Unnamed handyman"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {profile.userEmail ?? "No email"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Submitted {format(new Date(profile.updatedAt), "MMM d, yyyy")}
+                        </p>
+
+                        {profile.hourlyRate && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Hourly Rate:{" "}
+                            <span className="text-foreground font-medium">
+                              ${profile.hourlyRate}/hr
+                            </span>
+                          </p>
+                        )}
+
+                        {categories.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {categories.map((category) => (
+                              <span
+                                key={`${profile.userId}-pending-${category}`}
+                                className="text-[11px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium"
+                              >
+                                {category}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {profile.bio && (
+                          <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                            Bio: {profile.bio}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        {profile.insuranceCertUrl && (
+                          <Button asChild variant="outline" size="sm">
+                            <a href={profile.insuranceCertUrl} target="_blank" rel="noreferrer">
+                              <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                              View File
+                            </a>
+                          </Button>
+                        )}
+
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                          onClick={() =>
+                            setInsuranceVerification.mutate({
+                              userId: profile.userId,
+                              insuranceVerified: true,
+                            })
+                          }
+                          disabled={setInsuranceVerification.isPending}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                          Approve
                         </Button>
-                      )}
-
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() =>
-                          setInsuranceVerification.mutate({
-                            userId: profile.userId,
-                            insuranceVerified: true,
-                          })
-                        }
-                        disabled={setInsuranceVerification.isPending}
-                      >
-                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Approve
-                      </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -497,49 +623,81 @@ export default function AdminPanel() {
             </h2>
 
             <div className="space-y-3">
-              {verifiedInsurance.map((profile) => (
-                <div key={profile.userId} className="bg-white rounded-xl border border-emerald-200 p-4">
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {profile.userName ?? "Unnamed handyman"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{profile.userEmail ?? "No email"}</p>
-                    </div>
+              {verifiedInsurance.map((profile) => {
+                const categories = parseCategories(profile.categories);
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
-                        Verified
-                      </span>
+                return (
+                  <div key={profile.userId} className="bg-white rounded-xl border border-emerald-200 p-4">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex-1 min-w-[220px]">
+                        <p className="text-sm font-medium text-foreground">
+                          {profile.userName ?? "Unnamed handyman"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{profile.userEmail ?? "No email"}</p>
 
-                      {profile.insuranceCertUrl && (
-                        <Button asChild variant="outline" size="sm">
-                          <a href={profile.insuranceCertUrl} target="_blank" rel="noreferrer">
-                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                            View File
-                          </a>
+                        {profile.hourlyRate && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Hourly Rate:{" "}
+                            <span className="text-foreground font-medium">
+                              ${profile.hourlyRate}/hr
+                            </span>
+                          </p>
+                        )}
+
+                        {categories.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {categories.map((category) => (
+                              <span
+                                key={`${profile.userId}-verified-${category}`}
+                                className="text-[11px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium"
+                              >
+                                {category}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {profile.bio && (
+                          <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                            Bio: {profile.bio}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+                          Verified
+                        </span>
+
+                        {profile.insuranceCertUrl && (
+                          <Button asChild variant="outline" size="sm">
+                            <a href={profile.insuranceCertUrl} target="_blank" rel="noreferrer">
+                              <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                              View File
+                            </a>
+                          </Button>
+                        )}
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                          onClick={() =>
+                            setInsuranceVerification.mutate({
+                              userId: profile.userId,
+                              insuranceVerified: false,
+                            })
+                          }
+                          disabled={setInsuranceVerification.isPending}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                          Remove
                         </Button>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
-                        onClick={() =>
-                          setInsuranceVerification.mutate({
-                            userId: profile.userId,
-                            insuranceVerified: false,
-                          })
-                        }
-                        disabled={setInsuranceVerification.isPending}
-                      >
-                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Remove
-                      </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
