@@ -13,6 +13,19 @@ type UserType = "homeowner" | "handyman";
 const TERMS_VERSION = "2026-04-11";
 const PRIVACY_VERSION = "2026-04-11";
 
+const HANDYMAN_SKILLS = [
+  "General Helper",
+  "Plumbing",
+  "Electrical",
+  "Carpentry",
+  "Painting",
+  "HVAC",
+  "Landscaping",
+  "Cleaning",
+  "Drywall",
+  "Roofing",
+];
+
 export default function SignUp() {
   const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
@@ -20,6 +33,7 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [userType, setUserType] = useState<UserType>("homeowner");
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -36,6 +50,14 @@ export default function SignUp() {
       navigate("/dashboard");
     }
   }, [loading, isAuthenticated, navigate]);
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills((prev) =>
+      prev.includes(skill)
+        ? prev.filter((item) => item !== skill)
+        : [...prev, skill]
+    );
+  };
 
   const signUp = trpc.auth.signUp.useMutation({
     onSuccess: (data: any) => {
@@ -70,12 +92,16 @@ export default function SignUp() {
     },
   });
 
+  const hasRequiredSkills =
+    userType === "homeowner" || selectedSkills.length >= 1;
+
   const isFormValid =
     name.trim().length >= 2 &&
     email.trim().length > 0 &&
     password.length >= 6 &&
     confirmPassword.length >= 6 &&
     password === confirmPassword &&
+    hasRequiredSkills &&
     agreeTerms &&
     agreePrivacy &&
     confirmAge;
@@ -85,6 +111,11 @@ export default function SignUp() {
 
     if (password !== confirmPassword) {
       toast.error("Passwords do not match.");
+      return;
+    }
+
+    if (userType === "handyman" && selectedSkills.length < 1) {
+      toast.error("Please select at least one skill so we can match you with jobs.");
       return;
     }
 
@@ -98,6 +129,7 @@ export default function SignUp() {
       email: email.trim(),
       password,
       userType,
+      skills: userType === "handyman" ? selectedSkills : [],
       agreeTerms: true,
       agreePrivacy: true,
       confirmAge: true,
@@ -169,10 +201,14 @@ export default function SignUp() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">I am signing up as</label>
+
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setUserType("homeowner")}
+                    onClick={() => {
+                      setUserType("homeowner");
+                      setSelectedSkills([]);
+                    }}
                     className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
                       userType === "homeowner"
                         ? "border-primary bg-primary/10 text-primary"
@@ -181,6 +217,7 @@ export default function SignUp() {
                   >
                     Homeowner
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setUserType("handyman")}
@@ -195,10 +232,51 @@ export default function SignUp() {
                 </div>
               </div>
 
+              {userType === "handyman" && (
+                <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      Select your skills
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Choose at least one skill so we can notify you when matching jobs are posted.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    {HANDYMAN_SKILLS.map((skill) => (
+                      <label
+                        key={skill}
+                        className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm cursor-pointer transition-colors ${
+                          selectedSkills.includes(skill)
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-white text-foreground hover:border-primary/30"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSkills.includes(skill)}
+                          onChange={() => toggleSkill(skill)}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                        <span>{skill}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {selectedSkills.length < 1 && (
+                    <p className="text-xs text-destructive">
+                      Please select at least one skill to continue.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium text-foreground">
                   Password
                 </label>
+
                 <div className="relative">
                   <Input
                     id="password"
@@ -210,6 +288,7 @@ export default function SignUp() {
                     minLength={6}
                     className="pr-11"
                   />
+
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
@@ -224,6 +303,7 @@ export default function SignUp() {
                 <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
                   Confirm Password
                 </label>
+
                 <div className="relative">
                   <Input
                     id="confirmPassword"
@@ -235,6 +315,7 @@ export default function SignUp() {
                     minLength={6}
                     className="pr-11"
                   />
+
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword((prev) => !prev)}
@@ -333,6 +414,7 @@ export default function SignUp() {
               <p className="text-sm text-muted-foreground">
                 Already signed up but did not get the email?
               </p>
+
               <Button
                 type="button"
                 variant="outline"

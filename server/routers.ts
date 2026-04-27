@@ -347,6 +347,7 @@ const authRouter = router({
         email: z.string().email(),
         password: z.string().min(6).max(100),
         userType: z.enum(["homeowner", "handyman"]),
+        skills: z.array(z.enum(JOB_CATEGORIES)).default([]),
         agreeTerms: z.literal(true),
         agreePrivacy: z.literal(true),
         confirmAge: z.literal(true),
@@ -363,6 +364,13 @@ const authRouter = router({
         throw new TRPCError({
           code: "CONFLICT",
           message: "An account with this email already exists",
+        });
+      }
+
+      if (input.userType === "handyman" && input.skills.length < 1) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Please select at least one skill so we can match you with jobs.",
         });
       }
 
@@ -385,7 +393,7 @@ const authRouter = router({
       if (input.userType === "handyman") {
         await createHandymanProfile({
           userId: user.id,
-          categories: "[]",
+          categories: JSON.stringify(input.skills),
         });
       }
 
