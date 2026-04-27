@@ -1,234 +1,82 @@
-import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Hammer, MapPin, ShieldCheck, Star, Wrench } from "lucide-react";
-import { Link } from "wouter";
-
-const cities = [
-  "Saskatoon",
-  "Regina",
-  "Prince Albert",
-  "Moose Jaw",
-  "Warman",
-  "Martensville",
-  "Yorkton",
-  "Swift Current",
-];
-
-const services = [
-  "Furniture assembly",
-  "TV mounting",
-  "Plumbing repairs",
-  "Electrical help",
-  "Yard work and maintenance",
-  "Drywall patch repair",
-  "Interior painting",
-  "Fence and gutter repair",
-];
+import SeoLandingPage from "@/components/SeoLandingPage";
 
 export default function SaskatchewanHandymanServicesPage() {
-  useEffect(() => {
-    document.title = "Saskatchewan Handyman Services | SaskHandy";
-
-    const metaDescription = document.querySelector('meta[name="description"]');
-    const content =
-      "Find Saskatchewan handyman services for furniture assembly, TV mounting, plumbing repairs, electrical help, yard work, drywall repair, painting, and more with SaskHandy.";
-
-    if (metaDescription) {
-      metaDescription.setAttribute("content", content);
-    } else {
-      const meta = document.createElement("meta");
-      meta.name = "description";
-      meta.content = content;
-      document.head.appendChild(meta);
-    }
-  }, []);
-
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="container flex items-center justify-between py-4">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-700 text-white">
-              <Hammer className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xl font-bold tracking-tight">SaskHandy</div>
-              <div className="text-sm text-slate-500">Local help for home jobs</div>
-            </div>
-          </Link>
+    <SeoLandingPage
+      title="Saskatchewan Handyman Services"
+      pageTitle="Saskatchewan Handyman Services | SaskHandy"
+      metaDescription="Find Saskatchewan handyman services for furniture assembly, TV mounting, plumbing repairs, electrical help, yard work, drywall repair, painting, fence repair, gutter cleaning, and general home maintenance with SaskHandy."
+      badge="Handyman services across Saskatchewan"
+      intro="SaskHandy helps homeowners across Saskatchewan find local handyman services for furniture assembly, TV mounting, plumbing repairs, small electrical help, yard work, drywall patch repair, interior painting, fence repair, gutter cleaning, and other practical home jobs."
+      secondaryIntro="Whether you are in Saskatoon, Regina, Prince Albert, Moose Jaw, Warman, Martensville, or another Saskatchewan community, SaskHandy makes it easier to post a job, compare bids, message local handymen, and move forward with more confidence."
+      heroImage="/images/saskatchewan.jpg"
+      primaryCtaText="Post a Job"
+      secondaryCtaText="View Saskatoon Services"
+      secondaryCtaHref="/saskatoon-handyman-services"
+      sectionTitle="Popular handyman services in Saskatchewan"
+      sectionDescription="These are some of the most common service categories homeowners look for when they need local handyman help in Saskatchewan."
+      items={[
+        "Furniture assembly",
+        "TV mounting",
+        "Plumbing repairs",
+        "Electrical help",
+        "Yard work and maintenance",
+        "Drywall patch repair",
+        "Interior painting",
+        "Fence and gutter repair",
+        "Leaky faucet repair",
+        "Light fixture installation",
+        "Shelving installation",
+        "Door and trim repairs",
+        "Deck maintenance",
+        "Garage organization help",
+        "Rental property repairs",
+        "Seasonal home maintenance",
+      ]}
+      whyTitle="Why homeowners use SaskHandy for handyman services in Saskatchewan"
+      whyParagraphs={[
+        "Saskatchewan homeowners often search for handyman services when small repairs, installations, and maintenance tasks start piling up around the house. A loose fixture, damaged drywall patch, unassembled furniture item, leaky faucet, unmounted TV, scuffed wall, overgrown yard, or broken fence board may not always require a large contractor, but it still needs attention. SaskHandy helps homeowners post these practical home jobs and connect with local service providers who can review the work and respond.",
 
-          <Button asChild className="rounded-full bg-emerald-700 hover:bg-emerald-800">
-            <Link href="/sign-up">Get Started</Link>
-          </Button>
-        </div>
-      </header>
+        "Many home repairs are easy to delay because they seem small on their own. Over time, those small jobs can make a home feel unfinished, less comfortable, or harder to maintain. A room that needs paint touch-ups, a basement that needs drywall repair, a garage that needs organizing, a fence that needs attention, or a shelf that still needs to be installed can sit on a to-do list for months. SaskHandy gives homeowners a simpler way to turn those delayed tasks into clear job posts.",
 
-      <main>
-        <section className="bg-[#f7faf8]">
-          <div className="container py-16 md:py-20">
-            <div className="grid items-center gap-10 lg:grid-cols-2">
-              <div className="max-w-4xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
-                  <MapPin className="h-4 w-4" />
-                  Handyman services across Saskatchewan
-                </div>
+        "One of the biggest benefits of SaskHandy is that it gives homeowners a more organized way to hire local help. Instead of chasing random numbers, searching scattered listings, or posting in local groups without knowing who is available, homeowners can post a job in one place. They can describe what needs to be done, add photos, include the location, set a budget, and compare responses from local handymen who are interested in the work.",
 
-                <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                  Saskatchewan Handyman Services for Repairs, Installations, and Home Maintenance
-                </h1>
+        "Furniture assembly is one of the most common handyman services in Saskatchewan. Homeowners often need help building bed frames, dressers, desks, bookshelves, dining tables, TV stands, wardrobes, patio furniture, shelving units, nursery furniture, and home office setups. These jobs can take longer than expected, especially when the instructions are unclear or the furniture is heavy. SaskHandy gives homeowners a practical way to post assembly jobs and connect with local help.",
 
-                <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                  SaskHandy helps homeowners across Saskatchewan find local handyman services for
-                  furniture assembly, TV mounting, plumbing repairs, small electrical help, yard
-                  work, drywall patch repair, interior painting, fence repair, gutter cleaning,
-                  and other practical home jobs.
-                </p>
+        "TV mounting is another popular service for homeowners in Saskatoon, Regina, Prince Albert, Moose Jaw, Warman, Martensville, and surrounding communities. Mounting a TV can improve the look of a living room, bedroom, basement, or entertainment area, but it can also be stressful if you are unsure about wall studs, bracket placement, cable management, or the correct height. SaskHandy helps homeowners describe the project so local service providers can understand the job before responding.",
 
-                <p className="mt-4 max-w-3xl text-slate-600 leading-8">
-                  Whether you are in Saskatoon, Regina, Prince Albert, Moose Jaw, Warman, or
-                  Martensville, you can post a job, compare bids, message local handymen, and move
-                  forward with more confidence in one place.
-                </p>
+        "Drywall repair and painting are also common home maintenance needs across Saskatchewan. Small holes, dents, cracks, scuffs, peeling paint, and unfinished patches can make a room feel less maintained. These jobs are especially common before moving into a new home, preparing a rental unit, selling a property, or refreshing a room. SaskHandy helps homeowners post drywall patching, wall repair, interior painting, trim painting, and paint touch-up jobs so local handymen can review the scope.",
 
-                <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                  <Button asChild size="lg" className="rounded-full bg-emerald-700 hover:bg-emerald-800">
-                    <Link href="/sign-up">
-                      Post a Job
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+        "Minor plumbing help is another reason homeowners search for handyman services. A dripping faucet, running toilet, loose sink fixture, slow drain, or shower head replacement can quickly become annoying. Some plumbing work may require a licensed plumber, especially when it involves major repairs or complex systems. But for smaller fixture replacement and basic repair tasks, SaskHandy gives homeowners a way to explain the issue and connect with local help that can review the job.",
 
-                  <Button asChild size="lg" variant="outline" className="rounded-full">
-                    <Link href="/saskatoon-handyman-services">Saskatoon Services</Link>
-                  </Button>
-                </div>
-              </div>
+        "Small electrical help is also common, especially for light fixture replacement, ceiling fan installation, outlet replacement, switch replacement, vanity lights, and basic lighting updates. Some electrical work requires a licensed electrician, especially when there is new wiring, panel work, permits, or unsafe circuits. SaskHandy helps homeowners describe smaller electrical tasks clearly so the right kind of service provider can decide whether the job is appropriate for them.",
 
-              <div>
-                <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
-                  <img
-                    src="/images/saskatchewan.jpg"
-                    alt="Saskatchewan landscape"
-                    className="block h-[420px] w-full object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        "Yard work and seasonal maintenance are important across Saskatchewan because home maintenance changes throughout the year. Homeowners may need help with spring cleanup, fall cleanup, lawn care, garden bed cleanup, branch removal, gutter cleaning, fence repair, deck maintenance, garage cleanup, snow-season preparation, and other outdoor tasks. These jobs can be time-consuming and physically demanding, especially for homeowners who do not have the right tools or extra help available.",
 
-        <section className="border-b border-slate-200 bg-white">
-          <div className="container py-14">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-950">
-              Popular handyman services in Saskatchewan
-            </h2>
-            <p className="mt-3 max-w-2xl text-slate-600 leading-7">
-              These are some of the most common service categories homeowners look for when they
-              need local handyman help in Saskatchewan.
-            </p>
+        "SaskHandy is also useful when homeowners have several small jobs that can be grouped together. For example, a homeowner might need a dresser assembled, a TV mounted, a faucet checked, drywall patched, shelves installed, and a room touched up with paint. Posting these related tasks together can make the project clearer and more worthwhile for local handymen to review. It also helps homeowners get more done at once instead of putting off each repair separately.",
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {services.map((service) => (
-                <div
-                  key={service}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-                >
-                  {service}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        "Landlords and property owners across Saskatchewan can also use SaskHandy for rental property maintenance and move-in preparation. Common rental-related jobs include drywall patching, paint touch-ups, minor plumbing repairs, fixture replacement, furniture assembly, yard cleanup, fence repairs, gutter cleaning, and general maintenance. Completing these smaller jobs before a tenant moves in can help the property feel cleaner, safer, and better cared for.",
 
-        <section className="bg-white">
-          <div className="container py-16">
-            <div className="grid gap-10 lg:grid-cols-2">
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                  Why homeowners use SaskHandy
-                </h2>
-                <p className="mt-4 text-slate-600 leading-8">
-                  Instead of chasing random numbers, searching scattered listings, or posting in
-                  local Facebook groups, homeowners can use SaskHandy to compare bids, review
-                  profiles, keep messages in one place, and manage the job process more clearly.
-                </p>
-                <p className="mt-4 text-slate-600 leading-8">
-                  This works especially well for the small-to-medium jobs that often sit on a
-                  homeowner’s to-do list, including wall mounting, touch-up painting, minor repairs,
-                  leaky faucet fixes, light fixture installation, and seasonal yard maintenance.
-                </p>
-              </div>
+        "When posting a handyman job on SaskHandy, clear details can make a big difference. Homeowners should include what needs to be done, where the job is located, whether materials have already been purchased, whether tools are required, when the job needs to be completed, and whether photos are available. A detailed post helps local handymen understand the work, estimate the time involved, and decide whether the project matches their skills.",
 
-              <div className="space-y-5">
-                <div className="rounded-[28px] border border-slate-200 p-6">
-                  <ShieldCheck className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Secure payments and clearer process</h3>
-                  <p className="mt-2 text-slate-600 leading-7">
-                    Post once, compare bids, and keep the payment flow inside the platform instead
-                    of handling everything manually.
-                  </p>
-                </div>
-
-                <div className="rounded-[28px] border border-slate-200 p-6">
-                  <Star className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Reviews, profiles, and trust</h3>
-                  <p className="mt-2 text-slate-600 leading-7">
-                    Ratings and profile details help homeowners choose local handymen with more
-                    confidence.
-                  </p>
-                </div>
-
-                <div className="rounded-[28px] border border-slate-200 p-6">
-                  <Wrench className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Built for practical home jobs</h3>
-                  <p className="mt-2 text-slate-600 leading-7">
-                    SaskHandy is focused on the everyday home repair and maintenance jobs that
-                    homeowners actually search for.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-slate-200 bg-[#f7faf8]">
-          <div className="container py-16">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-              Major Saskatchewan locations
-            </h2>
-            <p className="mt-4 max-w-3xl text-slate-600 leading-8">
-              We are building stronger visibility for local handyman services in major Saskatchewan
-              cities and surrounding communities.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              {cities.map((city) => (
-                <span
-                  key={city}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
-                >
-                  {city}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/saskatoon-handyman-services"
-                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:text-emerald-800"
-              >
-                Saskatoon Handyman Services
-              </Link>
-              <Link
-                href="/regina-handyman-services"
-                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:text-emerald-800"
-              >
-                Regina Handyman Services
-              </Link>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
+        "SaskHandy is building stronger local visibility for handyman services across Saskatchewan, including Saskatoon, Regina, Prince Albert, Moose Jaw, Warman, Martensville, Yorkton, Swift Current, and nearby communities. The goal is to make it easier for homeowners to find practical local help for the home jobs they have been putting off. Whether you need one small fix, a seasonal maintenance task, or several repairs completed around the house, SaskHandy gives Saskatchewan homeowners a clearer way to post the job and connect with local handymen.",
+      ]}
+      bottomTitle="Need handyman services in Saskatchewan?"
+      bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, plumbing repairs, electrical help, drywall repair, painting, yard work, fence repair, gutter cleaning, seasonal maintenance, and general handyman services across Saskatchewan."
+      relatedLinks={[
+        { href: "/saskatoon-handyman-services", label: "Saskatoon Handyman Services" },
+        { href: "/regina-handyman-services", label: "Regina Handyman Services" },
+        { href: "/moose-jaw-handyman-services", label: "Moose Jaw Handyman Services" },
+        { href: "/prince-albert-handyman-services", label: "Prince Albert Handyman Services" },
+        { href: "/warman-handyman-services", label: "Warman Handyman Services" },
+        { href: "/martensville-handyman-services", label: "Martensville Handyman Services" },
+        { href: "/furniture-assembly-saskatchewan", label: "Furniture Assembly Saskatchewan" },
+        { href: "/tv-mounting-saskatchewan", label: "TV Mounting Saskatchewan" },
+        { href: "/plumbing-repairs-saskatchewan", label: "Plumbing Repairs Saskatchewan" },
+        { href: "/electrical-help-saskatchewan", label: "Electrical Help Saskatchewan" },
+        { href: "/drywall-painting-saskatchewan", label: "Drywall and Painting Saskatchewan" },
+        { href: "/yard-work-saskatchewan", label: "Yard Work Saskatchewan" },
+      ]}
+    />
   );
 }
