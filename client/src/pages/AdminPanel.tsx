@@ -151,6 +151,11 @@ export default function AdminPanel() {
     },
   });
 
+  const allHandymen = useMemo(
+    () => insuranceQueue?.filter((p) => p.userEmail || p.userName || p.categories || p.bio) ?? [],
+    [insuranceQueue]
+  );
+
   if (!user || user.role !== "admin") {
     return (
       <AppLayout>
@@ -174,11 +179,6 @@ export default function AdminPanel() {
 
   const pendingPayoutRequests = payoutRequests?.filter((p) => p.status === "pending") ?? [];
   const resolvedPayoutRequests = payoutRequests?.filter((p) => p.status !== "pending") ?? [];
-
-  const allHandymen = useMemo(
-    () => insuranceQueue?.filter((p) => p.userEmail || p.userName || p.categories || p.bio) ?? [],
-    [insuranceQueue]
-  );
 
   return (
     <AppLayout title="Admin Panel">
@@ -431,9 +431,7 @@ export default function AdminPanel() {
                         size="sm"
                         variant="destructive"
                         onClick={() => {
-                          const confirmed = window.confirm(
-                            `Reject payout request #${request.id}?`
-                          );
+                          const confirmed = window.confirm(`Reject payout request #${request.id}?`);
 
                           if (!confirmed) return;
 
@@ -942,7 +940,9 @@ export default function AdminPanel() {
                         <td className="px-4 py-3">
                           <div>
                             <p className="text-foreground text-sm">{job.homeownerName ?? "—"}</p>
-                            <p className="text-xs text-muted-foreground">{job.homeownerEmail ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {job.homeownerEmail ?? "—"}
+                            </p>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{job.category}</td>
