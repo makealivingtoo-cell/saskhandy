@@ -141,26 +141,96 @@ export default function BlogPage() {
 
         <section className="bg-white">
           <div className="container py-16">
-            <div className="max-w-3xl">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                Guides for Finding Reliable Handyman Services in Saskatchewan
-              </h2>
+            <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+                  Guides for Finding Reliable Handyman Services in Saskatchewan
+                </h2>
 
-              <p className="mt-4 leading-8 text-slate-600">
-                Whether you live in Saskatoon, Regina, Prince Albert, Moose Jaw, Warman,
-                Martensville, or another Saskatchewan community, finding the right person for a home
-                repair job can feel overwhelming. SaskHandy creates homeowner-friendly guides to
-                help you understand what to ask, how to compare quotes, which small repairs should
-                be handled early, and how to describe your job clearly when posting it online.
-              </p>
+                <p className="mt-4 leading-8 text-slate-600">
+                  Whether you live in Saskatoon, Regina, Prince Albert, Moose Jaw, Warman,
+                  Martensville, or another Saskatchewan community, finding the right person for a
+                  home repair job can feel overwhelming. SaskHandy creates homeowner-friendly guides
+                  to help you understand what to ask, how to compare quotes, which small repairs
+                  should be handled early, and how to describe your job clearly when posting it
+                  online.
+                </p>
 
-              <p className="mt-4 leading-8 text-slate-600">
-                Our goal is to make local handyman hiring easier for everyday home projects. That
-                includes simple jobs like assembling furniture, mounting a TV, fixing drywall,
-                painting a room, cleaning up a yard, repairing a fence, replacing fixtures, or
-                getting help with basic plumbing and electrical tasks. These articles are written
-                for homeowners who want practical advice before choosing a handyman.
-              </p>
+                <p className="mt-4 leading-8 text-slate-600">
+                  Our goal is to make local handyman hiring easier for everyday home projects. That
+                  includes simple jobs like assembling furniture, mounting a TV, fixing drywall,
+                  painting a room, cleaning up a yard, repairing a fence, replacing fixtures, or
+                  getting help with basic plumbing and electrical tasks. These articles are written
+                  for homeowners who want practical advice before choosing a handyman.
+                </p>
+              </div>
+
+              <div className="rounded-[28px] border border-slate-200 bg-[#f7faf8] p-6 shadow-sm">
+                <h3 className="text-xl font-semibold text-slate-950">
+                  Popular homeowner topics
+                </h3>
+
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Explore practical guides and common handyman services homeowners search for across
+                  Saskatchewan.
+                </p>
+
+                <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-700">
+                  <li>
+                    <Link
+                      href="/blog/how-to-hire-a-handyman-in-saskatchewan"
+                      className="font-medium text-emerald-700 hover:underline"
+                    >
+                      How to Hire a Handyman in Saskatchewan
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link
+                      href="/blog/small-home-jobs-you-should-not-put-off"
+                      className="font-medium text-emerald-700 hover:underline"
+                    >
+                      Small Home Jobs You Should Not Put Off
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link
+                      href="/blog/what-homeowners-should-ask-before-accepting-a-bid"
+                      className="font-medium text-emerald-700 hover:underline"
+                    >
+                      What Homeowners Should Ask Before Accepting a Bid
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link
+                      href="/saskatchewan-handyman-services"
+                      className="font-medium text-emerald-700 hover:underline"
+                    >
+                      Saskatchewan Handyman Services
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link
+                      href="/saskatoon-handyman-services"
+                      className="font-medium text-emerald-700 hover:underline"
+                    >
+                      Saskatoon Handyman Services
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link
+                      href="/regina-handyman-services"
+                      className="font-medium text-emerald-700 hover:underline"
+                    >
+                      Regina Handyman Services
+                    </Link>
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
