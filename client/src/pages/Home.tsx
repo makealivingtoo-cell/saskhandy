@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import HomeAiAssistant from "@/components/HomeAiAssistant";
 import {
   ArrowRight,
   CheckCircle2,
@@ -168,11 +169,18 @@ export default function HomePage() {
 
               <div>
                 <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
-                  <img
-                    src="/images/hero-handyman.jpg"
-                    alt="Handyman helping a homeowner with home repairs"
-                    className="h-[420px] w-full object-cover"
-                  />
+                  <picture>
+                    <source srcSet="/images/hero-handyman.webp" type="image/webp" />
+                    <img
+                      src="/images/hero-handyman.jpg"
+                      alt="Handyman helping a homeowner with home repairs"
+                      className="h-[420px] w-full object-cover"
+                      width="1200"
+                      height="800"
+                      fetchPriority="high"
+                      decoding="async"
+                    />
+                  </picture>
                 </div>
               </div>
             </div>
@@ -206,11 +214,18 @@ export default function HomePage() {
           <div className="container py-16 md:py-20">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
               <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-slate-50">
-                <img
-                  src="/images/homeowner-posting-job.jpg"
-                  alt="Homeowner posting a repair job from a phone"
-                  className="h-[420px] w-full object-cover"
-                />
+                <picture>
+                  <source srcSet="/images/homeowner-posting-job.webp" type="image/webp" />
+                  <img
+                    src="/images/homeowner-posting-job.jpg"
+                    alt="Homeowner posting a repair job from a phone"
+                    className="h-[420px] w-full object-cover"
+                    width="1200"
+                    height="800"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </picture>
               </div>
 
               <div className="max-w-xl">
@@ -382,6 +397,8 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      <HomeAiAssistant />
     </div>
   );
 }
