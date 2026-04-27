@@ -94,6 +94,59 @@ export const systemRouter = router({
       } as const;
     }),
 
+  askHomeAssistant: publicProcedure
+    .input(
+      z.object({
+        question: z.string().min(2, "Please ask a question").max(500),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const result = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: `You are SaskHandy's website assistant.
+
+SaskHandy is a Saskatchewan handyman marketplace that helps homeowners post home jobs, compare bids from local handymen, chat in one place, and pay securely.
+
+Answer questions about SaskHandy only.
+
+Core facts:
+- SaskHandy helps homeowners post home repair and maintenance jobs.
+- Homeowners can compare bids from local handymen.
+- Homeowners and handymen can chat through the platform.
+- Payments are handled through SaskHandy after a homeowner accepts a bid.
+- Funds are held until the job is complete.
+- Handymen can sign up, select their skills, build a profile, and get notified when jobs match their skills.
+- SaskHandy serves Saskatchewan communities including Saskatoon, Regina, Moose Jaw, Prince Albert, Warman, Martensville, and nearby areas.
+- Common job categories include furniture assembly, TV mounting, plumbing help, electrical help, yard work, painting, drywall repair, home repairs, moving help, seasonal maintenance, fence repair, gutter cleaning, and general handyman work.
+- For complex plumbing, electrical, structural, gas, roofing, unsafe, emergency, or permit-related work, tell users to contact a qualified/licensed professional.
+- Do not provide repair instructions for dangerous jobs.
+- Do not make promises about guaranteed availability, guaranteed pricing, or guaranteed outcomes.
+- Keep answers short, friendly, and useful.
+- When relevant, encourage homeowners to sign up and post a job.
+- When relevant, encourage handymen to sign up, select skills, and complete their profile.
+
+If the user asks something unrelated to SaskHandy, politely redirect them back to SaskHandy, home jobs, posting a job, becoming a handyman, services, locations, or payments.`,
+          },
+          {
+            role: "user",
+            content: input.question.trim(),
+          },
+        ],
+      });
+
+      const answer = extractTextContent(result.choices?.[0]?.message?.content).trim();
+
+      if (!answer) {
+        throw new Error("AI assistant returned an empty response");
+      }
+
+      return {
+        answer,
+      };
+    }),
+
   improveJobPost: protectedProcedure
     .input(
       z.object({

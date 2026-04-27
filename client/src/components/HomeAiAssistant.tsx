@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
-import { MessageCircle, Send, Sparkles, X } from "lucide-react";
+import { MessageCircle, Send, Sparkles, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 type ChatMessage = {
   role: "assistant" | "user";
@@ -16,92 +18,52 @@ const quickQuestions = [
   "How does payment work?",
 ];
 
-function getAssistantReply(question: string) {
-  const text = question.toLowerCase();
-
-  if (
-    text.includes("how") &&
-    (text.includes("work") || text.includes("saskhandy"))
-  ) {
-    return "SaskHandy helps homeowners post home jobs, compare bids from local handymen, chat in one place, and pay securely after accepting a bid. You can start by creating an account and posting your first job.";
-  }
-
-  if (
-    text.includes("service") ||
-    text.includes("request") ||
-    text.includes("job") ||
-    text.includes("category")
-  ) {
-    return "You can request help with common home jobs like furniture assembly, TV mounting, drywall repair, painting, yard work, minor plumbing help, small electrical help, fence repair, and general home maintenance.";
-  }
-
-  if (
-    text.includes("handyman") ||
-    text.includes("handymen") ||
-    text.includes("notification") ||
-    text.includes("skills")
-  ) {
-    return "Handymen can sign up, select their skills, build a profile, and receive notifications when jobs matching their service categories are posted.";
-  }
-
-  if (
-    text.includes("pay") ||
-    text.includes("payment") ||
-    text.includes("escrow") ||
-    text.includes("money")
-  ) {
-    return "Payment is handled through SaskHandy after a homeowner accepts a bid. The goal is to keep job details, communication, and payment in one organized place.";
-  }
-
-  if (
-    text.includes("saskatoon") ||
-    text.includes("regina") ||
-    text.includes("moose jaw") ||
-    text.includes("warman") ||
-    text.includes("martensville") ||
-    text.includes("prince albert")
-  ) {
-    return "SaskHandy is built for Saskatchewan communities, including Saskatoon, Regina, Moose Jaw, Prince Albert, Warman, Martensville, and nearby areas.";
-  }
-
-  if (
-    text.includes("start") ||
-    text.includes("sign up") ||
-    text.includes("account") ||
-    text.includes("post")
-  ) {
-    return "To get started, create an account and choose whether you are a homeowner or handyman. Homeowners can post jobs, and handymen can select their skills and bid on matching jobs.";
-  }
-
-  return "I can help with questions about how SaskHandy works, what services homeowners can request, how handymen get jobs, payments, and getting started. Try asking something like: “How do I post a job?”";
-}
-
 export default function HomeAiAssistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      text: "Hi! I can answer quick questions about SaskHandy, posting jobs, handyman services, payments, and getting started.",
+      text: "Hi! I can answer questions about SaskHandy, posting jobs, handyman services, payments, and getting started.",
     },
   ]);
+
+  const askHomeAssistant = trpc.system.askHomeAssistant.useMutation({
+    onSuccess: (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: data.answer,
+        },
+      ]);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Assistant failed. Please try again.");
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: "Sorry, I had trouble answering that. You can still sign up to post a job or browse SaskHandy services.",
+        },
+      ]);
+    },
+  });
 
   const hasMessages = useMemo(() => messages.length > 0, [messages]);
 
   const sendMessage = (value?: string) => {
     const message = (value ?? input).trim();
 
-    if (!message) return;
+    if (!message || askHomeAssistant.isPending) return;
 
-    const reply = getAssistantReply(message);
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", text: message },
-      { role: "assistant", text: reply },
-    ]);
-
+    setMessages((prev) => [...prev, { role: "user", text: message }]);
     setInput("");
+
+    askHomeAssistant.mutate({
+      question: message,
+    });
   };
 
   return (
@@ -113,7 +75,7 @@ export default function HomeAiAssistant() {
               <Sparkles className="h-4 w-4" />
               <div>
                 <div className="text-sm font-semibold">SaskHandy Assistant</div>
-                <div className="text-xs text-emerald-50">Quick answers for homeowners</div>
+                <div className="text-xs text-emerald-50">Ask about SaskHandy</div>
               </div>
             </div>
 
@@ -145,6 +107,15 @@ export default function HomeAiAssistant() {
                   </div>
                 </div>
               ))}
+
+            {askHomeAssistant.isPending && (
+              <div className="flex justify-start">
+                <div className="flex max-w-[85%] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
+                  Thinking...
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-slate-200 bg-white p-4">
@@ -154,7 +125,8 @@ export default function HomeAiAssistant() {
                   key={question}
                   type="button"
                   onClick={() => sendMessage(question)}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+                  disabled={askHomeAssistant.isPending}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {question}
                 </button>
@@ -170,14 +142,20 @@ export default function HomeAiAssistant() {
                 }}
                 placeholder="Ask a question..."
                 className="h-10"
+                disabled={askHomeAssistant.isPending}
               />
 
               <Button
                 type="button"
                 onClick={() => sendMessage()}
+                disabled={askHomeAssistant.isPending || !input.trim()}
                 className="h-10 rounded-full bg-emerald-700 px-4 hover:bg-emerald-800"
               >
-                <Send className="h-4 w-4" />
+                {askHomeAssistant.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
 
