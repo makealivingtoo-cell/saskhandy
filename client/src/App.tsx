@@ -9,7 +9,6 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import AboutPage from "./pages/AboutPage";
 import BlogPage from "./pages/BlogPage";
-import BlogArticlePage from "./pages/BlogArticlePage";
 import SaskatchewanHandymanServicesPage from "./pages/SaskatchewanHandymanServices";
 import SaskatoonHandymanServicesPage from "./pages/SaskatoonHandymanServices";
 import ReginaHandymanServicesPage from "./pages/ReginaHandymanServices";
@@ -61,7 +60,6 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/about" component={AboutPage} />
       <Route path="/blog" component={BlogPage} />
-      <Route path="/blog/:slug" component={BlogArticlePage} />
 
       <Route path="/saskatchewan-handyman-services" component={SaskatchewanHandymanServicesPage} />
       <Route path="/saskatoon-handyman-services" component={SaskatoonHandymanServicesPage} />
