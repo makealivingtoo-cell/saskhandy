@@ -568,8 +568,22 @@ const authRouter = router({
         });
       }
 
-      const sessionToken = await sdk.createSessionToken(refreshedUser.openId, {
-        name: refreshedUser.name ?? "",
+      await upsertUser({
+        openId: refreshedUser.openId,
+        lastSignedIn: new Date(),
+      } as any);
+
+      const latestUser = await safeGetUserByEmail(email);
+
+      if (!latestUser) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to refresh signed-in user",
+        });
+      }
+
+      const sessionToken = await sdk.createSessionToken(latestUser.openId, {
+        name: latestUser.name ?? "",
         expiresInMs: ONE_YEAR_MS,
       });
 
@@ -578,7 +592,7 @@ const authRouter = router({
 
       return {
         success: true,
-        user: refreshedUser,
+        user: latestUser,
       };
     }),
 

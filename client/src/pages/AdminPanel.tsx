@@ -1020,6 +1020,9 @@ export default function AdminPanel() {
                       Joined
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Last Login
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
                       Actions
                     </th>
                   </tr>
@@ -1049,6 +1052,11 @@ export default function AdminPanel() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">
                           {format(new Date(u.createdAt), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                          {u.lastSignedIn
+                            ? format(new Date(u.lastSignedIn), "MMM d, yyyy h:mm a")
+                            : "Never"}
                         </td>
                         <td className="px-4 py-3">
                           <Button
