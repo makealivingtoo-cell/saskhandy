@@ -1057,6 +1057,49 @@ const bidsRouter = router({
       return enriched;
     }),
 
+  getForJobSummary: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+
+      if (!job) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job not found.",
+        });
+      }
+
+      const bidList = await getBidsForJob(input.jobId);
+
+      const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
+
+      const visibleBids = canViewAllBids
+        ? bidList
+        : bidList.filter((bid) => bid.handymanId === ctx.user.id);
+
+      const enrichedVisibleBids = await Promise.all(
+        visibleBids.map(async (bid) => {
+          const user = await safeGetUserById(bid.handymanId);
+          const profile = await getHandymanProfile(bid.handymanId);
+
+          return {
+            ...bid,
+            handymanName: user?.name,
+            handymanRating: profile?.rating,
+            handymanTotalJobs: profile?.totalJobs,
+            handymanInsuranceVerified: profile?.insuranceVerified ?? false,
+          };
+        })
+      );
+
+      return {
+        visibleBids: enrichedVisibleBids,
+        totalBidCount: bidList.length,
+        hiddenBidCount: canViewAllBids ? 0 : Math.max(0, bidList.length - visibleBids.length),
+        canViewAllBids,
+      };
+    }),
+
   getForHandyman: protectedProcedure.query(async ({ ctx }) => {
     const bidList = await getBidsForHandyman(ctx.user.id);
 

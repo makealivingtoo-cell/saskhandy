@@ -13,7 +13,6 @@ import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   ArrowLeft,
-  Clock,
   DollarSign,
   Loader2,
   MapPin,
@@ -45,7 +44,7 @@ export default function HandymanJobDetails() {
     { enabled: !!jobId }
   );
 
-  const { data: bids } = trpc.bids.getForJob.useQuery(
+  const { data: bidSummary } = trpc.bids.getForJobSummary.useQuery(
     { jobId },
     {
       enabled:
@@ -55,6 +54,10 @@ export default function HandymanJobDetails() {
         (user.userType === "handyman" || user.role === "admin"),
     }
   );
+
+  const bids = bidSummary?.visibleBids ?? [];
+  const hiddenBidCount = bidSummary?.hiddenBidCount ?? 0;
+  const totalBidCount = bidSummary?.totalBidCount ?? 0;
 
   const isAssignedHandyman = job?.selectedHandymanId === user?.id;
 
@@ -88,7 +91,7 @@ export default function HandymanJobDetails() {
       setBidAmount("");
       setBidMessage("");
       setAvailability("");
-      await utils.bids.getForJob.invalidate({ jobId });
+      await utils.bids.getForJobSummary.invalidate({ jobId });
       await utils.bids.getForHandyman.invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -191,6 +194,58 @@ export default function HandymanJobDetails() {
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
           <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
         </div>
+
+        {job.status === "open" && totalBidCount > 0 && (
+          <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <p className="font-semibold text-foreground text-sm">Bid Activity</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {totalBidCount} bid{totalBidCount === 1 ? "" : "s"} submitted for this job.
+                </p>
+              </div>
+
+              <div className="text-xs bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full font-medium">
+                Bidding active
+              </div>
+            </div>
+
+            {hiddenBidCount > 0 ? (
+              <div className="space-y-2">
+                {Array.from({ length: Math.min(hiddenBidCount, 3) }).map((_, index) => (
+                  <div
+                    key={`hidden-bid-${index}`}
+                    className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <div className="h-3 w-24 rounded-full bg-muted-foreground/20 blur-[1px]" />
+                        <div className="h-2.5 w-40 rounded-full bg-muted-foreground/10 blur-[1px] mt-2" />
+                      </div>
+
+                      <div className="h-4 w-16 rounded-full bg-muted-foreground/20 blur-[1px]" />
+                    </div>
+                  </div>
+                ))}
+
+                {hiddenBidCount > 3 && (
+                  <p className="text-xs text-muted-foreground">
+                    +{hiddenBidCount - 3} more hidden bid{hiddenBidCount - 3 === 1 ? "" : "s"}
+                  </p>
+                )}
+
+                <p className="text-xs text-muted-foreground pt-1">
+                  Other bid details are hidden to keep pricing fair. Submit your best price based on
+                  the job details.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                You can see the relevant bid details for this job.
+              </p>
+            )}
+          </div>
+        )}
 
         {myBid && (
           <div
@@ -349,7 +404,9 @@ export default function HandymanJobDetails() {
                     onClick={() => createDispute.mutate({ jobId, reason: disputeReason })}
                     disabled={disputeReason.length < 10 || createDispute.isPending}
                   >
-                    {createDispute.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                    {createDispute.isPending ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : null}
                     Submit Dispute
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setShowDisputeForm(false)}>
@@ -412,7 +469,9 @@ export default function HandymanJobDetails() {
                     }
                     disabled={reviewRating === 0 || createReview.isPending}
                   >
-                    {createReview.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                    {createReview.isPending ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : null}
                     Submit Review
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>
