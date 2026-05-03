@@ -1019,13 +1019,28 @@ const bidsRouter = router({
       return { bidId };
     }),
 
-  getForJob: publicProcedure
+  getForJob: protectedProcedure
     .input(z.object({ jobId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+
+      if (!job) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job not found.",
+        });
+      }
+
       const bidList = await getBidsForJob(input.jobId);
 
+      const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
+
+      const visibleBids = canViewAllBids
+        ? bidList
+        : bidList.filter((bid) => bid.handymanId === ctx.user.id);
+
       const enriched = await Promise.all(
-        bidList.map(async (bid) => {
+        visibleBids.map(async (bid) => {
           const user = await safeGetUserById(bid.handymanId);
           const profile = await getHandymanProfile(bid.handymanId);
 

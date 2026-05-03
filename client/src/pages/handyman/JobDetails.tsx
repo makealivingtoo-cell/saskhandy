@@ -40,8 +40,21 @@ export default function HandymanJobDetails() {
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
 
-  const { data: job, isLoading } = trpc.jobs.getById.useQuery({ jobId }, { enabled: !!jobId });
-  const { data: bids } = trpc.bids.getForJob.useQuery({ jobId }, { enabled: !!jobId });
+  const { data: job, isLoading } = trpc.jobs.getById.useQuery(
+    { jobId },
+    { enabled: !!jobId }
+  );
+
+  const { data: bids } = trpc.bids.getForJob.useQuery(
+    { jobId },
+    {
+      enabled:
+        !!jobId &&
+        !!isAuthenticated &&
+        !!user &&
+        (user.userType === "handyman" || user.role === "admin"),
+    }
+  );
 
   const isAssignedHandyman = job?.selectedHandymanId === user?.id;
 
@@ -176,11 +189,7 @@ export default function HandymanJobDetails() {
         </div>
 
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
-          <MapView
-            locationQuery={job.location}
-            title="Job Location"
-            heightClassName="h-[280px]"
-          />
+          <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
         </div>
 
         {myBid && (
@@ -230,7 +239,9 @@ export default function HandymanJobDetails() {
                 <div className="space-y-1.5">
                   <Label htmlFor="bidAmount">Bid Amount</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      $
+                    </span>
                     <Input
                       id="bidAmount"
                       type="number"
@@ -298,10 +309,7 @@ export default function HandymanJobDetails() {
         )}
 
         {isAssignedHandyman && (
-          <JobChat
-            jobId={jobId}
-            otherPartyLabel={job.homeownerName ?? "the homeowner"}
-          />
+          <JobChat jobId={jobId} otherPartyLabel={job.homeownerName ?? "the homeowner"} />
         )}
 
         {isAssignedHandyman && job.status === "in_progress" && (
