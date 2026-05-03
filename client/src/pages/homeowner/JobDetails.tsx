@@ -255,7 +255,8 @@ export default function JobDetails() {
               <h3 className="font-semibold text-amber-800">Awaiting payment</h3>
             </div>
             <p className="text-sm text-amber-700 mb-4">
-              Your bid has been accepted, but the job is not officially active yet. Complete payment to start the job and move it into active work.
+              Your bid has been accepted, but the job is not officially active yet. Complete payment
+              to start the job and move it into active work.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button onClick={() => setShowPaymentModal(true)}>Complete Payment</Button>
@@ -503,7 +504,9 @@ export default function JobDetails() {
                 {acceptedBid.availability && (
                   <div className="flex items-center gap-1 mt-1">
                     <Clock className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{acceptedBid.availability}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {acceptedBid.availability}
+                    </span>
                   </div>
                 )}
               </div>
@@ -527,6 +530,9 @@ export default function JobDetails() {
             {canRetryPayment && (
               <div className="mt-4 pt-4 border-t border-border/40">
                 <Button onClick={() => setShowPaymentModal(true)}>Retry Payment</Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Payment is held securely and released only after you mark the job as completed.
+                </p>
               </div>
             )}
           </div>
@@ -602,7 +608,9 @@ export default function JobDetails() {
                         {bid.availability && (
                           <div className="flex items-center gap-1 mt-1.5 ml-10">
                             <Clock className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">{bid.availability}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {bid.availability}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -618,7 +626,7 @@ export default function JobDetails() {
                             {acceptBid.isPending ? (
                               <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                             ) : null}
-                            Accept & Pay
+                            Accept & Secure Payment
                           </Button>
                           <Button
                             size="sm"
@@ -629,6 +637,10 @@ export default function JobDetails() {
                             Reject
                           </Button>
                         </div>
+                        <p className="text-xs text-muted-foreground mt-2 max-w-[220px] ml-auto">
+                          Payment is held securely and released only after you mark the job as
+                          completed.
+                        </p>
                         <Link href={`/profile/${bid.handymanId}`}>
                           <span className="text-xs text-primary hover:underline cursor-pointer block mt-1">
                             View Profile
