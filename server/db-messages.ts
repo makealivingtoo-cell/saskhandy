@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { messages, type Message, type InsertMessage } from "../drizzle/schema";
 import { getDb } from "./db";
 
@@ -23,13 +23,34 @@ export async function getMessageById(id: number): Promise<Message | null> {
   return result.length > 0 ? result[0] : null;
 }
 
+/**
+ * Legacy job-level messages.
+ * Keep this for accepted-job chats and backwards compatibility.
+ * Important: only return messages that are NOT attached to a bid.
+ */
 export async function getMessagesForJob(jobId: number): Promise<Message[]> {
   const db = await getDb();
 
   return db
     .select()
     .from(messages)
-    .where(eq(messages.jobId, jobId))
+    .where(and(eq(messages.jobId, jobId), isNull(messages.bidId)))
+    .orderBy(desc(messages.createdAt));
+}
+
+/**
+ * Bid-level messages.
+ * This keeps pre-acceptance conversations private between:
+ * - the homeowner
+ * - the handyman who placed that specific bid
+ */
+export async function getMessagesForBid(jobId: number, bidId: number): Promise<Message[]> {
+  const db = await getDb();
+
+  return db
+    .select()
+    .from(messages)
+    .where(and(eq(messages.jobId, jobId), eq(messages.bidId, bidId)))
     .orderBy(desc(messages.createdAt));
 }
 
@@ -60,9 +81,37 @@ export async function markMessageAsRead(messageId: number, userId: number): Prom
 export async function getUnreadCount(jobId: number, userId: number): Promise<number> {
   const db = await getDb();
 
-  const jobMessages = await db.select().from(messages).where(eq(messages.jobId, jobId));
+  const jobMessages = await db
+    .select()
+    .from(messages)
+    .where(and(eq(messages.jobId, jobId), isNull(messages.bidId)));
 
   return jobMessages.filter((msg) => {
+    let readByArray: number[] = [];
+
+    try {
+      readByArray = msg.readBy ? JSON.parse(msg.readBy) : [];
+    } catch {
+      readByArray = [];
+    }
+
+    return !readByArray.includes(userId) && msg.senderId !== userId;
+  }).length;
+}
+
+export async function getUnreadCountForBid(
+  jobId: number,
+  bidId: number,
+  userId: number
+): Promise<number> {
+  const db = await getDb();
+
+  const bidMessages = await db
+    .select()
+    .from(messages)
+    .where(and(eq(messages.jobId, jobId), eq(messages.bidId, bidId)));
+
+  return bidMessages.filter((msg) => {
     let readByArray: number[] = [];
 
     try {

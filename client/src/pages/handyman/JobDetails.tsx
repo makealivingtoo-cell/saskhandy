@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle,
+  Clock,
   DollarSign,
   Loader2,
   MapPin,
@@ -95,7 +96,7 @@ export default function HandymanJobDetails() {
 
   const createBid = trpc.bids.create.useMutation({
     onSuccess: async () => {
-      toast.success("Bid placed. The homeowner will review it.");
+      toast.success("Bid placed. The homeowner can now review it and message you.");
       setShowBidForm(false);
       setBidAmount("");
       setBidMessage("");
@@ -207,7 +208,7 @@ export default function HandymanJobDetails() {
           <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
         </div>
 
-        {job.status === "open" && (
+        {job.status === "open" && !myBid && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -327,7 +328,37 @@ export default function HandymanJobDetails() {
                 job is completed and released.
               </p>
             </div>
+
+            {job.status === "open" && myBid.status === "pending" && (
+              <div className="mt-4 pt-4 border-t border-black/5">
+                <div className="bg-white/60 border border-amber-200 rounded-xl p-4">
+                  <div className="flex items-start gap-2">
+                    <Clock className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Waiting for homeowner response
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        The homeowner can message you here before accepting your bid. Keep the
+                        conversation on SaskHandy so the job details and payment process stay
+                        protected.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+        {job.status === "open" && myBid && myBid.status === "pending" && (
+          <JobChat
+            jobId={jobId}
+            bidId={myBid.id}
+            otherPartyLabel={job.homeownerName ?? "the homeowner"}
+            title="Bid Chat"
+            description="Message the homeowner about your bid before they decide whether to accept."
+          />
         )}
 
         {job.status === "open" && !myBid && (

@@ -3,9 +3,11 @@ import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
 import {
   createMessage,
+  getMessagesForBid,
   getMessagesForJob,
   markMessageAsRead,
   getUnreadCount,
+  getUnreadCountForBid,
 } from "./db-messages";
 import {
   sendVerificationEmail,
@@ -1672,6 +1674,7 @@ const messagesRouter = router({
     .input(
       z.object({
         jobId: z.number(),
+        bidId: z.number().optional(),
         content: z.string().min(1).max(2000),
       })
     )
@@ -1679,31 +1682,64 @@ const messagesRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const isHomeowner = job.homeownerId === ctx.user.id;
-      const isHandyman = job.selectedHandymanId === ctx.user.id;
+      let recipientUserId: number | null | undefined = null;
 
-      if (!isHomeowner && !isHandyman) {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      if (input.bidId) {
+        const bid = await getBidById(input.bidId);
+
+        if (!bid || bid.jobId !== input.jobId) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Bid not found for this job.",
+          });
+        }
+
+        const isHomeowner = job.homeownerId === ctx.user.id;
+        const isBidHandyman = bid.handymanId === ctx.user.id;
+        const isAdmin = ctx.user.role === "admin";
+
+        if (!isHomeowner && !isBidHandyman && !isAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+
+        recipientUserId = isHomeowner ? bid.handymanId : job.homeownerId;
+      } else {
+        const isHomeowner = job.homeownerId === ctx.user.id;
+        const isSelectedHandyman = job.selectedHandymanId === ctx.user.id;
+        const isAdmin = ctx.user.role === "admin";
+
+        if (!isHomeowner && !isSelectedHandyman && !isAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+
+        if (!job.selectedHandymanId && !isAdmin) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This job does not have an accepted handyman yet. Use bid chat instead.",
+          });
+        }
+
+        recipientUserId = isHomeowner ? job.selectedHandymanId : job.homeownerId;
       }
 
       const msg = await createMessage({
         jobId: input.jobId,
+        bidId: input.bidId,
         senderId: ctx.user.id,
         content: input.content,
       });
 
-      const recipientUserId = isHomeowner ? job.selectedHandymanId : job.homeownerId;
-
-      if (recipientUserId) {
+      if (recipientUserId && recipientUserId !== ctx.user.id) {
         await notifyUser({
           userId: recipientUserId,
           type: "new_message",
           title: "New message",
           message: `You have a new message about "${job.title}".`,
-          link: "/messages",
+          link: `/jobs/${job.id}`,
         });
 
         const recipient = await safeGetUserById(recipientUserId);
+
         if (recipient?.email) {
           void safeSendEmail("sendNewMessageEmail", () =>
             sendNewMessageEmail({
@@ -1721,23 +1757,53 @@ const messagesRouter = router({
     }),
 
   getForJob: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
+    .input(
+      z.object({
+        jobId: z.number(),
+        bidId: z.number().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const isHomeowner = job.homeownerId === ctx.user.id;
-      const isHandyman = job.selectedHandymanId === ctx.user.id;
+      let jobMessages;
 
-      if (!isHomeowner && !isHandyman && ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      if (input.bidId) {
+        const bid = await getBidById(input.bidId);
+
+        if (!bid || bid.jobId !== input.jobId) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Bid not found for this job.",
+          });
+        }
+
+        const isHomeowner = job.homeownerId === ctx.user.id;
+        const isBidHandyman = bid.handymanId === ctx.user.id;
+        const isAdmin = ctx.user.role === "admin";
+
+        if (!isHomeowner && !isBidHandyman && !isAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+
+        jobMessages = await getMessagesForBid(input.jobId, input.bidId);
+      } else {
+        const isHomeowner = job.homeownerId === ctx.user.id;
+        const isSelectedHandyman = job.selectedHandymanId === ctx.user.id;
+        const isAdmin = ctx.user.role === "admin";
+
+        if (!isHomeowner && !isSelectedHandyman && !isAdmin) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+
+        jobMessages = await getMessagesForJob(input.jobId);
       }
-
-      const jobMessages = await getMessagesForJob(input.jobId);
 
       const enriched = await Promise.all(
         jobMessages.map(async (msg) => {
           const sender = await safeGetUserById(msg.senderId);
+
           return {
             ...msg,
             senderName: sender?.name,
@@ -1756,8 +1822,17 @@ const messagesRouter = router({
     }),
 
   getUnreadCount: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
+    .input(
+      z.object({
+        jobId: z.number(),
+        bidId: z.number().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
+      if (input.bidId) {
+        return getUnreadCountForBid(input.jobId, input.bidId, ctx.user.id);
+      }
+
       return getUnreadCount(input.jobId, ctx.user.id);
     }),
 });

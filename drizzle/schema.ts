@@ -258,6 +258,7 @@ export type InsertDispute = typeof disputes.$inferInsert;
 export const messages = mysqlTable("messages", {
   id: int("id").autoincrement().primaryKey(),
   jobId: int("jobId").notNull(),
+  bidId: int("bidId"),
   senderId: int("senderId").notNull(),
   content: text("content").notNull(),
   readBy: varchar("readBy", { length: 1000 }).default("[]"),

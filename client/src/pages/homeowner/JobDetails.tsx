@@ -80,6 +80,8 @@ export default function JobDetails() {
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBidId, setSelectedBidId] = useState<number | null>(null);
+  const [paymentBid, setPaymentBid] = useState<any | null>(null);
 
   const { data: job, isLoading: jobLoading } = trpc.jobs.getById.useQuery(
     { jobId },
@@ -119,6 +121,7 @@ export default function JobDetails() {
   const rejectBid = trpc.bids.reject.useMutation({
     onSuccess: async () => {
       toast.success("Bid rejected.");
+      setSelectedBidId(null);
       await utils.bids.getForJob.invalidate({ jobId });
     },
     onError: (err) => toast.error(err.message),
@@ -198,12 +201,19 @@ export default function JobDetails() {
   const isOwner = job.homeownerId === user?.id;
   const pendingBids = bids?.filter((b) => b.status === "pending") ?? [];
   const acceptedBid = bids?.find((b) => b.status === "accepted");
+  const selectedBid = pendingBids.find((bid) => bid.id === selectedBidId) ?? null;
+  const modalBid = paymentBid ?? acceptedBid;
 
   const canEdit = isOwner && job.status === "open" && !job.selectedBidId && !job.selectedHandymanId;
   const canDelete = canEdit && pendingBids.length === 0 && !payment;
   const canCancel = canEdit && pendingBids.length > 0;
   const isAwaitingPayment = job.status === "awaiting_payment";
   const canRetryPayment = isAwaitingPayment && !!acceptedBid;
+
+  const handleAcceptBid = (bid: any) => {
+    setPaymentBid(bid);
+    acceptBid.mutate({ bidId: bid.id });
+  };
 
   return (
     <AppLayout>
@@ -303,7 +313,14 @@ export default function JobDetails() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={() => setShowPaymentModal(true)}>Complete Secure Payment</Button>
+              <Button
+                onClick={() => {
+                  setPaymentBid(acceptedBid);
+                  setShowPaymentModal(true);
+                }}
+              >
+                Complete Secure Payment
+              </Button>
 
               <p className="text-xs text-amber-700 self-center">
                 If your earlier payment attempt failed or was closed, you can retry here.
@@ -615,7 +632,14 @@ export default function JobDetails() {
 
             {canRetryPayment && (
               <div className="mt-4 pt-4 border-t border-border/40">
-                <Button onClick={() => setShowPaymentModal(true)}>Retry Secure Payment</Button>
+                <Button
+                  onClick={() => {
+                    setPaymentBid(acceptedBid);
+                    setShowPaymentModal(true);
+                  }}
+                >
+                  Retry Secure Payment
+                </Button>
 
                 <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
                   <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
@@ -645,8 +669,8 @@ export default function JobDetails() {
 
                 {pendingBids.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Compare the handyman’s message, availability, profile, and price before
-                    accepting.
+                    Open a bid to chat with the handyman, ask questions, and decide whether to
+                    accept.
                   </p>
                 )}
               </div>
@@ -659,9 +683,8 @@ export default function JobDetails() {
                   <div>
                     <p className="text-sm font-medium text-foreground">Choosing a bid</p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Price matters, but it is not the only thing. Look for a clear message,
-                      realistic availability, profile details, and any trust badges before you
-                      accept.
+                      You can chat with a handyman before accepting. Keep communication on SaskHandy
+                      so the job details, payment, and dispute process stay protected.
                     </p>
                   </div>
                 </div>
@@ -694,116 +717,199 @@ export default function JobDetails() {
               </div>
             ) : (
               <div className="space-y-3">
-                {pendingBids.map((bid) => (
-                  <div key={bid.id} className="bg-white rounded-xl border border-border/60 p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <HandymanAvatar
-                            imageUrl={(bid as any).handymanProfileImageUrl}
-                            name={bid.handymanName}
-                          />
+                {pendingBids.map((bid) => {
+                  const isSelected = selectedBidId === bid.id;
 
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-foreground text-sm">
-                                {bid.handymanName ?? "Handyman"}
+                  return (
+                    <div
+                      key={bid.id}
+                      className={`bg-white rounded-xl border p-5 ${
+                        isSelected ? "border-primary/40 shadow-sm" : "border-border/60"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <HandymanAvatar
+                              imageUrl={(bid as any).handymanProfileImageUrl}
+                              name={bid.handymanName}
+                            />
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium text-foreground text-sm">
+                                  {bid.handymanName ?? "Handyman"}
+                                </p>
+
+                                {getBidInsuranceVerified(bid) && (
+                                  <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                    <Shield className="w-3 h-3" />
+                                    Insurance Verified
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {bid.handymanRating && (
+                                  <StarRatingDisplay
+                                    rating={parseFloat(bid.handymanRating)}
+                                    size="sm"
+                                    showValue
+                                  />
+                                )}
+
+                                {bid.handymanTotalJobs !== undefined && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {bid.handymanTotalJobs} jobs completed
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {bid.message && (
+                            <p className="text-sm text-muted-foreground mt-2 ml-10 line-clamp-2">
+                              {bid.message}
+                            </p>
+                          )}
+
+                          {bid.availability && (
+                            <div className="flex items-center gap-1 mt-1.5 ml-10">
+                              <Clock className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {bid.availability}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <p className="text-xl font-bold text-foreground">${bid.bidAmount}</p>
+
+                          <div className="flex flex-col gap-2 mt-2 items-end">
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedBidId(isSelected ? null : bid.id)}
+                              variant={isSelected ? "outline" : "default"}
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                              {isSelected ? "Close Bid" : "Chat / View Bid"}
+                            </Button>
+
+                            <Link href={`/profile/${bid.handymanId}`}>
+                              <span className="text-xs text-primary hover:underline cursor-pointer block">
+                                View Profile
+                              </span>
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+
+                      {isSelected && selectedBid && (
+                        <div className="mt-5 pt-5 border-t border-border/40">
+                          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                              <div>
+                                <p className="text-sm font-semibold text-foreground">
+                                  Bid from {selectedBid.handymanName ?? "this handyman"}
+                                </p>
+
+                                {selectedBid.message && (
+                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    {selectedBid.message}
+                                  </p>
+                                )}
+
+                                {selectedBid.availability && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    Availability: {selectedBid.availability}
+                                  </p>
+                                )}
+
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Ask any questions before accepting. Once you accept, you’ll be
+                                  asked to secure payment.
+                                </p>
+                              </div>
+
+                              <div className="text-left sm:text-right shrink-0">
+                                <p className="text-2xl font-bold text-foreground">
+                                  ${selectedBid.bidAmount}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Bid amount</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                              <Button
+                                onClick={() => handleAcceptBid(selectedBid)}
+                                disabled={acceptBid.isPending}
+                              >
+                                {acceptBid.isPending ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Shield className="w-4 h-4 mr-2" />
+                                )}
+                                Accept Bid & Secure Payment
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                                onClick={() => rejectBid.mutate({ bidId: selectedBid.id })}
+                                disabled={rejectBid.isPending}
+                              >
+                                {rejectBid.isPending ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 mr-2" />
+                                )}
+                                Reject Bid
+                              </Button>
+
+                              <Button asChild variant="outline">
+                                <Link href={`/profile/${selectedBid.handymanId}`}>
+                                  View Profile
+                                </Link>
+                              </Button>
+                            </div>
+
+                            <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+                              <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                              <p>
+                                Payment is held securely and released only after you mark the job as
+                                completed.
                               </p>
-
-                              {getBidInsuranceVerified(bid) && (
-                                <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                                  <Shield className="w-3 h-3" />
-                                  Insurance Verified
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {bid.handymanRating && (
-                                <StarRatingDisplay
-                                  rating={parseFloat(bid.handymanRating)}
-                                  size="sm"
-                                  showValue
-                                />
-                              )}
-
-                              {bid.handymanTotalJobs !== undefined && (
-                                <span className="text-xs text-muted-foreground">
-                                  {bid.handymanTotalJobs} jobs completed
-                                </span>
-                              )}
                             </div>
                           </div>
+
+                          <JobChat
+                            jobId={jobId}
+                            bidId={selectedBid.id}
+                            otherPartyLabel={selectedBid.handymanName ?? "this handyman"}
+                            title="Bid Chat"
+                            description={`Message ${
+                              selectedBid.handymanName ?? "this handyman"
+                            } before accepting the bid.`}
+                          />
                         </div>
-
-                        {bid.message && (
-                          <p className="text-sm text-muted-foreground mt-2 ml-10">{bid.message}</p>
-                        )}
-
-                        {bid.availability && (
-                          <div className="flex items-center gap-1 mt-1.5 ml-10">
-                            <Clock className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">
-                              {bid.availability}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <p className="text-xl font-bold text-foreground">${bid.bidAmount}</p>
-
-                        <div className="flex gap-2 mt-2 justify-end">
-                          <Button
-                            size="sm"
-                            onClick={() => acceptBid.mutate({ bidId: bid.id })}
-                            disabled={acceptBid.isPending}
-                          >
-                            {acceptBid.isPending ? (
-                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                            ) : null}
-                            Accept & Secure Payment
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => rejectBid.mutate({ bidId: bid.id })}
-                            disabled={rejectBid.isPending}
-                          >
-                            Reject
-                          </Button>
-                        </div>
-
-                        <Link href={`/profile/${bid.handymanId}`}>
-                          <span className="text-xs text-primary hover:underline cursor-pointer block mt-2">
-                            View Profile
-                          </span>
-                        </Link>
-                      </div>
+                      )}
                     </div>
-
-                    <div className="mt-4 pt-3 border-t border-border/40 flex items-start gap-2 text-xs text-muted-foreground">
-                      <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                      <p>
-                        Payment is held securely and released only after you mark the job as
-                        completed.
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         )}
       </div>
 
-      {showPaymentModal && acceptedBid && (
+      {showPaymentModal && modalBid && (
         <StripePaymentModal
           jobId={jobId}
-          amount={parseFloat(acceptedBid.bidAmount)}
+          amount={parseFloat(modalBid.bidAmount)}
           onSuccess={async () => {
             setShowPaymentModal(false);
+            setPaymentBid(null);
             toast.success("Payment submitted. Once confirmed, the job will move into active work.");
             await utils.jobs.getById.invalidate({ jobId });
             await utils.payments.getByJob.invalidate({ jobId });
