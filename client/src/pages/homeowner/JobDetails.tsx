@@ -23,6 +23,7 @@ import {
   Star,
   Trash2,
   User,
+  X,
   XCircle,
 } from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
@@ -63,6 +64,165 @@ function HandymanAvatar({
       ) : (
         <User className={`${iconSizeClass} text-primary`} />
       )}
+    </div>
+  );
+}
+
+function BidChatDrawer({
+  bid,
+  jobId,
+  isOpen,
+  onClose,
+  onAccept,
+  onReject,
+  acceptPending,
+  rejectPending,
+}: {
+  bid: any | null;
+  jobId: number;
+  isOpen: boolean;
+  onClose: () => void;
+  onAccept: (bid: any) => void;
+  onReject: (bidId: number) => void;
+  acceptPending: boolean;
+  rejectPending: boolean;
+}) {
+  if (!isOpen || !bid) return null;
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        aria-label="Close chat overlay"
+        className="absolute inset-0 bg-black/35"
+        onClick={onClose}
+      />
+
+      <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl flex flex-col">
+        <div className="border-b border-border/60 px-5 py-4 shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <HandymanAvatar
+                imageUrl={(bid as any).handymanProfileImageUrl}
+                name={bid.handymanName}
+                size="md"
+              />
+
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground truncate">
+                  {bid.handymanName ?? "Handyman"}
+                </p>
+
+                <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                  {bid.handymanRating && (
+                    <StarRatingDisplay
+                      rating={parseFloat(bid.handymanRating)}
+                      size="sm"
+                      showValue
+                    />
+                  )}
+
+                  {bid.handymanTotalJobs !== undefined && (
+                    <span className="text-xs text-muted-foreground">
+                      {bid.handymanTotalJobs} jobs completed
+                    </span>
+                  )}
+                </div>
+
+                {getBidInsuranceVerified(bid) && (
+                  <span className="inline-flex items-center gap-1 mt-2 text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+                    <Shield className="w-3 h-3" />
+                    Insurance Verified
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center hover:bg-muted shrink-0"
+              aria-label="Close chat"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-b border-border/60 bg-muted/20 shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Bid amount</p>
+              <p className="text-2xl font-bold text-foreground">${bid.bidAmount}</p>
+            </div>
+
+            <Link href={`/profile/${bid.handymanId}`}>
+              <span className="text-sm text-primary hover:underline cursor-pointer shrink-0">
+                View Profile
+              </span>
+            </Link>
+          </div>
+
+          {bid.message && (
+            <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+              {bid.message}
+            </p>
+          )}
+
+          {bid.availability && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                Availability: {bid.availability}
+              </span>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 mt-4">
+            <Button onClick={() => onAccept(bid)} disabled={acceptPending}>
+              {acceptPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Shield className="w-4 h-4 mr-2" />
+              )}
+              Accept Bid & Secure Payment
+            </Button>
+
+            <Button
+              variant="outline"
+              className="border-destructive/30 text-destructive hover:bg-destructive/5"
+              onClick={() => onReject(bid.id)}
+              disabled={rejectPending}
+            >
+              {rejectPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="w-4 h-4 mr-2" />
+              )}
+              Reject Bid
+            </Button>
+          </div>
+
+          <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+            <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+            <p>
+              Payment is held securely and released only after you mark the job as completed.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 min-h-0 p-4 bg-muted/30">
+          <JobChat
+            jobId={jobId}
+            bidId={bid.id}
+            otherPartyLabel={bid.handymanName ?? "this handyman"}
+            title="Bid Chat"
+            description={`Message ${bid.handymanName ?? "this handyman"} before accepting the bid.`}
+            compact
+            className="h-full mt-0"
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -111,6 +271,7 @@ export default function JobDetails() {
   const acceptBid = trpc.bids.accept.useMutation({
     onSuccess: async () => {
       setShowPaymentModal(true);
+      setSelectedBidId(null);
       await utils.jobs.getById.invalidate({ jobId });
       await utils.bids.getForJob.invalidate({ jobId });
       await utils.payments.getByJob.invalidate({ jobId });
@@ -292,11 +453,7 @@ export default function JobDetails() {
         )}
 
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
-          <MapView
-            locationQuery={job.location}
-            title="Job Location"
-            heightClassName="h-[280px]"
-          />
+          <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
         </div>
 
         {isAwaitingPayment && acceptedBid && (
@@ -717,191 +874,108 @@ export default function JobDetails() {
               </div>
             ) : (
               <div className="space-y-3">
-                {pendingBids.map((bid) => {
-                  const isSelected = selectedBidId === bid.id;
+                {pendingBids.map((bid) => (
+                  <div
+                    key={bid.id}
+                    className={`bg-white rounded-xl border p-5 ${
+                      selectedBidId === bid.id ? "border-primary/40 shadow-sm" : "border-border/60"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <HandymanAvatar
+                            imageUrl={(bid as any).handymanProfileImageUrl}
+                            name={bid.handymanName}
+                          />
 
-                  return (
-                    <div
-                      key={bid.id}
-                      className={`bg-white rounded-xl border p-5 ${
-                        isSelected ? "border-primary/40 shadow-sm" : "border-border/60"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <HandymanAvatar
-                              imageUrl={(bid as any).handymanProfileImageUrl}
-                              name={bid.handymanName}
-                            />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium text-foreground text-sm">
+                                {bid.handymanName ?? "Handyman"}
+                              </p>
 
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium text-foreground text-sm">
-                                  {bid.handymanName ?? "Handyman"}
-                                </p>
+                              {getBidInsuranceVerified(bid) && (
+                                <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                  <Shield className="w-3 h-3" />
+                                  Insurance Verified
+                                </span>
+                              )}
+                            </div>
 
-                                {getBidInsuranceVerified(bid) && (
-                                  <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                                    <Shield className="w-3 h-3" />
-                                    Insurance Verified
-                                  </span>
-                                )}
-                              </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {bid.handymanRating && (
+                                <StarRatingDisplay
+                                  rating={parseFloat(bid.handymanRating)}
+                                  size="sm"
+                                  showValue
+                                />
+                              )}
 
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {bid.handymanRating && (
-                                  <StarRatingDisplay
-                                    rating={parseFloat(bid.handymanRating)}
-                                    size="sm"
-                                    showValue
-                                  />
-                                )}
-
-                                {bid.handymanTotalJobs !== undefined && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {bid.handymanTotalJobs} jobs completed
-                                  </span>
-                                )}
-                              </div>
+                              {bid.handymanTotalJobs !== undefined && (
+                                <span className="text-xs text-muted-foreground">
+                                  {bid.handymanTotalJobs} jobs completed
+                                </span>
+                              )}
                             </div>
                           </div>
-
-                          {bid.message && (
-                            <p className="text-sm text-muted-foreground mt-2 ml-10 line-clamp-2">
-                              {bid.message}
-                            </p>
-                          )}
-
-                          {bid.availability && (
-                            <div className="flex items-center gap-1 mt-1.5 ml-10">
-                              <Clock className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">
-                                {bid.availability}
-                              </span>
-                            </div>
-                          )}
                         </div>
 
-                        <div className="text-right shrink-0">
-                          <p className="text-xl font-bold text-foreground">${bid.bidAmount}</p>
+                        {bid.message && (
+                          <p className="text-sm text-muted-foreground mt-2 ml-10 line-clamp-2">
+                            {bid.message}
+                          </p>
+                        )}
 
-                          <div className="flex flex-col gap-2 mt-2 items-end">
-                            <Button
-                              size="sm"
-                              onClick={() => setSelectedBidId(isSelected ? null : bid.id)}
-                              variant={isSelected ? "outline" : "default"}
-                            >
-                              <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                              {isSelected ? "Close Bid" : "Chat / View Bid"}
-                            </Button>
-
-                            <Link href={`/profile/${bid.handymanId}`}>
-                              <span className="text-xs text-primary hover:underline cursor-pointer block">
-                                View Profile
-                              </span>
-                            </Link>
+                        {bid.availability && (
+                          <div className="flex items-center gap-1 mt-1.5 ml-10">
+                            <Clock className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">
+                              {bid.availability}
+                            </span>
                           </div>
-                        </div>
+                        )}
                       </div>
 
-                      {isSelected && selectedBid && (
-                        <div className="mt-5 pt-5 border-t border-border/40">
-                          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                              <div>
-                                <p className="text-sm font-semibold text-foreground">
-                                  Bid from {selectedBid.handymanName ?? "this handyman"}
-                                </p>
+                      <div className="text-right shrink-0">
+                        <p className="text-xl font-bold text-foreground">${bid.bidAmount}</p>
 
-                                {selectedBid.message && (
-                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                    {selectedBid.message}
-                                  </p>
-                                )}
+                        <div className="flex flex-col gap-2 mt-2 items-end">
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedBidId(bid.id)}
+                            variant={selectedBidId === bid.id ? "outline" : "default"}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                            {selectedBidId === bid.id ? "Chat Open" : "Open Chat"}
+                          </Button>
 
-                                {selectedBid.availability && (
-                                  <p className="text-xs text-muted-foreground mt-2">
-                                    Availability: {selectedBid.availability}
-                                  </p>
-                                )}
-
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Ask any questions before accepting. Once you accept, you’ll be
-                                  asked to secure payment.
-                                </p>
-                              </div>
-
-                              <div className="text-left sm:text-right shrink-0">
-                                <p className="text-2xl font-bold text-foreground">
-                                  ${selectedBid.bidAmount}
-                                </p>
-                                <p className="text-xs text-muted-foreground">Bid amount</p>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                              <Button
-                                onClick={() => handleAcceptBid(selectedBid)}
-                                disabled={acceptBid.isPending}
-                              >
-                                {acceptBid.isPending ? (
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Shield className="w-4 h-4 mr-2" />
-                                )}
-                                Accept Bid & Secure Payment
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                className="border-destructive/30 text-destructive hover:bg-destructive/5"
-                                onClick={() => rejectBid.mutate({ bidId: selectedBid.id })}
-                                disabled={rejectBid.isPending}
-                              >
-                                {rejectBid.isPending ? (
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                )}
-                                Reject Bid
-                              </Button>
-
-                              <Button asChild variant="outline">
-                                <Link href={`/profile/${selectedBid.handymanId}`}>
-                                  View Profile
-                                </Link>
-                              </Button>
-                            </div>
-
-                            <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-                              <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                              <p>
-                                Payment is held securely and released only after you mark the job as
-                                completed.
-                              </p>
-                            </div>
-                          </div>
-
-                          <JobChat
-                            jobId={jobId}
-                            bidId={selectedBid.id}
-                            otherPartyLabel={selectedBid.handymanName ?? "this handyman"}
-                            title="Bid Chat"
-                            description={`Message ${
-                              selectedBid.handymanName ?? "this handyman"
-                            } before accepting the bid.`}
-                          />
+                          <Link href={`/profile/${bid.handymanId}`}>
+                            <span className="text-xs text-primary hover:underline cursor-pointer block">
+                              View Profile
+                            </span>
+                          </Link>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         )}
       </div>
+
+      <BidChatDrawer
+        bid={selectedBid}
+        jobId={jobId}
+        isOpen={!!selectedBid}
+        onClose={() => setSelectedBidId(null)}
+        onAccept={handleAcceptBid}
+        onReject={(bidId) => rejectBid.mutate({ bidId })}
+        acceptPending={acceptBid.isPending}
+        rejectPending={rejectBid.isPending}
+      />
 
       {showPaymentModal && modalBid && (
         <StripePaymentModal

@@ -11,27 +11,40 @@ import { cn } from "@/lib/utils";
 interface JobChatProps {
   jobId: number;
   otherPartyLabel: string;
+  bidId?: number;
+  title?: string;
+  description?: string;
+  compact?: boolean;
+  className?: string;
 }
 
-export function JobChat({ jobId, otherPartyLabel }: JobChatProps) {
+export function JobChat({
+  jobId,
+  bidId,
+  otherPartyLabel,
+  title = "Chat",
+  description,
+  compact = false,
+  className,
+}: JobChatProps) {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const [message, setMessage] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const messagesQuery = trpc.messages.getForJob.useQuery(
-    { jobId },
-    {
-      refetchInterval: 4000,
-      refetchOnWindowFocus: true,
-    }
-  );
+  const queryInput = bidId ? { jobId, bidId } : { jobId };
+
+  const messagesQuery = trpc.messages.getForJob.useQuery(queryInput, {
+    refetchInterval: 4000,
+    refetchOnWindowFocus: true,
+  });
 
   const sendMessage = trpc.messages.create.useMutation({
     onSuccess: async () => {
       setMessage("");
-      await utils.messages.getForJob.invalidate({ jobId });
-      await utils.messages.getUnreadCount.invalidate({ jobId });
+
+      await utils.messages.getForJob.invalidate(queryInput);
+      await utils.messages.getUnreadCount.invalidate(queryInput);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -50,25 +63,32 @@ export function JobChat({ jobId, otherPartyLabel }: JobChatProps) {
 
     sendMessage.mutate({
       jobId,
+      bidId,
       content,
     });
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden mt-6">
-      <div className="px-5 py-4 border-b border-border/40">
-        <h3 className="font-semibold text-foreground">Chat</h3>
+    <div
+      className={cn(
+        "bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden",
+        compact ? "h-full flex flex-col" : "mt-6",
+        className
+      )}
+    >
+      <div className="px-5 py-4 border-b border-border/40 shrink-0">
+        <h3 className="font-semibold text-foreground">{title}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Message {otherPartyLabel} about this job.
+          {description ?? `Message ${otherPartyLabel} about this job.`}
         </p>
       </div>
 
       {messagesQuery.isLoading ? (
-        <div className="flex items-center justify-center py-16">
+        <div className="flex items-center justify-center py-16 flex-1">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : groupedMessages.length === 0 ? (
-        <div className="px-6 py-12 text-center">
+        <div className="px-6 py-12 text-center flex-1 flex flex-col items-center justify-center">
           <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm font-medium text-foreground">No messages yet</p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -76,7 +96,12 @@ export function JobChat({ jobId, otherPartyLabel }: JobChatProps) {
           </p>
         </div>
       ) : (
-        <div className="max-h-[420px] overflow-y-auto px-4 py-4 space-y-3 bg-muted/20">
+        <div
+          className={cn(
+            "overflow-y-auto px-4 py-4 space-y-3 bg-muted/20 flex-1",
+            compact ? "min-h-0" : "max-h-[420px]"
+          )}
+        >
           {groupedMessages.map((msg) => {
             const isMine = msg.senderId === user?.id;
 
@@ -87,7 +112,7 @@ export function JobChat({ jobId, otherPartyLabel }: JobChatProps) {
               >
                 <div
                   className={cn(
-                    "max-w-[80%] rounded-2xl px-4 py-3 shadow-sm",
+                    "max-w-[82%] rounded-2xl px-4 py-3 shadow-sm",
                     isMine
                       ? "bg-primary text-primary-foreground"
                       : "bg-white border border-border/60 text-foreground"
@@ -114,21 +139,32 @@ export function JobChat({ jobId, otherPartyLabel }: JobChatProps) {
               </div>
             );
           })}
+
           <div ref={bottomRef} />
         </div>
       )}
 
-      <div className="border-t border-border/40 p-4">
+      <div className="border-t border-border/40 p-4 shrink-0">
         <div className="space-y-3">
           <Textarea
             placeholder={`Write a message to ${otherPartyLabel}...`}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            rows={3}
+            rows={compact ? 2 : 3}
             className="resize-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
           />
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] text-muted-foreground">
+              Press Ctrl + Enter to send
+            </p>
+
             <Button onClick={handleSend} disabled={sendMessage.isPending || !message.trim()}>
               {sendMessage.isPending ? (
                 <>
@@ -138,7 +174,7 @@ export function JobChat({ jobId, otherPartyLabel }: JobChatProps) {
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
-                  Send Message
+                  Send
                 </>
               )}
             </Button>
