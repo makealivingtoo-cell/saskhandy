@@ -13,14 +13,23 @@ import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle,
   DollarSign,
   Loader2,
   MapPin,
+  Shield,
   Star,
+  TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
+
+const bidTips = [
+  "Give a clear price based on the job details.",
+  "Mention when you are available.",
+  "Write a short note showing you understand the work.",
+];
 
 export default function HandymanJobDetails() {
   const { id } = useParams();
@@ -136,10 +145,9 @@ export default function HandymanJobDetails() {
     );
   }
 
+  const parsedBidAmount = parseFloat(bidAmount);
   const estimatedPayout =
-    bidAmount && !Number.isNaN(parseFloat(bidAmount))
-      ? (parseFloat(bidAmount) * 0.8).toFixed(2)
-      : null;
+    bidAmount && !Number.isNaN(parsedBidAmount) ? (parsedBidAmount * 0.8).toFixed(2) : null;
 
   return (
     <AppLayout>
@@ -158,6 +166,7 @@ export default function HandymanJobDetails() {
                 <h1 className="text-xl font-serif text-foreground">{job.title}</h1>
                 <StatusBadge status={job.status} />
               </div>
+
               {job.homeownerName && (
                 <p className="text-xs text-muted-foreground">Posted by {job.homeownerName}</p>
               )}
@@ -171,6 +180,7 @@ export default function HandymanJobDetails() {
               <p className="text-xs text-muted-foreground mb-0.5">Category</p>
               <p className="text-sm font-medium">{job.category}</p>
             </div>
+
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Location</p>
               <div className="flex items-center gap-1">
@@ -178,10 +188,12 @@ export default function HandymanJobDetails() {
                 <p className="text-sm font-medium truncate">{job.location}</p>
               </div>
             </div>
+
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
               <p className="text-sm font-medium">${job.budgetMin}–${job.budgetMax}</p>
             </div>
+
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Posted</p>
               <p className="text-sm font-medium">
@@ -194,6 +206,28 @@ export default function HandymanJobDetails() {
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
           <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
         </div>
+
+        {job.status === "open" && (
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-foreground">Submit a strong bid</p>
+                <div className="mt-2 space-y-2">
+                  {bidTips.map((tip) => (
+                    <div key={tip} className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                      <p className="text-sm text-muted-foreground leading-relaxed">{tip}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {job.status === "open" && totalBidCount > 0 && (
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
@@ -234,14 +268,17 @@ export default function HandymanJobDetails() {
                   </p>
                 )}
 
-                <p className="text-xs text-muted-foreground pt-1">
-                  Other bid details are hidden to keep pricing fair. Submit your best price based on
-                  the job details.
-                </p>
+                <div className="pt-2 flex items-start gap-2 text-xs text-muted-foreground">
+                  <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                  <p>
+                    Other bid details are hidden to keep pricing fair. Submit your best price based
+                    on the job details, not other handymen’s bids.
+                  </p>
+                </div>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                You can see the relevant bid details for this job.
+                You can see the bid details relevant to your account.
               </p>
             )}
           </div>
@@ -257,20 +294,38 @@ export default function HandymanJobDetails() {
                 : "bg-amber-50 border-amber-200"
             }`}
           >
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-semibold text-sm">Your Bid</p>
                   <StatusBadge status={myBid.status} />
                 </div>
-                {myBid.message && <p className="text-xs text-muted-foreground">{myBid.message}</p>}
+
+                {myBid.message && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">{myBid.message}</p>
+                )}
+
+                {myBid.availability && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Availability: {myBid.availability}
+                  </p>
+                )}
               </div>
-              <div className="text-right">
+
+              <div className="text-right shrink-0">
                 <p className="text-xl font-bold">${myBid.bidAmount}</p>
                 <p className="text-xs text-muted-foreground">
                   You keep ${(parseFloat(myBid.bidAmount) * 0.8).toFixed(2)}
                 </p>
               </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-black/5 flex items-start gap-2 text-xs text-muted-foreground">
+              <DollarSign className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <p>
+                SaskHandy keeps a 20% platform fee. Your payout is 80% of the accepted bid after the
+                job is completed and released.
+              </p>
             </div>
           </div>
         )}
@@ -278,18 +333,24 @@ export default function HandymanJobDetails() {
         {job.status === "open" && !myBid && (
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
             {!showBidForm ? (
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="font-semibold text-foreground text-sm">Interested in this job?</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Place a competitive bid to win this job.
+                    Send a clear bid with your price, availability, and short message.
                   </p>
                 </div>
+
                 <Button onClick={() => setShowBidForm(true)}>Place a Bid</Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-foreground">Place Your Bid</h3>
+              <div className="space-y-5">
+                <div>
+                  <h3 className="font-semibold text-foreground">Place Your Bid</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The homeowner will see your price, message, availability, and profile details.
+                  </p>
+                </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="bidAmount">Bid Amount</Label>
@@ -308,10 +369,14 @@ export default function HandymanJobDetails() {
                       className="pl-7"
                     />
                   </div>
+
                   {estimatedPayout && (
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-                      <DollarSign className="w-3.5 h-3.5" />
-                      You&apos;ll receive <strong>${estimatedPayout}</strong> after the platform fee
+                    <div className="flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                      <DollarSign className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <p>
+                        You&apos;ll receive <strong>${estimatedPayout}</strong> after SaskHandy’s
+                        20% platform fee.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -320,7 +385,7 @@ export default function HandymanJobDetails() {
                   <Label htmlFor="availability">Availability</Label>
                   <Input
                     id="availability"
-                    placeholder="e.g., Available this weekend"
+                    placeholder="e.g., Available this weekend or weekday evenings"
                     value={availability}
                     onChange={(e) => setAvailability(e.target.value)}
                   />
@@ -330,12 +395,24 @@ export default function HandymanJobDetails() {
                   <Label htmlFor="message">Message to Homeowner</Label>
                   <Textarea
                     id="message"
-                    placeholder="Describe your approach and why you're a good fit..."
+                    placeholder="Briefly explain how you can help, when you can do it, and why you're a good fit."
                     value={bidMessage}
                     onChange={(e) => setBidMessage(e.target.value)}
-                    rows={3}
+                    rows={4}
                     className="resize-none"
                   />
+                </div>
+
+                <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
+                  <p className="text-xs font-medium text-foreground mb-2">Before submitting:</p>
+                  <div className="space-y-1.5">
+                    {bidTips.map((tip) => (
+                      <div key={`check-${tip}`} className="flex items-start gap-2">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                        <p className="text-xs text-muted-foreground">{tip}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -354,6 +431,7 @@ export default function HandymanJobDetails() {
                     {createBid.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                     Submit Bid
                   </Button>
+
                   <Button variant="outline" onClick={() => setShowBidForm(false)}>
                     Cancel
                   </Button>
@@ -370,13 +448,15 @@ export default function HandymanJobDetails() {
         {isAssignedHandyman && job.status === "in_progress" && (
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
             {!showDisputeForm ? (
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="font-semibold text-foreground text-sm">Issue with this job?</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Open a dispute if there is a serious problem.
+                    Open a dispute only if there is a serious issue that cannot be resolved with the
+                    homeowner.
                   </p>
                 </div>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -390,6 +470,7 @@ export default function HandymanJobDetails() {
             ) : (
               <div className="space-y-3">
                 <h3 className="font-semibold text-red-800">Open a Dispute</h3>
+
                 <Textarea
                   placeholder="Describe the issue..."
                   value={disputeReason}
@@ -397,6 +478,7 @@ export default function HandymanJobDetails() {
                   rows={3}
                   className="resize-none"
                 />
+
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -409,6 +491,7 @@ export default function HandymanJobDetails() {
                     ) : null}
                     Submit Dispute
                   </Button>
+
                   <Button size="sm" variant="outline" onClick={() => setShowDisputeForm(false)}>
                     Cancel
                   </Button>
@@ -425,7 +508,9 @@ export default function HandymanJobDetails() {
               <h3 className="font-semibold text-red-800">Dispute Open</h3>
               <StatusBadge status={dispute.status} />
             </div>
+
             <p className="text-sm text-red-700">{dispute.reason}</p>
+
             {dispute.adminNotes && (
               <div className="mt-3 pt-3 border-t border-red-200">
                 <p className="text-xs font-medium text-red-800">Admin Resolution:</p>
@@ -441,6 +526,7 @@ export default function HandymanJobDetails() {
               <Star className="w-4 h-4 text-amber-500" />
               <h3 className="font-semibold text-foreground">Rate the Homeowner</h3>
             </div>
+
             {myReview ? (
               <div className="flex items-center gap-3">
                 <StarRatingDisplay rating={myReview.rating} showValue />
@@ -449,6 +535,7 @@ export default function HandymanJobDetails() {
             ) : showReviewForm ? (
               <div className="space-y-3">
                 <StarRatingInput value={reviewRating} onChange={setReviewRating} />
+
                 <Textarea
                   placeholder="Share your experience..."
                   value={reviewComment}
@@ -456,6 +543,7 @@ export default function HandymanJobDetails() {
                   rows={3}
                   className="resize-none"
                 />
+
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -474,16 +562,23 @@ export default function HandymanJobDetails() {
                     ) : null}
                     Submit Review
                   </Button>
+
                   <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setShowReviewForm(true)}>
-                <Star className="w-3.5 h-3.5 mr-1.5" />
-                Leave a Review
-              </Button>
+              <div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Leave a review to help build trust on SaskHandy.
+                </p>
+
+                <Button size="sm" variant="outline" onClick={() => setShowReviewForm(true)}>
+                  <Star className="w-3.5 h-3.5 mr-1.5" />
+                  Leave a Review
+                </Button>
+              </div>
             )}
           </div>
         )}
