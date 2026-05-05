@@ -197,6 +197,7 @@ export default function JobDetails() {
               <p className="text-xs text-muted-foreground mb-0.5">Category</p>
               <p className="text-sm font-medium">{job.category}</p>
             </div>
+
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Location</p>
               <div className="flex items-center gap-1">
@@ -204,10 +205,12 @@ export default function JobDetails() {
                 <p className="text-sm font-medium truncate">{job.location}</p>
               </div>
             </div>
+
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
               <p className="text-sm font-medium">${job.budgetMin}–${job.budgetMax}</p>
             </div>
+
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Posted</p>
               <p className="text-sm font-medium">
@@ -256,14 +259,18 @@ export default function JobDetails() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-4 h-4 text-amber-700" />
-              <h3 className="font-semibold text-amber-800">Awaiting payment</h3>
+              <h3 className="font-semibold text-amber-800">Payment needed to start the job</h3>
             </div>
-            <p className="text-sm text-amber-700 mb-4">
-              Your bid has been accepted, but the job is not officially active yet. Complete payment
-              to start the job and move it into active work.
+
+            <p className="text-sm text-amber-700 mb-4 leading-relaxed">
+              You accepted a bid from {acceptedBid.handymanName ?? "this handyman"}. Complete the
+              secure payment to officially start the job. The payment is held until you mark the
+              work as complete.
             </p>
+
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={() => setShowPaymentModal(true)}>Complete Payment</Button>
+              <Button onClick={() => setShowPaymentModal(true)}>Complete Secure Payment</Button>
+
               <p className="text-xs text-amber-700 self-center">
                 If your earlier payment attempt failed or was closed, you can retry here.
               </p>
@@ -322,48 +329,70 @@ export default function JobDetails() {
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Shield className="w-4 h-4 text-primary" />
-              <h3 className="font-semibold text-primary text-sm">Escrow Payment</h3>
+              <h3 className="font-semibold text-primary text-sm">Secure Payment</h3>
               <StatusBadge status={payment.status} />
             </div>
+
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-lg font-bold text-foreground">${payment.amount}</p>
                 <p className="text-xs text-muted-foreground">Total Charged</p>
               </div>
+
               <div>
                 <p className="text-lg font-bold text-foreground">${payment.handymanPayout}</p>
-                <p className="text-xs text-muted-foreground">Handyman Payout (80%)</p>
+                <p className="text-xs text-muted-foreground">Handyman Payout</p>
               </div>
+
               <div>
                 <p className="text-lg font-bold text-foreground">${payment.platformFee}</p>
-                <p className="text-xs text-muted-foreground">Platform Fee (20%)</p>
+                <p className="text-xs text-muted-foreground">Platform Fee</p>
               </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-primary/10 flex items-start gap-2 text-xs text-muted-foreground">
+              <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+              <p>
+                Payment is held securely and released to the handyman only after you mark the job as
+                completed.
+              </p>
             </div>
           </div>
         )}
 
         {job.status === "in_progress" && isOwner && (
-          <div className="bg-white rounded-xl border border-border/60 p-5 mb-6 flex flex-col sm:flex-row gap-3">
-            <Button
-              className="flex-1"
-              onClick={() => markComplete.mutate({ jobId, status: "completed" })}
-              disabled={markComplete.isPending}
-            >
-              {markComplete.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <CheckCircle className="w-4 h-4 mr-2" />
-              )}
-              Mark Job Complete
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
-              onClick={() => setShowDisputeForm(true)}
-            >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Open Dispute
-            </Button>
+          <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-foreground">Job in progress</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Once the work is done and you are satisfied, mark the job complete to release
+                payment.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                className="flex-1"
+                onClick={() => markComplete.mutate({ jobId, status: "completed" })}
+                disabled={markComplete.isPending}
+              >
+                {markComplete.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                )}
+                Mark Job Complete
+              </Button>
+
+              <Button
+                variant="outline"
+                className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
+                onClick={() => setShowDisputeForm(true)}
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Open Dispute
+              </Button>
+            </div>
           </div>
         )}
 
@@ -371,8 +400,9 @@ export default function JobDetails() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
             <h3 className="font-semibold text-red-800 mb-2">Open a Dispute</h3>
             <p className="text-xs text-red-700 mb-3">
-              Describe the issue. Our team will review and resolve it.
+              Describe the issue. Our team will review and help resolve it.
             </p>
+
             <Textarea
               placeholder="Explain what went wrong..."
               value={disputeReason}
@@ -380,6 +410,7 @@ export default function JobDetails() {
               rows={3}
               className="mb-3 bg-white"
             />
+
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -392,6 +423,7 @@ export default function JobDetails() {
                 ) : null}
                 Submit Dispute
               </Button>
+
               <Button size="sm" variant="outline" onClick={() => setShowDisputeForm(false)}>
                 Cancel
               </Button>
@@ -406,7 +438,9 @@ export default function JobDetails() {
               <h3 className="font-semibold text-red-800">Dispute Open</h3>
               <StatusBadge status={dispute.status} />
             </div>
+
             <p className="text-sm text-red-700">{dispute.reason}</p>
+
             {dispute.adminNotes && (
               <div className="mt-3 pt-3 border-t border-red-200">
                 <p className="text-xs font-medium text-red-800">Admin Resolution:</p>
@@ -422,6 +456,7 @@ export default function JobDetails() {
               <Star className="w-4 h-4 text-amber-500" />
               <h3 className="font-semibold text-foreground">Rate the Handyman</h3>
             </div>
+
             {myReview ? (
               <div className="flex items-center gap-3">
                 <StarRatingDisplay rating={myReview.rating} showValue />
@@ -437,6 +472,7 @@ export default function JobDetails() {
                   rows={3}
                   className="resize-none"
                 />
+
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -455,6 +491,7 @@ export default function JobDetails() {
                     ) : null}
                     Submit Review
                   </Button>
+
                   <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>
                     Cancel
                   </Button>
@@ -498,6 +535,7 @@ export default function JobDetails() {
                       showValue
                     />
                   )}
+
                   {acceptedBid.handymanTotalJobs !== undefined && (
                     <span className="text-xs text-muted-foreground">
                       {acceptedBid.handymanTotalJobs} jobs completed
@@ -517,6 +555,7 @@ export default function JobDetails() {
 
               <div className="text-right shrink-0">
                 <p className="text-xl font-bold text-foreground">${acceptedBid.bidAmount}</p>
+
                 <Link href={`/profile/${acceptedBid.handymanId}`}>
                   <span className="text-xs text-primary hover:underline cursor-pointer">
                     View Profile
@@ -533,7 +572,7 @@ export default function JobDetails() {
 
             {canRetryPayment && (
               <div className="mt-4 pt-4 border-t border-border/40">
-                <Button onClick={() => setShowPaymentModal(true)}>Retry Payment</Button>
+                <Button onClick={() => setShowPaymentModal(true)}>Retry Secure Payment</Button>
 
                 <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
                   <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
@@ -555,9 +594,36 @@ export default function JobDetails() {
 
         {job.status === "open" && (
           <div>
-            <h2 className="text-base font-semibold text-foreground mb-3">
-              Bids ({pendingBids.length})
-            </h2>
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Bids ({pendingBids.length})
+                </h2>
+
+                {pendingBids.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Compare the handyman’s message, availability, profile, and price before
+                    accepting.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {pendingBids.length > 0 && (
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Choosing a bid</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Price matters, but it is not the only thing. Look for a clear message,
+                      realistic availability, profile details, and any trust badges before you
+                      accept.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {bidsLoading ? (
               <div className="flex justify-center py-8">
@@ -566,9 +632,22 @@ export default function JobDetails() {
             ) : pendingBids.length === 0 ? (
               <div className="bg-white rounded-xl border border-border/60 p-8 text-center">
                 <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  No bids yet. Handymen will start bidding soon.
+
+                <h3 className="font-semibold text-foreground mb-2">No bids yet</h3>
+
+                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Your job is live. Handymen can review it and send bids. Jobs with clear details,
+                  realistic budgets, and photos usually get better responses.
                 </p>
+
+                {canEdit && (
+                  <Button asChild variant="outline" size="sm" className="mt-5">
+                    <Link href={`/jobs/${jobId}/edit`}>
+                      <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                      Improve Job Post
+                    </Link>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
@@ -586,6 +665,7 @@ export default function JobDetails() {
                               <p className="font-medium text-foreground text-sm">
                                 {bid.handymanName ?? "Handyman"}
                               </p>
+
                               {getBidInsuranceVerified(bid) && (
                                 <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                                   <Shield className="w-3 h-3" />
@@ -602,6 +682,7 @@ export default function JobDetails() {
                                   showValue
                                 />
                               )}
+
                               {bid.handymanTotalJobs !== undefined && (
                                 <span className="text-xs text-muted-foreground">
                                   {bid.handymanTotalJobs} jobs completed
