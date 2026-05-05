@@ -663,26 +663,44 @@ const handymanProfilesRouter = router({
         categories: z.array(z.string()).optional(),
         hourlyRate: z.number().optional(),
         insuranceCertUrl: z.string().optional(),
+        profileImageUrl: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const existing = await getHandymanProfile(ctx.user.id);
-      const categoriesStr = JSON.stringify(input.categories ?? []);
+
+      const dataToSave: any = {};
+
+      if ("bio" in input) {
+        dataToSave.bio = input.bio;
+      }
+
+      if ("categories" in input) {
+        dataToSave.categories = JSON.stringify(input.categories ?? []);
+      }
+
+      if ("hourlyRate" in input) {
+        dataToSave.hourlyRate = input.hourlyRate?.toFixed(2);
+      }
+
+      if ("insuranceCertUrl" in input) {
+        dataToSave.insuranceCertUrl = input.insuranceCertUrl;
+      }
+
+      if ("profileImageUrl" in input) {
+        dataToSave.profileImageUrl = input.profileImageUrl;
+      }
 
       if (existing) {
-        await updateHandymanProfile(ctx.user.id, {
-          bio: input.bio,
-          categories: categoriesStr,
-          hourlyRate: input.hourlyRate?.toFixed(2),
-          insuranceCertUrl: input.insuranceCertUrl,
-        });
+        await updateHandymanProfile(ctx.user.id, dataToSave);
       } else {
         await createHandymanProfile({
           userId: ctx.user.id,
           bio: input.bio,
-          categories: categoriesStr,
+          categories: JSON.stringify(input.categories ?? []),
           hourlyRate: input.hourlyRate?.toFixed(2),
           insuranceCertUrl: input.insuranceCertUrl,
+          profileImageUrl: input.profileImageUrl,
         });
       }
 
@@ -1050,6 +1068,7 @@ const bidsRouter = router({
             handymanRating: profile?.rating,
             handymanTotalJobs: profile?.totalJobs,
             handymanInsuranceVerified: profile?.insuranceVerified ?? false,
+            handymanProfileImageUrl: profile?.profileImageUrl ?? null,
           };
         })
       );
@@ -1088,6 +1107,7 @@ const bidsRouter = router({
             handymanRating: profile?.rating,
             handymanTotalJobs: profile?.totalJobs,
             handymanInsuranceVerified: profile?.insuranceVerified ?? false,
+            handymanProfileImageUrl: profile?.profileImageUrl ?? null,
           };
         })
       );

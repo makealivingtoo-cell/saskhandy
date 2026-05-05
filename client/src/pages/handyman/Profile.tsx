@@ -6,17 +6,78 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle, ExternalLink, Loader2, Save, Shield, Upload } from "lucide-react";
+import {
+  Camera,
+  CheckCircle,
+  ExternalLink,
+  Info,
+  Loader2,
+  Save,
+  Shield,
+  Star,
+  Upload,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 
+const bioTips = [
+  "Mention the types of jobs you are comfortable doing.",
+  "Include your experience or trade background if you have one.",
+  "Keep it friendly, clear, and professional.",
+];
+
+function getProfileItems({
+  bio,
+  selectedCategories,
+  hourlyRate,
+  insuranceCertUrl,
+  insuranceVerified,
+  profileImageUrl,
+}: {
+  bio: string;
+  selectedCategories: string[];
+  hourlyRate: string;
+  insuranceCertUrl?: string | null;
+  insuranceVerified?: boolean | null;
+  profileImageUrl?: string | null;
+}) {
+  return [
+    {
+      label: "Profile photo",
+      completed: Boolean(profileImageUrl),
+    },
+    {
+      label: "Bio",
+      completed: Boolean(bio.trim()),
+    },
+    {
+      label: "Skills",
+      completed: selectedCategories.length > 0,
+    },
+    {
+      label: "Hourly rate",
+      completed: Boolean(hourlyRate.trim()),
+    },
+    {
+      label: "Insurance file",
+      completed: Boolean(insuranceCertUrl),
+    },
+    {
+      label: "Insurance verified",
+      completed: Boolean(insuranceVerified),
+    },
+  ];
+}
+
 export default function HandymanProfile() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const insuranceFileInputRef = useRef<HTMLInputElement | null>(null);
+  const profileImageInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: profile, isLoading } = trpc.handymanProfiles.get.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -32,7 +93,8 @@ export default function HandymanProfile() {
   const [bio, setBio] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hourlyRate, setHourlyRate] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploadingInsurance, setUploadingInsurance] = useState(false);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
 
   const updateProfile = trpc.handymanProfiles.createOrUpdate.useMutation({
     onSuccess: async () => {
@@ -68,22 +130,30 @@ export default function HandymanProfile() {
     }
   }, [profile]);
 
-  const profileCompletion = useMemo(() => {
-    let score = 0;
-    if (bio.trim()) score += 25;
-    if (selectedCategories.length > 0) score += 25;
-    if (hourlyRate.trim()) score += 25;
-    if (profile?.insuranceCertUrl) score += 15;
-    if (profile?.insuranceVerified) score += 10;
+  const profileItems = useMemo(
+    () =>
+      getProfileItems({
+        bio,
+        selectedCategories,
+        hourlyRate,
+        insuranceCertUrl: profile?.insuranceCertUrl,
+        insuranceVerified: profile?.insuranceVerified,
+        profileImageUrl: profile?.profileImageUrl,
+      }),
+    [
+      bio,
+      selectedCategories,
+      hourlyRate,
+      profile?.insuranceCertUrl,
+      profile?.insuranceVerified,
+      profile?.profileImageUrl,
+    ]
+  );
 
-    return Math.min(score, 100);
-  }, [
-    bio,
-    selectedCategories.length,
-    hourlyRate,
-    profile?.insuranceCertUrl,
-    profile?.insuranceVerified,
-  ]);
+  const profileCompletion = useMemo(() => {
+    const completedItems = profileItems.filter((item) => item.completed).length;
+    return Math.round((completedItems / profileItems.length) * 100);
+  }, [profileItems]);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
@@ -99,14 +169,85 @@ export default function HandymanProfile() {
     });
   };
 
-  const openFilePicker = () => {
-    if (uploading || updateProfile.isPending) return;
-    fileInputRef.current?.click();
+  const resetInsuranceFileInput = () => {
+    if (insuranceFileInputRef.current) {
+      insuranceFileInputRef.current.value = "";
+    }
   };
 
-  const resetFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const resetProfileImageInput = () => {
+    if (profileImageInputRef.current) {
+      profileImageInputRef.current.value = "";
+    }
+  };
+
+  const uploadFile = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      throw new Error("Upload request failed");
+    }
+
+    const data = await res.json();
+
+    if (!data?.url) {
+      throw new Error("Upload response missing file URL");
+    }
+
+    return data.url as string;
+  };
+
+  const openProfileImagePicker = () => {
+    if (uploadingProfileImage || updateProfile.isPending) return;
+    profileImageInputRef.current?.click();
+  };
+
+  const openInsuranceFilePicker = () => {
+    if (uploadingInsurance || updateProfile.isPending) return;
+    insuranceFileInputRef.current?.click();
+  };
+
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a JPG, PNG, or WEBP image.");
+      resetProfileImageInput();
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Profile photo must be under 5MB.");
+      resetProfileImageInput();
+      return;
+    }
+
+    setUploadingProfileImage(true);
+
+    try {
+      const url = await uploadFile(file);
+
+      await updateProfile.mutateAsync({
+        profileImageUrl: url,
+      });
+
+      await utils.handymanProfiles.get.invalidate();
+      toast.success("Profile photo updated.");
+    } catch {
+      toast.error("Profile photo upload failed. Please try again.");
+    } finally {
+      setUploadingProfileImage(false);
+      resetProfileImageInput();
     }
   };
 
@@ -118,40 +259,23 @@ export default function HandymanProfile() {
 
     if (!allowedTypes.includes(file.type)) {
       toast.error("Please upload a PDF, JPG, or PNG file.");
-      resetFileInput();
+      resetInsuranceFileInput();
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File must be under 5MB.");
-      resetFileInput();
+      resetInsuranceFileInput();
       return;
     }
 
-    setUploading(true);
+    setUploadingInsurance(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error("Upload request failed");
-      }
-
-      const data = await res.json();
-
-      if (!data?.url) {
-        throw new Error("Upload response missing file URL");
-      }
+      const url = await uploadFile(file);
 
       await updateProfile.mutateAsync({
-        insuranceCertUrl: data.url,
+        insuranceCertUrl: url,
       });
 
       await utils.handymanProfiles.get.invalidate();
@@ -159,8 +283,8 @@ export default function HandymanProfile() {
     } catch {
       toast.error("Upload failed. Please try again.");
     } finally {
-      setUploading(false);
-      resetFileInput();
+      setUploadingInsurance(false);
+      resetInsuranceFileInput();
     }
   };
 
@@ -182,54 +306,132 @@ export default function HandymanProfile() {
 
   return (
     <AppLayout title="My Profile">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-2xl font-bold text-primary">
-                {user?.name?.charAt(0)?.toUpperCase()}
-              </span>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 mb-5">
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden border border-border/60">
+                  {profile?.profileImageUrl ? (
+                    <img
+                      src={profile.profileImageUrl}
+                      alt={`${user?.name ?? "Handyman"} profile`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl font-bold text-primary">
+                      {user?.name?.charAt(0)?.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openProfileImagePicker}
+                  disabled={uploadingProfileImage || updateProfile.isPending}
+                  className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm border-2 border-white disabled:opacity-60"
+                  aria-label="Upload profile photo"
+                >
+                  {uploadingProfileImage ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                </button>
+
+                <input
+                  ref={profileImageInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp"
+                  className="hidden"
+                  onChange={handleProfileImageUpload}
+                />
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-foreground text-lg">{user?.name}</h2>
+
+                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                  {profile?.rating && parseFloat(profile.rating) > 0 ? (
+                    <StarRatingDisplay rating={parseFloat(profile.rating)} size="sm" showValue />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No ratings yet</span>
+                  )}
+
+                  <span className="text-xs text-muted-foreground">
+                    {profile?.totalJobs ?? 0} jobs completed
+                  </span>
+
+                  {profile?.insuranceVerified && (
+                    <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Insurance Verified
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openProfileImagePicker}
+                  disabled={uploadingProfileImage || updateProfile.isPending}
+                  className="text-xs text-primary hover:underline mt-2 inline-flex items-center gap-1 disabled:opacity-60"
+                >
+                  <Camera className="w-3 h-3" />
+                  {profile?.profileImageUrl ? "Change profile photo" : "Add profile photo"}
+                </button>
+              </div>
             </div>
 
-            <div>
-              <h2 className="font-semibold text-foreground text-lg">{user?.name}</h2>
-
-              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                {profile?.rating && parseFloat(profile.rating) > 0 ? (
-                  <StarRatingDisplay rating={parseFloat(profile.rating)} size="sm" showValue />
-                ) : (
-                  <span className="text-xs text-muted-foreground">No ratings yet</span>
-                )}
-
-                <span className="text-xs text-muted-foreground">
-                  {profile?.totalJobs ?? 0} jobs completed
-                </span>
-
-                {profile?.insuranceVerified && (
-                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    Insurance Verified
-                  </span>
-                )}
-              </div>
+            <div className="text-left sm:text-right">
+              <p className="text-xs text-muted-foreground">Profile completion</p>
+              <p className="text-2xl font-bold text-foreground">{profileCompletion}%</p>
             </div>
           </div>
 
           <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground">Profile completion</p>
-              <p className="text-xs font-semibold text-foreground">{profileCompletion}%</p>
-            </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-all"
                 style={{ width: `${profileCompletion}%` }}
               />
             </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {profileItems.map((item) => (
+                <span
+                  key={item.label}
+                  className={cn(
+                    "text-xs px-3 py-1 rounded-full border",
+                    item.completed
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-muted text-muted-foreground border-border/60"
+                  )}
+                >
+                  {item.completed ? "✓ " : ""}
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl p-4 bg-primary/5 border border-primary/20 mb-4">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  How homeowners use your profile
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  When you bid on a job, homeowners can look at your photo, skills, rating, job
+                  history, insurance status, and message. A complete profile can make your bid feel
+                  safer and more professional.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div
-            className={`rounded-lg p-4 ${
+            className={`rounded-xl p-4 ${
               insuranceState === "verified"
                 ? "bg-emerald-50 border border-emerald-200"
                 : insuranceState === "pending"
@@ -272,10 +474,10 @@ export default function HandymanProfile() {
                     }`}
                   >
                     {insuranceState === "verified"
-                      ? "Your insurance has been approved by admin."
+                      ? "Your insurance has been approved by admin and can help build homeowner trust."
                       : insuranceState === "pending"
                       ? "Your uploaded file is waiting for admin review."
-                      : "Upload a PDF, JPG, or PNG under 5MB."}
+                      : "Upload a PDF, JPG, or PNG under 5MB to submit it for admin review."}
                   </p>
 
                   {profile?.insuranceCertUrl && (
@@ -294,7 +496,7 @@ export default function HandymanProfile() {
 
               <div className="shrink-0">
                 <input
-                  ref={fileInputRef}
+                  ref={insuranceFileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="hidden"
@@ -305,10 +507,10 @@ export default function HandymanProfile() {
                   size="sm"
                   variant="outline"
                   type="button"
-                  onClick={openFilePicker}
-                  disabled={uploading || updateProfile.isPending}
+                  onClick={openInsuranceFilePicker}
+                  disabled={uploadingInsurance || updateProfile.isPending}
                 >
-                  {uploading ? (
+                  {uploadingInsurance ? (
                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   ) : (
                     <Upload className="w-3.5 h-3.5 mr-1.5" />
@@ -319,9 +521,9 @@ export default function HandymanProfile() {
             </div>
           </div>
 
-          <div className="rounded-lg p-4 mt-4 bg-primary/5 border border-primary/20">
+          <div className="rounded-xl p-4 mt-4 bg-primary/5 border border-primary/20">
             <p className="text-sm font-medium text-primary">Manual payouts</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               SaskHandy currently processes handyman payouts manually. Submit payout requests from
               the Earnings page before end of day Friday. Approved payouts are processed on
               Saturday.
@@ -330,25 +532,49 @@ export default function HandymanProfile() {
         </div>
 
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 space-y-6">
-          <h3 className="font-semibold text-foreground">Edit Profile</h3>
+          <div>
+            <h3 className="font-semibold text-foreground">Edit Profile</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              These details help homeowners understand who they are hiring before accepting a bid.
+            </p>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="bio">About You</Label>
             <Textarea
               id="bio"
-              placeholder="Describe your experience, skills, and what makes you a strong choice..."
+              placeholder="Example: I help with small repairs, furniture assembly, yard work, and general home maintenance. I’m reliable, detail-oriented, and clear with communication."
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              rows={4}
+              rows={5}
               className="resize-none"
             />
+
+            <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
+              <p className="text-xs font-medium text-foreground mb-2">Bio tips</p>
+              <div className="space-y-1.5">
+                {bioTips.map((tip) => (
+                  <div key={tip} className="flex items-start gap-2">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-muted-foreground">{tip}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3">
-            <Label>Service Categories</Label>
+            <div>
+              <Label>Service Categories</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Choose every type of job you are comfortable bidding on.
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {categories.map((cat) => {
                 const isSelected = selectedCategories.includes(cat);
+
                 return (
                   <button
                     key={cat}
@@ -389,9 +615,17 @@ export default function HandymanProfile() {
                 /hr
               </span>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              This helps homeowners understand your typical rate, but you can still bid differently
+              for each job.
+            </p>
           </div>
 
-          <Button onClick={handleSave} disabled={updateProfile.isPending || uploading}>
+          <Button
+            onClick={handleSave}
+            disabled={updateProfile.isPending || uploadingInsurance || uploadingProfileImage}
+          >
             {updateProfile.isPending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
@@ -401,9 +635,13 @@ export default function HandymanProfile() {
           </Button>
         </div>
 
-        {reviews && reviews.length > 0 && (
+        {reviews && reviews.length > 0 ? (
           <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
-            <h3 className="font-semibold text-foreground mb-4">Reviews ({reviews.length})</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="w-4 h-4 text-amber-500" />
+              <h3 className="font-semibold text-foreground">Reviews ({reviews.length})</h3>
+            </div>
+
             <div className="space-y-4">
               {reviews.map((review) => (
                 <div
@@ -416,12 +654,22 @@ export default function HandymanProfile() {
                     </span>
                     <StarRatingDisplay rating={review.rating} size="sm" />
                   </div>
+
                   {review.comment && (
                     <p className="text-sm text-muted-foreground">{review.comment}</p>
                   )}
                 </div>
               ))}
             </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 text-center">
+            <Star className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <h3 className="font-semibold text-foreground mb-1">No reviews yet</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Reviews will appear here after completed jobs. Clear communication and reliable work
+              can help you earn stronger reviews over time.
+            </p>
           </div>
         )}
       </div>

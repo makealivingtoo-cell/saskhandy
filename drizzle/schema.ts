@@ -80,6 +80,7 @@ export const handymanProfiles = mysqlTable("handyman_profiles", {
   backgroundCheckPassed: boolean("backgroundCheckPassed").default(false).notNull(),
   insuranceVerified: boolean("insuranceVerified").default(false).notNull(),
   insuranceCertUrl: text("insuranceCertUrl"),
+  profileImageUrl: text("profileImageUrl"),
 
   stripeAccountId: varchar("stripeAccountId", { length: 255 }),
   stripeChargesEnabled: boolean("stripeChargesEnabled").default(false).notNull(),

@@ -372,6 +372,7 @@ export async function getHandymanProfilesForAdmin() {
       backgroundCheckPassed: handymanProfiles.backgroundCheckPassed,
       insuranceVerified: handymanProfiles.insuranceVerified,
       insuranceCertUrl: handymanProfiles.insuranceCertUrl,
+      profileImageUrl: handymanProfiles.profileImageUrl,
       stripeAccountId: handymanProfiles.stripeAccountId,
       stripeChargesEnabled: handymanProfiles.stripeChargesEnabled,
       stripePayoutsEnabled: handymanProfiles.stripePayoutsEnabled,
