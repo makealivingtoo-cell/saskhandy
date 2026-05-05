@@ -33,6 +33,40 @@ function getBidInsuranceVerified(bid: any) {
   return bid?.handymanInsuranceVerified === true;
 }
 
+function HandymanAvatar({
+  imageUrl,
+  name,
+  size = "sm",
+}: {
+  imageUrl?: string | null;
+  name?: string | null;
+  size?: "sm" | "md";
+}) {
+  const sizeClass = size === "md" ? "w-11 h-11" : "w-8 h-8";
+  const iconSizeClass = size === "md" ? "w-5 h-5" : "w-4 h-4";
+  const initialSizeClass = size === "md" ? "text-base" : "text-sm";
+
+  return (
+    <div
+      className={`${sizeClass} bg-primary/10 rounded-full flex items-center justify-center overflow-hidden border border-border/60 shrink-0`}
+    >
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={`${name ?? "Handyman"} profile`}
+          className="w-full h-full object-cover"
+        />
+      ) : name ? (
+        <span className={`font-semibold text-primary ${initialSizeClass}`}>
+          {name.charAt(0).toUpperCase()}
+        </span>
+      ) : (
+        <User className={`${iconSizeClass} text-primary`} />
+      )}
+    </div>
+  );
+}
+
 export default function JobDetails() {
   const { id } = useParams();
   const jobId = parseInt(id ?? "0");
@@ -516,41 +550,50 @@ export default function JobDetails() {
             </div>
 
             <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-foreground">{acceptedBid.handymanName}</p>
-                  {getBidInsuranceVerified(acceptedBid) && (
-                    <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      Insurance Verified
-                    </span>
-                  )}
-                </div>
+              <div className="flex items-start gap-3 min-w-0">
+                <HandymanAvatar
+                  imageUrl={(acceptedBid as any).handymanProfileImageUrl}
+                  name={acceptedBid.handymanName}
+                  size="md"
+                />
 
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {acceptedBid.handymanRating && (
-                    <StarRatingDisplay
-                      rating={parseFloat(acceptedBid.handymanRating)}
-                      size="sm"
-                      showValue
-                    />
-                  )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-foreground">{acceptedBid.handymanName}</p>
 
-                  {acceptedBid.handymanTotalJobs !== undefined && (
-                    <span className="text-xs text-muted-foreground">
-                      {acceptedBid.handymanTotalJobs} jobs completed
-                    </span>
-                  )}
-                </div>
-
-                {acceptedBid.availability && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Clock className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      {acceptedBid.availability}
-                    </span>
+                    {getBidInsuranceVerified(acceptedBid) && (
+                      <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <Shield className="w-3 h-3" />
+                        Insurance Verified
+                      </span>
+                    )}
                   </div>
-                )}
+
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {acceptedBid.handymanRating && (
+                      <StarRatingDisplay
+                        rating={parseFloat(acceptedBid.handymanRating)}
+                        size="sm"
+                        showValue
+                      />
+                    )}
+
+                    {acceptedBid.handymanTotalJobs !== undefined && (
+                      <span className="text-xs text-muted-foreground">
+                        {acceptedBid.handymanTotalJobs} jobs completed
+                      </span>
+                    )}
+                  </div>
+
+                  {acceptedBid.availability && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Clock className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {acceptedBid.availability}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="text-right shrink-0">
@@ -656,9 +699,10 @@ export default function JobDetails() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="w-4 h-4 text-primary" />
-                          </div>
+                          <HandymanAvatar
+                            imageUrl={(bid as any).handymanProfileImageUrl}
+                            name={bid.handymanName}
+                          />
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
