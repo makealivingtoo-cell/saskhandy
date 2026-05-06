@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { messages, type Message, type InsertMessage } from "../drizzle/schema";
 import { getDb } from "./db";
 
@@ -35,7 +35,7 @@ export async function getMessagesForJob(jobId: number): Promise<Message[]> {
     .select()
     .from(messages)
     .where(and(eq(messages.jobId, jobId), isNull(messages.bidId)))
-    .orderBy(desc(messages.createdAt));
+    .orderBy(asc(messages.createdAt));
 }
 
 /**
@@ -51,7 +51,7 @@ export async function getMessagesForBid(jobId: number, bidId: number): Promise<M
     .select()
     .from(messages)
     .where(and(eq(messages.jobId, jobId), eq(messages.bidId, bidId)))
-    .orderBy(desc(messages.createdAt));
+    .orderBy(asc(messages.createdAt));
 }
 
 export async function markMessageAsRead(messageId: number, userId: number): Promise<void> {
