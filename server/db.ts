@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import mysql, { type Pool } from "mysql2/promise";
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   bids,
@@ -30,23 +30,67 @@ import {
   type InsertUser,
 } from "../drizzle/schema";
 
-let dbInstance: Awaited<ReturnType<typeof createDb>> | null = null;
+let poolInstance: Pool | null = null;
+let dbInstance: ReturnType<typeof drizzle> | null = null;
 
-async function createDb() {
+function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;
+
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is not configured");
   }
 
-  const connection = await mysql.createConnection(databaseUrl);
-  return drizzle(connection);
+  return databaseUrl;
+}
+
+function createPool() {
+  const databaseUrl = getDatabaseUrl();
+
+  return mysql.createPool({
+    uri: databaseUrl,
+
+    // Use a pool instead of one long-lived connection.
+    // This helps prevent auth/database failures after the app has been idle.
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+
+    // Helps prevent idle connection drops.
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+
+    // Prevent requests from hanging forever if the DB has issues.
+    connectTimeout: 10000,
+
+    // Keep a few idle connections without holding too many open.
+    maxIdle: 5,
+    idleTimeout: 60000,
+  });
+}
+
+async function createDb() {
+  if (!poolInstance) {
+    poolInstance = createPool();
+  }
+
+  return drizzle(poolInstance);
 }
 
 export async function getDb() {
   if (!dbInstance) {
     dbInstance = await createDb();
   }
+
   return dbInstance;
+}
+
+export async function closeDb() {
+  if (poolInstance) {
+    await poolInstance.end();
+  }
+
+  poolInstance = null;
+  dbInstance = null;
 }
 
 function stringifyPhotos(photos?: string[] | null) {
@@ -422,9 +466,7 @@ export async function recalculateHandymanRating(userId: number) {
 }
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
-export async function createJob(
-  data: Omit<InsertJob, "photos"> & { photos?: string[] | null }
-) {
+export async function createJob(data: Omit<InsertJob, "photos"> & { photos?: string[] | null }) {
   const db = await getDb();
   const result = await db.insert(jobs).values({
     ...data,
