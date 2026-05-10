@@ -16,7 +16,8 @@ import {
   ShieldAlert,
   Wallet,
 } from "lucide-react";
-import { Link } from "wouter";
+import { useState } from "react";
+import { useLocation } from "wouter";
 
 function useConversationJobs() {
   const { user, isAuthenticated } = useAuth();
@@ -128,8 +129,49 @@ function NotificationSkeleton() {
   );
 }
 
+function getFallbackNotificationLink(type: NotificationType, userType?: string | null) {
+  if (type === "payout_paid" || type === "payout_rejected" || type === "payout_requested") {
+    return "/handyman/earnings";
+  }
+
+  if (type === "new_bid") {
+    return "/dashboard";
+  }
+
+  if (type === "bid_accepted" || type === "payment_received") {
+    return userType === "handyman" ? "/handyman/dashboard" : "/dashboard";
+  }
+
+  if (type === "new_message") {
+    return userType === "handyman" ? "/handyman/dashboard" : "/dashboard";
+  }
+
+  return userType === "handyman" ? "/handyman/dashboard" : "/dashboard";
+}
+
+function resolveNotificationLink(
+  link: string | null | undefined,
+  type: NotificationType,
+  userType?: string | null
+) {
+  if (!link) {
+    return getFallbackNotificationLink(type, userType);
+  }
+
+  // If a handyman receives a job notification that points to the homeowner route,
+  // send them to the handyman job route instead.
+  if (userType === "handyman" && link.startsWith("/jobs/")) {
+    return link.replace("/jobs/", "/handyman/jobs/");
+  }
+
+  return link;
+}
+
 export function NotificationBell() {
+  const { user } = useAuth();
   const utils = trpc.useUtils();
+  const [, navigate] = useLocation();
+  const [open, setOpen] = useState(false);
 
   const {
     data: notifications = [],
@@ -164,8 +206,24 @@ export function NotificationBell() {
 
   const hasUnread = unreadCount > 0;
 
+  const handleNotificationClick = (item: {
+    id: number;
+    read: boolean;
+    link?: string | null;
+    type: NotificationType;
+  }) => {
+    const href = resolveNotificationLink(item.link, item.type, user?.userType);
+
+    if (!item.read) {
+      markRead.mutate({ notificationId: item.id });
+    }
+
+    setOpen(false);
+    navigate(href);
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -221,47 +279,43 @@ export function NotificationBell() {
           ) : (
             <div className="space-y-1">
               {notifications.map((item) => {
-                const href =
-                  item.link || (item.type === "new_message" ? "/messages" : "/dashboard");
+                const href = resolveNotificationLink(item.link, item.type, user?.userType);
 
                 return (
-                  <Link key={item.id} href={href}>
-                    <div
-                      onClick={() => {
-                        if (!item.read) {
-                          markRead.mutate({ notificationId: item.id });
-                        }
-                      }}
-                      className={`relative flex items-start gap-3 rounded-xl px-3 py-3 cursor-pointer transition-colors ${
-                        item.read ? "hover:bg-muted/60" : "bg-primary/5 hover:bg-primary/10"
-                      }`}
-                    >
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <NotificationIcon type={item.type} />
-                      </div>
-
-                      <div className="min-w-0 flex-1 pr-4">
-                        <p className="text-sm text-foreground leading-snug">
-                          <span className="font-semibold">{item.title}</span>{" "}
-                          <span className="text-muted-foreground">{item.message}</span>
-                        </p>
-
-                        <p
-                          className={`text-xs mt-1 font-medium ${
-                            item.read ? "text-muted-foreground" : "text-primary"
-                          }`}
-                        >
-                          {formatDistanceToNow(new Date(item.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </p>
-                      </div>
-
-                      {!item.read && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary" />
-                      )}
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleNotificationClick(item)}
+                    className={`relative flex w-full text-left items-start gap-3 rounded-xl px-3 py-3 cursor-pointer transition-colors ${
+                      item.read ? "hover:bg-muted/60" : "bg-primary/5 hover:bg-primary/10"
+                    }`}
+                    title={`Open ${href}`}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <NotificationIcon type={item.type} />
                     </div>
-                  </Link>
+
+                    <div className="min-w-0 flex-1 pr-4">
+                      <p className="text-sm text-foreground leading-snug">
+                        <span className="font-semibold">{item.title}</span>{" "}
+                        <span className="text-muted-foreground">{item.message}</span>
+                      </p>
+
+                      <p
+                        className={`text-xs mt-1 font-medium ${
+                          item.read ? "text-muted-foreground" : "text-primary"
+                        }`}
+                      >
+                        {formatDistanceToNow(new Date(item.createdAt), {
+                          addSuffix: true,
+                        })}
+                      </p>
+                    </div>
+
+                    {!item.read && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary" />
+                    )}
+                  </button>
                 );
               })}
             </div>
