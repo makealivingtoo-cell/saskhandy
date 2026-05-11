@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { format, formatDistanceToNow } from "date-fns";
-import { Loader2, MessageSquare, Send } from "lucide-react";
+import { Loader2, MessageSquare, Send, Shield } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,13 @@ interface JobChatProps {
   description?: string;
   compact?: boolean;
   className?: string;
+}
+
+const restrictedContactPattern =
+  /(\+?\d[\d\s().-]{7,}\d)|([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})|(whatsapp|text me|call me|phone number|phone #|email me|e-transfer|etransfer|cash only|pay cash|outside saskhandy)/i;
+
+function containsRestrictedContactInfo(value: string) {
+  return restrictedContactPattern.test(value);
 }
 
 export function JobChat({
@@ -60,6 +67,13 @@ export function JobChat({
   const handleSend = () => {
     const content = message.trim();
     if (!content) return;
+
+    if (containsRestrictedContactInfo(content)) {
+      toast.error(
+        "Please keep contact details and payment communication inside SaskHandy for safety and payment protection."
+      );
+      return;
+    }
 
     sendMessage.mutate({
       jobId,
@@ -145,6 +159,14 @@ export function JobChat({
       )}
 
       <div className="border-t border-border/40 p-4 shrink-0">
+        <div className="mb-3 flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2">
+          <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Keep messages, contact details, and payment communication on SaskHandy for safety,
+            payment protection, and dispute support.
+          </p>
+        </div>
+
         <div className="space-y-3">
           <Textarea
             placeholder={`Write a message to ${otherPartyLabel}...`}
@@ -161,9 +183,7 @@ export function JobChat({
           />
 
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] text-muted-foreground">
-              Press Ctrl + Enter to send
-            </p>
+            <p className="text-[11px] text-muted-foreground">Press Ctrl + Enter to send</p>
 
             <Button onClick={handleSend} disabled={sendMessage.isPending || !message.trim()}>
               {sendMessage.isPending ? (
