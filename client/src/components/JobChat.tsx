@@ -98,11 +98,11 @@ export function JobChat({
       </div>
 
       {messagesQuery.isLoading ? (
-        <div className="flex items-center justify-center py-16 flex-1 min-h-[180px]">
+        <div className="flex items-center justify-center py-8 flex-1 min-h-0">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : groupedMessages.length === 0 ? (
-        <div className="px-6 py-12 text-center flex-1 min-h-[180px] flex flex-col items-center justify-center">
+        <div className="px-6 py-6 text-center flex-1 min-h-0 flex flex-col items-center justify-center">
           <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm font-medium text-foreground">No messages yet</p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -159,11 +159,17 @@ export function JobChat({
       )}
 
       <div className="border-t border-border/40 p-4 shrink-0">
-        <div className="mb-3 flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2">
+        <div
+          className={cn(
+            "mb-3 flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3",
+            compact ? "py-1.5" : "py-2"
+          )}
+        >
           <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Keep messages, contact details, and payment communication on SaskHandy for safety,
-            payment protection, and dispute support.
+            {compact
+              ? "Keep messages and payment communication on SaskHandy for safety and protection."
+              : "Keep messages, contact details, and payment communication on SaskHandy for safety, payment protection, and dispute support."}
           </p>
         </div>
 

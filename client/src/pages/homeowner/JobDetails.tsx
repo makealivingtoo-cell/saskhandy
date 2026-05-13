@@ -390,7 +390,7 @@ function BidChatDrawer({
           </div>
         </div>
 
-        <div className="h-[44vh] min-h-[360px] p-4 bg-muted/30 border-t border-border/60 shrink-0">
+        <div className="h-[52vh] min-h-[430px] max-h-[520px] p-3 bg-muted/30 border-t border-border/60 shrink-0">
           <JobChat
             jobId={jobId}
             bidId={bid.id}
