@@ -66,18 +66,51 @@ export default function SaskatoonHandymanServicesPage() {
       bottomTitle="Looking for local handyman services in Saskatoon?"
       bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, plumbing repairs, electrical help, drywall repair, painting, gutter cleaning, yard work, fence repair, seasonal maintenance, and general handyman services in Saskatoon and nearby Saskatchewan communities."
       relatedLinks={[
-        { href: "/saskatchewan-handyman-services", label: "Saskatchewan Handyman Services" },
-        { href: "/regina-handyman-services", label: "Regina Handyman Services" },
-        { href: "/moose-jaw-handyman-services", label: "Moose Jaw Handyman Services" },
-        { href: "/prince-albert-handyman-services", label: "Prince Albert Handyman Services" },
-        { href: "/warman-handyman-services", label: "Warman Handyman Services" },
-        { href: "/martensville-handyman-services", label: "Martensville Handyman Services" },
-        { href: "/furniture-assembly-saskatchewan", label: "Furniture Assembly Saskatchewan" },
-        { href: "/tv-mounting-saskatchewan", label: "TV Mounting Saskatchewan" },
-        { href: "/drywall-painting-saskatchewan", label: "Drywall and Painting Saskatchewan" },
-        { href: "/plumbing-repairs-saskatchewan", label: "Plumbing Repairs Saskatchewan" },
-        { href: "/electrical-help-saskatchewan", label: "Electrical Help Saskatchewan" },
-        { href: "/yard-work-saskatchewan", label: "Yard Work Saskatchewan" },
+        { href: "/tv-mounting-saskatoon", label: "TV Mounting Saskatoon" },
+        {
+          href: "/ring-doorbell-installation-saskatoon",
+          label: "Ring Doorbell Installation Saskatoon",
+        },
+        {
+          href: "/smart-doorbell-installation-saskatoon",
+          label: "Smart Doorbell Installation Saskatoon",
+        },
+        {
+          href: "/professional-tv-mounting-saskatoon",
+          label: "Professional TV Mounting Saskatoon",
+        },
+        {
+          href: "/tv-installation-service-saskatoon",
+          label: "TV Installation Service Saskatoon",
+        },
+        {
+          href: "/best-tv-wall-mount-saskatoon",
+          label: "Best TV Wall Mount Saskatoon",
+        },
+        {
+          href: "/smart-home-doorbell-integration-saskatoon",
+          label: "Smart Home Doorbell Integration Saskatoon",
+        },
+        {
+          href: "/home-security-doorbell-installation-saskatoon",
+          label: "Home Security Doorbell Installation Saskatoon",
+        },
+        {
+          href: "/diy-vs-professional-doorbell-installation-saskatoon",
+          label: "DIY vs Professional Doorbell Installation Saskatoon",
+        },
+        {
+          href: "/furniture-assembly-saskatchewan",
+          label: "Furniture Assembly Saskatchewan",
+        },
+        {
+          href: "/tv-mounting-saskatchewan",
+          label: "TV Mounting Saskatchewan",
+        },
+        {
+          href: "/saskatchewan-handyman-services",
+          label: "Saskatchewan Handyman Services",
+        },
       ]}
     />
   );
