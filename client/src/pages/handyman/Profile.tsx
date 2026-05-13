@@ -67,10 +67,16 @@ function getOptionalTrustItems({
   hourlyRate,
   insuranceCertUrl,
   insuranceVerified,
+  identityVerificationStatus,
+  criminalRecordCheckStatus,
+  tradeLicenseVerificationStatus,
 }: {
   hourlyRate: string;
   insuranceCertUrl?: string | null;
   insuranceVerified?: boolean | null;
+  identityVerificationStatus?: string | null;
+  criminalRecordCheckStatus?: string | null;
+  tradeLicenseVerificationStatus?: string | null;
 }) {
   return [
     {
@@ -85,6 +91,18 @@ function getOptionalTrustItems({
       label: "Insurance verified",
       completed: Boolean(insuranceVerified),
     },
+    {
+      label: "ID name matched",
+      completed: identityVerificationStatus === "approved",
+    },
+    {
+      label: "Criminal check reviewed",
+      completed: criminalRecordCheckStatus === "reviewed",
+    },
+    {
+      label: "Trade licence verified",
+      completed: tradeLicenseVerificationStatus === "approved",
+    },
   ];
 }
 
@@ -94,6 +112,9 @@ export default function HandymanProfile() {
   const utils = trpc.useUtils();
 
   const insuranceFileInputRef = useRef<HTMLInputElement | null>(null);
+  const identityFileInputRef = useRef<HTMLInputElement | null>(null);
+  const criminalRecordFileInputRef = useRef<HTMLInputElement | null>(null);
+  const tradeLicenseFileInputRef = useRef<HTMLInputElement | null>(null);
   const profileImageInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: profile, isLoading } = trpc.handymanProfiles.get.useQuery(undefined, {
@@ -110,7 +131,12 @@ export default function HandymanProfile() {
   const [bio, setBio] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hourlyRate, setHourlyRate] = useState("");
+  const [tradeLicenseType, setTradeLicenseType] = useState("");
+  const [tradeLicenseNumber, setTradeLicenseNumber] = useState("");
   const [uploadingInsurance, setUploadingInsurance] = useState(false);
+  const [uploadingIdentity, setUploadingIdentity] = useState(false);
+  const [uploadingCriminalRecord, setUploadingCriminalRecord] = useState(false);
+  const [uploadingTradeLicense, setUploadingTradeLicense] = useState(false);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
 
   const updateProfile = trpc.handymanProfiles.createOrUpdate.useMutation({
@@ -144,6 +170,8 @@ export default function HandymanProfile() {
       }
 
       setHourlyRate(profile.hourlyRate ? String(parseFloat(profile.hourlyRate)) : "");
+      setTradeLicenseType(profile.tradeLicenseType ?? "");
+      setTradeLicenseNumber(profile.tradeLicenseNumber ?? "");
     }
   }, [profile]);
 
@@ -164,8 +192,18 @@ export default function HandymanProfile() {
         hourlyRate,
         insuranceCertUrl: profile?.insuranceCertUrl,
         insuranceVerified: profile?.insuranceVerified,
+        identityVerificationStatus: profile?.identityVerificationStatus,
+        criminalRecordCheckStatus: profile?.criminalRecordCheckStatus,
+        tradeLicenseVerificationStatus: profile?.tradeLicenseVerificationStatus,
       }),
-    [hourlyRate, profile?.insuranceCertUrl, profile?.insuranceVerified]
+    [
+      hourlyRate,
+      profile?.insuranceCertUrl,
+      profile?.insuranceVerified,
+      profile?.identityVerificationStatus,
+      profile?.criminalRecordCheckStatus,
+      profile?.tradeLicenseVerificationStatus,
+    ]
   );
 
   const bidReadyCompletion = useMemo(() => {
@@ -187,12 +225,32 @@ export default function HandymanProfile() {
       bio: bio.trim() || undefined,
       categories: selectedCategories,
       hourlyRate: hourlyRate ? parseFloat(hourlyRate) : undefined,
+      tradeLicenseType: tradeLicenseType.trim() || undefined,
+      tradeLicenseNumber: tradeLicenseNumber.trim() || undefined,
     });
   };
 
   const resetInsuranceFileInput = () => {
     if (insuranceFileInputRef.current) {
       insuranceFileInputRef.current.value = "";
+    }
+  };
+
+  const resetIdentityFileInput = () => {
+    if (identityFileInputRef.current) {
+      identityFileInputRef.current.value = "";
+    }
+  };
+
+  const resetCriminalRecordFileInput = () => {
+    if (criminalRecordFileInputRef.current) {
+      criminalRecordFileInputRef.current.value = "";
+    }
+  };
+
+  const resetTradeLicenseFileInput = () => {
+    if (tradeLicenseFileInputRef.current) {
+      tradeLicenseFileInputRef.current.value = "";
     }
   };
 
@@ -233,6 +291,37 @@ export default function HandymanProfile() {
   const openInsuranceFilePicker = () => {
     if (uploadingInsurance || updateProfile.isPending) return;
     insuranceFileInputRef.current?.click();
+  };
+
+  const openIdentityFilePicker = () => {
+    if (uploadingIdentity || updateProfile.isPending) return;
+    identityFileInputRef.current?.click();
+  };
+
+  const openCriminalRecordFilePicker = () => {
+    if (uploadingCriminalRecord || updateProfile.isPending) return;
+    criminalRecordFileInputRef.current?.click();
+  };
+
+  const openTradeLicenseFilePicker = () => {
+    if (uploadingTradeLicense || updateProfile.isPending) return;
+    tradeLicenseFileInputRef.current?.click();
+  };
+
+  const validateVerificationFile = (file: File) => {
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a PDF, JPG, or PNG file.");
+      return false;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File must be under 5MB.");
+      return false;
+    }
+
+    return true;
   };
 
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,6 +398,98 @@ export default function HandymanProfile() {
     }
   };
 
+  const handleIdentityUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!validateVerificationFile(file)) {
+      resetIdentityFileInput();
+      return;
+    }
+
+    setUploadingIdentity(true);
+
+    try {
+      const url = await uploadFile(file);
+
+      await updateProfile.mutateAsync({
+        identityDocumentUrl: url,
+      });
+
+      await utils.handymanProfiles.get.invalidate();
+      toast.success("ID uploaded for name-match review.");
+    } catch {
+      toast.error("ID upload failed. Please try again.");
+    } finally {
+      setUploadingIdentity(false);
+      resetIdentityFileInput();
+    }
+  };
+
+  const handleCriminalRecordUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!validateVerificationFile(file)) {
+      resetCriminalRecordFileInput();
+      return;
+    }
+
+    setUploadingCriminalRecord(true);
+
+    try {
+      const url = await uploadFile(file);
+
+      await updateProfile.mutateAsync({
+        criminalRecordCheckUrl: url,
+      });
+
+      await utils.handymanProfiles.get.invalidate();
+      toast.success("Criminal record check uploaded for review.");
+    } catch {
+      toast.error("Criminal record check upload failed. Please try again.");
+    } finally {
+      setUploadingCriminalRecord(false);
+      resetCriminalRecordFileInput();
+    }
+  };
+
+  const handleTradeLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!validateVerificationFile(file)) {
+      resetTradeLicenseFileInput();
+      return;
+    }
+
+    if (!tradeLicenseType.trim()) {
+      toast.error("Add the licence type before uploading.");
+      resetTradeLicenseFileInput();
+      return;
+    }
+
+    setUploadingTradeLicense(true);
+
+    try {
+      const url = await uploadFile(file);
+
+      await updateProfile.mutateAsync({
+        tradeLicenseDocumentUrl: url,
+        tradeLicenseType: tradeLicenseType.trim(),
+        tradeLicenseNumber: tradeLicenseNumber.trim() || undefined,
+      });
+
+      await utils.handymanProfiles.get.invalidate();
+      toast.success("Trade licence uploaded for review.");
+    } catch {
+      toast.error("Trade licence upload failed. Please try again.");
+    } finally {
+      setUploadingTradeLicense(false);
+      resetTradeLicenseFileInput();
+    }
+  };
+
   if (loading || isLoading) {
     return (
       <AppLayout title="My Profile">
@@ -324,6 +505,10 @@ export default function HandymanProfile() {
     : profile.insuranceVerified
     ? "verified"
     : "pending";
+
+  const identityState = profile?.identityVerificationStatus ?? "not_submitted";
+  const criminalState = profile?.criminalRecordCheckStatus ?? "not_submitted";
+  const tradeLicenseState = profile?.tradeLicenseVerificationStatus ?? "not_submitted";
 
   return (
     <AppLayout title="My Profile">
@@ -384,6 +569,27 @@ export default function HandymanProfile() {
                   <span className="text-xs text-muted-foreground">
                     {profile?.totalJobs ?? 0} jobs completed
                   </span>
+
+                  {profile?.identityVerificationStatus === "approved" && (
+                    <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      ID Name Matched
+                    </span>
+                  )}
+
+                  {profile?.criminalRecordCheckStatus === "reviewed" && (
+                    <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Criminal Check Reviewed
+                    </span>
+                  )}
+
+                  {profile?.tradeLicenseVerificationStatus === "approved" && (
+                    <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Licence Verified
+                    </span>
+                  )}
 
                   {profile?.insuranceVerified && (
                     <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
@@ -704,7 +910,14 @@ export default function HandymanProfile() {
 
           <Button
             onClick={handleSave}
-            disabled={updateProfile.isPending || uploadingInsurance || uploadingProfileImage}
+            disabled={
+              updateProfile.isPending ||
+              uploadingInsurance ||
+              uploadingIdentity ||
+              uploadingCriminalRecord ||
+              uploadingTradeLicense ||
+              uploadingProfileImage
+            }
           >
             {updateProfile.isPending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

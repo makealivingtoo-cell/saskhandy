@@ -110,6 +110,14 @@ function getBidIdentityChecked(bid: any) {
   return bid?.handymanIdentityChecked === true || bid?.handymanIdNameMatched === true;
 }
 
+function getBidCriminalRecordCheckReviewed(bid: any) {
+  return bid?.handymanCriminalRecordCheckReviewed === true;
+}
+
+function getBidTradeLicenseVerified(bid: any) {
+  return bid?.handymanTradeLicenseVerified === true;
+}
+
 function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: boolean }) {
   const completedJobs = getBidCompletedJobs(bid);
   const reviewCount = getBidReviewCount(bid);
@@ -126,6 +134,20 @@ function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: bo
           <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
             <Shield className="h-3 w-3" />
             Identity checked
+          </span>
+        )}
+
+        {getBidCriminalRecordCheckReviewed(bid) && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-medium text-purple-700">
+            <Shield className="h-3 w-3" />
+            Criminal check reviewed
+          </span>
+        )}
+
+        {getBidTradeLicenseVerified(bid) && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+            <Shield className="h-3 w-3" />
+            {bid?.handymanTradeLicenseType ? `${bid.handymanTradeLicenseType} verified` : "Licence verified"}
           </span>
         )}
 

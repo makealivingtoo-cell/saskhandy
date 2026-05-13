@@ -110,6 +110,22 @@ export const handymanProfiles = mysqlTable("handyman_profiles", {
   criminalRecordCheckExpiresAt: timestamp("criminalRecordCheckExpiresAt"),
   criminalRecordCheckNotes: text("criminalRecordCheckNotes"),
 
+  tradeLicenseVerificationStatus: mysqlEnum("tradeLicenseVerificationStatus", [
+    "not_submitted",
+    "pending",
+    "approved",
+    "rejected",
+  ])
+    .default("not_submitted")
+    .notNull(),
+  tradeLicenseType: varchar("tradeLicenseType", { length: 120 }),
+  tradeLicenseNumber: varchar("tradeLicenseNumber", { length: 120 }),
+  tradeLicenseDocumentUrl: text("tradeLicenseDocumentUrl"),
+  tradeLicenseReviewedAt: timestamp("tradeLicenseReviewedAt"),
+  tradeLicenseReviewedBy: int("tradeLicenseReviewedBy"),
+  tradeLicenseRejectionReason: text("tradeLicenseRejectionReason"),
+  tradeLicenseNotes: text("tradeLicenseNotes"),
+
   stripeAccountId: varchar("stripeAccountId", { length: 255 }),
   stripeChargesEnabled: boolean("stripeChargesEnabled").default(false).notNull(),
   stripePayoutsEnabled: boolean("stripePayoutsEnabled").default(false).notNull(),

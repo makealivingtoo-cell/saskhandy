@@ -84,6 +84,7 @@ import {
   setHandymanCriminalRecordCheckStatus,
   setHandymanIdentityVerification,
   setHandymanInsuranceVerification,
+  setHandymanTradeLicenseVerification,
   updateReportStatus,
   updateBidStatus,
   updateHandymanProfile,
@@ -215,6 +216,11 @@ function buildHandymanBidTrustFields(params: {
     handymanBio: params.profile?.bio ?? null,
     handymanSkills: categories,
     handymanIdentityChecked: getProfileIdentityChecked(params.profile),
+    handymanCriminalRecordCheckReviewed:
+      params.profile?.criminalRecordCheckStatus === "reviewed",
+    handymanTradeLicenseVerified:
+      params.profile?.tradeLicenseVerificationStatus === "approved",
+    handymanTradeLicenseType: params.profile?.tradeLicenseType ?? null,
   };
 }
 
@@ -762,6 +768,11 @@ const handymanProfilesRouter = router({
         hourlyRate: z.number().optional(),
         insuranceCertUrl: z.string().optional(),
         profileImageUrl: z.string().optional(),
+        identityDocumentUrl: z.string().optional(),
+        criminalRecordCheckUrl: z.string().optional(),
+        tradeLicenseDocumentUrl: z.string().optional(),
+        tradeLicenseType: z.string().max(120).optional(),
+        tradeLicenseNumber: z.string().max(120).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -789,6 +800,38 @@ const handymanProfilesRouter = router({
         dataToSave.profileImageUrl = input.profileImageUrl;
       }
 
+      if ("identityDocumentUrl" in input) {
+        dataToSave.identityDocumentUrl = input.identityDocumentUrl;
+        dataToSave.identityVerificationStatus = input.identityDocumentUrl ? "pending" : "not_submitted";
+        dataToSave.identityReviewedAt = null;
+        dataToSave.identityReviewedBy = null;
+        dataToSave.identityRejectionReason = null;
+      }
+
+      if ("criminalRecordCheckUrl" in input) {
+        dataToSave.criminalRecordCheckUrl = input.criminalRecordCheckUrl;
+        dataToSave.criminalRecordCheckStatus = input.criminalRecordCheckUrl ? "pending" : "not_submitted";
+        dataToSave.criminalRecordCheckReviewedAt = null;
+        dataToSave.criminalRecordCheckReviewedBy = null;
+        dataToSave.criminalRecordCheckNotes = null;
+      }
+
+      if ("tradeLicenseDocumentUrl" in input) {
+        dataToSave.tradeLicenseDocumentUrl = input.tradeLicenseDocumentUrl;
+        dataToSave.tradeLicenseVerificationStatus = input.tradeLicenseDocumentUrl ? "pending" : "not_submitted";
+        dataToSave.tradeLicenseReviewedAt = null;
+        dataToSave.tradeLicenseReviewedBy = null;
+        dataToSave.tradeLicenseRejectionReason = null;
+      }
+
+      if ("tradeLicenseType" in input) {
+        dataToSave.tradeLicenseType = input.tradeLicenseType?.trim() || null;
+      }
+
+      if ("tradeLicenseNumber" in input) {
+        dataToSave.tradeLicenseNumber = input.tradeLicenseNumber?.trim() || null;
+      }
+
       if (existing) {
         await updateHandymanProfile(ctx.user.id, dataToSave);
       } else {
@@ -799,7 +842,15 @@ const handymanProfilesRouter = router({
           hourlyRate: input.hourlyRate?.toFixed(2),
           insuranceCertUrl: input.insuranceCertUrl,
           profileImageUrl: input.profileImageUrl,
-        });
+          identityDocumentUrl: input.identityDocumentUrl,
+          identityVerificationStatus: input.identityDocumentUrl ? "pending" : "not_submitted",
+          criminalRecordCheckUrl: input.criminalRecordCheckUrl,
+          criminalRecordCheckStatus: input.criminalRecordCheckUrl ? "pending" : "not_submitted",
+          tradeLicenseDocumentUrl: input.tradeLicenseDocumentUrl,
+          tradeLicenseVerificationStatus: input.tradeLicenseDocumentUrl ? "pending" : "not_submitted",
+          tradeLicenseType: input.tradeLicenseType?.trim() || null,
+          tradeLicenseNumber: input.tradeLicenseNumber?.trim() || null,
+        } as any);
       }
 
       return { success: true };
@@ -2223,6 +2274,28 @@ const adminRouter = router({
         status: input.status,
         reviewedBy: ctx.user.id,
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+        notes: input.notes?.trim() || null,
+      });
+
+      return { success: true };
+    }),
+
+  setTradeLicenseVerification: protectedProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        status: z.enum(["not_submitted", "pending", "approved", "rejected"]),
+        rejectionReason: z.string().max(1000).optional(),
+        notes: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      await setHandymanTradeLicenseVerification(input.userId, {
+        status: input.status,
+        reviewedBy: ctx.user.id,
+        rejectionReason: input.rejectionReason?.trim() || null,
         notes: input.notes?.trim() || null,
       });
 

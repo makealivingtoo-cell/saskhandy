@@ -143,6 +143,8 @@ export default function PublicProfile() {
   const isNewToSaskHandy = completedJobs === 0;
   const hasNoReviews = reviewCount === 0 && ratingValue === 0;
   const identityChecked = getIdentityChecked(profile);
+  const criminalRecordCheckReviewed = profile.criminalRecordCheckStatus === "reviewed";
+  const tradeLicenseVerified = profile.tradeLicenseVerificationStatus === "approved";
 
   return (
     <AppLayout>
@@ -159,6 +161,20 @@ export default function PublicProfile() {
                   <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
                     Identity checked
+                  </span>
+                )}
+
+                {criminalRecordCheckReviewed && (
+                  <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    Criminal check reviewed
+                  </span>
+                )}
+
+                {tradeLicenseVerified && (
+                  <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    Licence verified
                   </span>
                 )}
 
@@ -303,6 +319,37 @@ export default function PublicProfile() {
                     This means the handyman’s profile name has been matched to identification. It
                     does not replace your own judgment. You can message the handyman before choosing
                     and should only move forward when you feel comfortable.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {criminalRecordCheckReviewed && (
+            <div className="mt-5 pt-5 border-t border-border/40">
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-2">
+                <Shield className="w-4 h-4 text-purple-700 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-purple-800">Criminal record check reviewed</p>
+                  <p className="text-xs text-purple-700 mt-1 leading-relaxed">
+                    This means SaskHandy reviewed an uploaded criminal record check document. It
+                    does not guarantee safety or replace your own judgment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tradeLicenseVerified && (
+            <div className="mt-5 pt-5 border-t border-border/40">
+              <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 flex items-start gap-2">
+                <Shield className="w-4 h-4 text-sky-700 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-sky-800">Trade licence verified</p>
+                  <p className="text-xs text-sky-700 mt-1 leading-relaxed">
+                    SaskHandy reviewed this handyman’s uploaded trade licence information
+                    {profile.tradeLicenseType ? ` for ${profile.tradeLicenseType}` : ""}.
+                    Always confirm the work is appropriate for the job before choosing.
                   </p>
                 </div>
               </div>

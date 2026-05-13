@@ -148,6 +148,18 @@ export default function AdminPanel() {
     onError: (err) => toast.error(err.message),
   });
 
+  const setTradeLicenseVerification = trpc.admin.setTradeLicenseVerification.useMutation({
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.status === "approved"
+          ? "Trade licence marked as verified."
+          : "Trade licence status updated."
+      );
+      refetchInsurance();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const updateReportStatus = trpc.reports.updateStatus.useMutation({
     onSuccess: async (_, variables) => {
       toast.success(`Report marked ${variables.status}.`);
@@ -243,6 +255,12 @@ export default function AdminPanel() {
 
   const reviewedCriminalChecks =
     insuranceQueue?.filter((p) => p.criminalRecordCheckStatus === "reviewed") ?? [];
+
+  const pendingTradeLicenses =
+    insuranceQueue?.filter((p) => p.tradeLicenseVerificationStatus === "pending") ?? [];
+
+  const approvedTradeLicenses =
+    insuranceQueue?.filter((p) => p.tradeLicenseVerificationStatus === "approved") ?? [];
 
   return (
     <AppLayout title="Admin Panel">
@@ -495,6 +513,12 @@ export default function AdminPanel() {
                           {profile.criminalRecordCheckStatus === "reviewed" && (
                             <span className="text-[11px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium">
                               Criminal Check Reviewed
+                            </span>
+                          )}
+
+                          {profile.tradeLicenseVerificationStatus === "approved" && (
+                            <span className="text-[11px] bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium">
+                              Trade Licence Verified
                             </span>
                           )}
 
@@ -958,6 +982,126 @@ export default function AdminPanel() {
 
                       <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium">
                         Criminal Record Check Reviewed
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Trade Licence Verification{" "}
+              <span className="text-muted-foreground font-normal">({pendingTradeLicenses.length})</span>
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => refetchInsurance()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {insuranceLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : pendingTradeLicenses.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No pending trade licence reviews.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingTradeLicenses.map((profile) => (
+                <div key={`trade-license-${profile.userId}`} className="bg-white rounded-xl border border-sky-200 p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-[220px]">
+                      <p className="font-semibold text-foreground text-sm">
+                        {profile.userName ?? "Unnamed handyman"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {profile.userEmail ?? "No email"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Licence type: {profile.tradeLicenseType ?? "Not provided"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Licence #: {profile.tradeLicenseNumber ?? "Not provided"}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {profile.tradeLicenseDocumentUrl && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={profile.tradeLicenseDocumentUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View Licence
+                          </a>
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        className="bg-sky-600 hover:bg-sky-700"
+                        onClick={() =>
+                          setTradeLicenseVerification.mutate({
+                            userId: profile.userId,
+                            status: "approved",
+                          })
+                        }
+                        disabled={setTradeLicenseVerification.isPending}
+                      >
+                        <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                        Mark Licence Verified
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                        onClick={() =>
+                          setTradeLicenseVerification.mutate({
+                            userId: profile.userId,
+                            status: "rejected",
+                            rejectionReason: "Licence document was unclear, expired, or did not match the profile.",
+                          })
+                        }
+                        disabled={setTradeLicenseVerification.isPending}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {approvedTradeLicenses.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                Trade Licences Verified ({approvedTradeLicenses.length})
+              </h3>
+
+              <div className="space-y-3">
+                {approvedTradeLicenses.map((profile) => (
+                  <div key={`trade-license-approved-${profile.userId}`} className="bg-white rounded-xl border border-sky-200 p-4">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {profile.userName ?? "Unnamed handyman"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.userEmail ?? "No email"}
+                          {profile.tradeLicenseType ? ` · ${profile.tradeLicenseType}` : ""}
+                        </p>
+                      </div>
+
+                      <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium">
+                        Trade Licence Verified
                       </span>
                     </div>
                   </div>

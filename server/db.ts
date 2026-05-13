@@ -379,6 +379,34 @@ export async function updateHandymanProfile(userId: number, data: Partial<Insert
   return getHandymanProfile(userId);
 }
 
+export async function setHandymanTradeLicenseVerification(
+  userId: number,
+  data: {
+    status: "not_submitted" | "pending" | "approved" | "rejected";
+    reviewedBy?: number | null;
+    rejectionReason?: string | null;
+    notes?: string | null;
+  }
+) {
+  const db = await getDb();
+
+  await db
+    .update(handymanProfiles)
+    .set({
+      tradeLicenseVerificationStatus: data.status,
+      tradeLicenseReviewedAt:
+        data.status === "approved" || data.status === "rejected" ? new Date() : null,
+      tradeLicenseReviewedBy:
+        data.status === "approved" || data.status === "rejected"
+          ? data.reviewedBy ?? null
+          : null,
+      tradeLicenseRejectionReason: data.status === "rejected" ? data.rejectionReason ?? null : null,
+      tradeLicenseNotes: data.notes ?? null,
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(handymanProfiles.userId, userId));
+}
+
 export async function updateHandymanStripeAccount(
   userId: number,
   data: {
@@ -430,6 +458,14 @@ export async function getHandymanProfilesForAdmin() {
       criminalRecordCheckReviewedBy: handymanProfiles.criminalRecordCheckReviewedBy,
       criminalRecordCheckExpiresAt: handymanProfiles.criminalRecordCheckExpiresAt,
       criminalRecordCheckNotes: handymanProfiles.criminalRecordCheckNotes,
+      tradeLicenseVerificationStatus: handymanProfiles.tradeLicenseVerificationStatus,
+      tradeLicenseType: handymanProfiles.tradeLicenseType,
+      tradeLicenseNumber: handymanProfiles.tradeLicenseNumber,
+      tradeLicenseDocumentUrl: handymanProfiles.tradeLicenseDocumentUrl,
+      tradeLicenseReviewedAt: handymanProfiles.tradeLicenseReviewedAt,
+      tradeLicenseReviewedBy: handymanProfiles.tradeLicenseReviewedBy,
+      tradeLicenseRejectionReason: handymanProfiles.tradeLicenseRejectionReason,
+      tradeLicenseNotes: handymanProfiles.tradeLicenseNotes,
       stripeAccountId: handymanProfiles.stripeAccountId,
       stripeChargesEnabled: handymanProfiles.stripeChargesEnabled,
       stripePayoutsEnabled: handymanProfiles.stripePayoutsEnabled,
