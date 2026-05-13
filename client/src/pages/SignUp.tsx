@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { trackCompleteRegistration } from "@/lib/metaPixel";
-import { Eye, EyeOff, Hammer, Loader2 } from "lucide-react";
+import { CheckCircle, Eye, EyeOff, Hammer, Loader2, Shield, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -24,6 +24,20 @@ const HANDYMAN_SKILLS = [
   "Cleaning",
   "Drywall",
   "Roofing",
+];
+
+const HANDYMAN_PROFILE_REQUIREMENTS = [
+  "Full name",
+  "Profile photo",
+  "Short bio",
+  "Skills/services",
+];
+
+const HANDYMAN_TRUST_BOOSTERS = [
+  "ID name match",
+  "Insurance review",
+  "Criminal record check review",
+  "Trade licence verification, if applicable",
 ];
 
 export default function SignUp() {
@@ -68,7 +82,11 @@ export default function SignUp() {
           "Account created, but verification email could not be sent yet. You can resend it on the next screen."
         );
       } else {
-        toast.success("Account created. Check your email to verify your account.");
+        toast.success(
+          userType === "handyman"
+            ? "Account created. Verify your email, then complete your profile before bidding."
+            : "Account created. Check your email to verify your account."
+        );
       }
 
       navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
@@ -166,7 +184,7 @@ export default function SignUp() {
             <div className="mb-6 text-center">
               <h1 className="text-2xl font-serif text-foreground mb-2">Join SaskHandy</h1>
               <p className="text-sm text-muted-foreground">
-                Create your account to post jobs or bid as a handyman.
+                Create your account to post jobs or offer trusted local handyman services.
               </p>
             </div>
 
@@ -202,44 +220,98 @@ export default function SignUp() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">I am signing up as</label>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       setUserType("homeowner");
                       setSelectedSkills([]);
                     }}
-                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                    className={`rounded-xl border px-4 py-3 text-left transition-colors ${
                       userType === "homeowner"
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-foreground hover:border-primary/30"
                     }`}
                   >
-                    Homeowner
+                    <span className="block text-sm font-semibold">Homeowner</span>
+                    <span className="block text-xs mt-1 text-muted-foreground">
+                      Post jobs and compare local bids.
+                    </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setUserType("handyman")}
-                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                    className={`rounded-xl border px-4 py-3 text-left transition-colors ${
                       userType === "handyman"
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-foreground hover:border-primary/30"
                     }`}
                   >
-                    Handyman
+                    <span className="block text-sm font-semibold">Handyman</span>
+                    <span className="block text-xs mt-1 text-muted-foreground">
+                      Build a profile and bid on local jobs.
+                    </span>
                   </button>
                 </div>
               </div>
 
               {userType === "handyman" && (
-                <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+                <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        Complete your profile before bidding
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        Homeowners review your profile before choosing a bid. After signup, you’ll
+                        need a profile photo, short bio, and listed skills before you can send bids.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-border/60 bg-white p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        <p className="text-xs font-semibold text-foreground">Required to bid</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {HANDYMAN_PROFILE_REQUIREMENTS.map((item) => (
+                          <p key={item} className="text-xs text-muted-foreground">
+                            • {item}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-border/60 bg-white p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Shield className="w-3.5 h-3.5 text-primary" />
+                        <p className="text-xs font-semibold text-foreground">Trust boosters</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {HANDYMAN_TRUST_BOOSTERS.map((item) => (
+                          <p key={item} className="text-xs text-muted-foreground">
+                            • {item}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-sm font-medium text-foreground">
                       Select your skills
                     </label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Choose at least one skill so we can notify you when matching jobs are posted.
+                      Choose at least one skill so we can match you with relevant jobs.
                     </p>
                   </div>
 
@@ -404,6 +476,8 @@ export default function SignUp() {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Creating Account...
                   </>
+                ) : userType === "handyman" ? (
+                  "Create Account & Continue to Profile"
                 ) : (
                   "Create Account"
                 )}
