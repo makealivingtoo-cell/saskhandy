@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { trackCompleteRegistration } from "@/lib/metaPixel";
-import { CheckCircle, Eye, EyeOff, Hammer, Loader2, Shield, UserCheck } from "lucide-react";
+import { CheckCircle, ChevronDown, Eye, EyeOff, Hammer, Loader2, Shield, UserCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -48,6 +48,7 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [userType, setUserType] = useState<UserType>("homeowner");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -201,6 +202,12 @@ export default function SignUp() {
                   required
                   minLength={2}
                 />
+
+                <p className="text-xs text-muted-foreground">
+                  {userType === "handyman"
+                    ? "Use your legal name. If you submit ID verification later, this name must match your government ID."
+                    : "Use your real name so people know who they are communicating with."}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -226,6 +233,7 @@ export default function SignUp() {
                     onClick={() => {
                       setUserType("homeowner");
                       setSelectedSkills([]);
+                      setShowSkillsDropdown(false);
                     }}
                     className={`rounded-xl border px-4 py-3 text-left transition-colors ${
                       userType === "homeowner"
@@ -306,41 +314,104 @@ export default function SignUp() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-foreground">
-                      Select your skills
-                    </label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Choose at least one skill so we can match you with relevant jobs.
-                    </p>
-                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-sm font-medium text-foreground">
+                        Select your skills
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Choose at least one skill so we can match you with relevant jobs.
+                      </p>
+                    </div>
 
-                  <div className="grid grid-cols-1 gap-2">
-                    {HANDYMAN_SKILLS.map((skill) => (
-                      <label
-                        key={skill}
-                        className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm cursor-pointer transition-colors ${
-                          selectedSkills.includes(skill)
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-white text-foreground hover:border-primary/30"
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowSkillsDropdown((prev) => !prev)}
+                        className={`w-full rounded-xl border bg-white px-4 py-3 text-left transition-colors ${
+                          selectedSkills.length > 0
+                            ? "border-primary/40"
+                            : "border-border hover:border-primary/30"
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={selectedSkills.includes(skill)}
-                          onChange={() => toggleSkill(skill)}
-                          className="h-4 w-4 rounded border-border"
-                        />
-                        <span>{skill}</span>
-                      </label>
-                    ))}
-                  </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">
+                              {selectedSkills.length > 0
+                                ? `${selectedSkills.length} skill${
+                                    selectedSkills.length === 1 ? "" : "s"
+                                  } selected`
+                                : "Choose your skills"}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              {selectedSkills.length > 0
+                                ? selectedSkills.join(", ")
+                                : "General helper, plumbing, electrical, painting, and more"}
+                            </p>
+                          </div>
 
-                  {selectedSkills.length < 1 && (
-                    <p className="text-xs text-destructive">
-                      Please select at least one skill to continue.
-                    </p>
-                  )}
+                          <ChevronDown
+                            className={`w-4 h-4 text-muted-foreground transition-transform ${
+                              showSkillsDropdown ? "rotate-180" : ""
+                            }`}
+                          />
+                        </div>
+                      </button>
+
+                      {showSkillsDropdown && (
+                        <div className="absolute z-20 mt-2 w-full rounded-xl border border-border bg-white shadow-lg overflow-hidden">
+                          <div className="max-h-64 overflow-y-auto p-2">
+                            {HANDYMAN_SKILLS.map((skill) => {
+                              const isSelected = selectedSkills.includes(skill);
+
+                              return (
+                                <button
+                                  key={skill}
+                                  type="button"
+                                  onClick={() => toggleSkill(skill)}
+                                  className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm text-left transition-colors ${
+                                    isSelected
+                                      ? "bg-primary/10 text-primary"
+                                      : "text-foreground hover:bg-muted"
+                                  }`}
+                                >
+                                  <span>{skill}</span>
+                                  {isSelected && <CheckCircle className="w-4 h-4 shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedSkills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                          >
+                            {skill}
+                            <button
+                              type="button"
+                              onClick={() => toggleSkill(skill)}
+                              className="rounded-full hover:bg-primary/10"
+                              aria-label={`Remove ${skill}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {selectedSkills.length < 1 && (
+                      <p className="text-xs text-destructive">
+                        Please select at least one skill to continue.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
