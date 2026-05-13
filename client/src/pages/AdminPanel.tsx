@@ -11,6 +11,7 @@ import {
   CheckCircle,
   DollarSign,
   ExternalLink,
+  FileCheck,
   Loader2,
   RefreshCw,
   Shield,
@@ -85,10 +86,20 @@ export default function AdminPanel() {
     enabled: isAuthenticated && user?.role === "admin",
   });
 
+  const {
+    data: reports,
+    isLoading: reportsLoading,
+    refetch: refetchReports,
+  } = trpc.reports.getAll.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+  });
+
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<number, string>>({});
   const [payoutAdminNotes, setPayoutAdminNotes] = useState<Record<number, string>>({});
+  const [reportAdminNotes, setReportAdminNotes] = useState<Record<number, string>>({});
   const [updatingPayoutId, setUpdatingPayoutId] = useState<number | null>(null);
+  const [updatingReportId, setUpdatingReportId] = useState<number | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
 
@@ -109,6 +120,44 @@ export default function AdminPanel() {
       refetchInsurance();
     },
     onError: (err) => toast.error(err.message),
+  });
+
+  const setIdentityVerification = trpc.admin.setIdentityVerification.useMutation({
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.status === "approved"
+          ? "Identity marked as checked."
+          : variables.status === "rejected"
+          ? "Identity verification rejected."
+          : "Identity status updated."
+      );
+      refetchInsurance();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const setCriminalRecordCheckStatus = trpc.admin.setCriminalRecordCheckStatus.useMutation({
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.status === "reviewed"
+          ? "Criminal record check marked as reviewed."
+          : "Criminal record check status updated."
+      );
+      refetchInsurance();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const updateReportStatus = trpc.reports.updateStatus.useMutation({
+    onSuccess: async (_, variables) => {
+      toast.success(`Report marked ${variables.status}.`);
+      setUpdatingReportId(null);
+      await refetchReports();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      setUpdatingReportId(null);
+    },
   });
 
   const updatePayoutRequestStatus = trpc.admin.updatePayoutRequestStatus.useMutation({
@@ -180,10 +229,25 @@ export default function AdminPanel() {
   const pendingPayoutRequests = payoutRequests?.filter((p) => p.status === "pending") ?? [];
   const resolvedPayoutRequests = payoutRequests?.filter((p) => p.status !== "pending") ?? [];
 
+  const openReports = reports?.filter((report) => report.status === "open") ?? [];
+  const resolvedReports = reports?.filter((report) => report.status !== "open") ?? [];
+
+  const pendingIdentityReviews =
+    insuranceQueue?.filter((p) => p.identityVerificationStatus === "pending") ?? [];
+
+  const approvedIdentityReviews =
+    insuranceQueue?.filter((p) => p.identityVerificationStatus === "approved") ?? [];
+
+  const pendingCriminalChecks =
+    insuranceQueue?.filter((p) => p.criminalRecordCheckStatus === "pending") ?? [];
+
+  const reviewedCriminalChecks =
+    insuranceQueue?.filter((p) => p.criminalRecordCheckStatus === "reviewed") ?? [];
+
   return (
     <AppLayout title="Admin Panel">
       <div className="space-y-8">
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
           {[
             {
               label: "Total Users",
@@ -216,6 +280,12 @@ export default function AdminPanel() {
               color: "bg-red-50 text-red-600",
             },
             {
+              label: "Open Reports",
+              value: openReports.length,
+              icon: Shield,
+              color: "bg-orange-50 text-orange-600",
+            },
+            {
               label: "Payout Requests",
               value: stats?.pendingPayoutRequests ?? pendingPayoutRequests.length,
               icon: DollarSign,
@@ -237,6 +307,152 @@ export default function AdminPanel() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Safety Reports{" "}
+              <span className="text-muted-foreground font-normal">({openReports.length})</span>
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => refetchReports()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {reportsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : openReports.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <Shield className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No open safety reports.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {openReports.map((report) => (
+                <div key={report.id} className="bg-white rounded-xl border border-orange-200 p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                        <p className="font-semibold text-foreground text-sm">
+                          Report #{report.id}
+                        </p>
+                        <StatusBadge status={report.status} />
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        Reason: <span className="font-medium text-foreground">{report.reason}</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Reporter user #{report.reporterUserId}
+                        {report.reportedUserId ? ` · Reported user #${report.reportedUserId}` : ""}
+                        {report.jobId ? ` · Job #${report.jobId}` : ""}
+                        {report.bidId ? ` · Bid #${report.bidId}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Created {format(new Date(report.createdAt), "MMM d, yyyy h:mm a")}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {report.jobId && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={`/jobs/${report.jobId}`} target="_blank" rel="noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View Job
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {report.details && (
+                    <div className="bg-orange-50 rounded-lg p-3 mb-4">
+                      <p className="text-xs font-medium text-orange-800 mb-1">Details:</p>
+                      <p className="text-sm text-orange-700">{report.details}</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder="Admin notes about this report..."
+                      value={reportAdminNotes[report.id] ?? ""}
+                      onChange={(e) =>
+                        setReportAdminNotes((prev) => ({
+                          ...prev,
+                          [report.id]: e.target.value,
+                        }))
+                      }
+                      rows={3}
+                      className="resize-none"
+                    />
+
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setUpdatingReportId(report.id);
+                          updateReportStatus.mutate({
+                            reportId: report.id,
+                            status: "reviewing",
+                            adminNotes: reportAdminNotes[report.id] ?? "",
+                          });
+                        }}
+                        disabled={updateReportStatus.isPending}
+                      >
+                        {updateReportStatus.isPending && updatingReportId === report.id ? (
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        ) : (
+                          <Shield className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Mark Reviewing
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => {
+                          setUpdatingReportId(report.id);
+                          updateReportStatus.mutate({
+                            reportId: report.id,
+                            status: "resolved",
+                            adminNotes: reportAdminNotes[report.id] ?? "",
+                          });
+                        }}
+                        disabled={updateReportStatus.isPending}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Resolve
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-muted-foreground/30"
+                        onClick={() => {
+                          setUpdatingReportId(report.id);
+                          updateReportStatus.mutate({
+                            reportId: report.id,
+                            status: "dismissed",
+                            adminNotes: reportAdminNotes[report.id] ?? "",
+                          });
+                        }}
+                        disabled={updateReportStatus.isPending}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -270,6 +486,18 @@ export default function AdminPanel() {
                           <p className="text-sm font-medium text-foreground">
                             {profile.userName ?? "Unnamed handyman"}
                           </p>
+                          {profile.identityVerificationStatus === "approved" && (
+                            <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                              Identity Checked
+                            </span>
+                          )}
+
+                          {profile.criminalRecordCheckStatus === "reviewed" && (
+                            <span className="text-[11px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium">
+                              Criminal Check Reviewed
+                            </span>
+                          )}
+
                           {profile.insuranceVerified && (
                             <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
                               Insurance Verified
@@ -514,6 +742,234 @@ export default function AdminPanel() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
+              Identity Verification{" "}
+              <span className="text-muted-foreground font-normal">({pendingIdentityReviews.length})</span>
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => refetchInsurance()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {insuranceLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : pendingIdentityReviews.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No pending identity reviews.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingIdentityReviews.map((profile) => (
+                <div key={`identity-${profile.userId}`} className="bg-white rounded-xl border border-blue-200 p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-[220px]">
+                      <p className="font-semibold text-foreground text-sm">
+                        {profile.userName ?? "Unnamed handyman"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {profile.userEmail ?? "No email"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Status: {profile.identityVerificationStatus}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {profile.identityDocumentUrl && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={profile.identityDocumentUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View ID
+                          </a>
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() =>
+                          setIdentityVerification.mutate({
+                            userId: profile.userId,
+                            status: "approved",
+                          })
+                        }
+                        disabled={setIdentityVerification.isPending}
+                      >
+                        <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                        Mark ID Name Matched
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                        onClick={() =>
+                          setIdentityVerification.mutate({
+                            userId: profile.userId,
+                            status: "rejected",
+                            rejectionReason: "ID name did not match profile or document was unclear.",
+                          })
+                        }
+                        disabled={setIdentityVerification.isPending}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {approvedIdentityReviews.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                Identity Checked ({approvedIdentityReviews.length})
+              </h3>
+
+              <div className="space-y-3">
+                {approvedIdentityReviews.map((profile) => (
+                  <div key={`identity-approved-${profile.userId}`} className="bg-white rounded-xl border border-blue-200 p-4">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {profile.userName ?? "Unnamed handyman"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{profile.userEmail ?? "No email"}</p>
+                      </div>
+
+                      <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                        ID Name Matched
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Criminal Record Checks{" "}
+              <span className="text-muted-foreground font-normal">({pendingCriminalChecks.length})</span>
+            </h2>
+            <Button variant="outline" size="sm" onClick={() => refetchInsurance()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {insuranceLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : pendingCriminalChecks.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No pending criminal record checks.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingCriminalChecks.map((profile) => (
+                <div key={`criminal-${profile.userId}`} className="bg-white rounded-xl border border-purple-200 p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-[220px]">
+                      <p className="font-semibold text-foreground text-sm">
+                        {profile.userName ?? "Unnamed handyman"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {profile.userEmail ?? "No email"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Status: {profile.criminalRecordCheckStatus}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {profile.criminalRecordCheckUrl && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={profile.criminalRecordCheckUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View Check
+                          </a>
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        className="bg-purple-600 hover:bg-purple-700"
+                        onClick={() =>
+                          setCriminalRecordCheckStatus.mutate({
+                            userId: profile.userId,
+                            status: "reviewed",
+                          })
+                        }
+                        disabled={setCriminalRecordCheckStatus.isPending}
+                      >
+                        <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                        Mark Reviewed
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                        onClick={() =>
+                          setCriminalRecordCheckStatus.mutate({
+                            userId: profile.userId,
+                            status: "rejected",
+                            notes: "Document was unclear, expired, or did not match the profile.",
+                          })
+                        }
+                        disabled={setCriminalRecordCheckStatus.isPending}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {reviewedCriminalChecks.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                Criminal Checks Reviewed ({reviewedCriminalChecks.length})
+              </h3>
+
+              <div className="space-y-3">
+                {reviewedCriminalChecks.map((profile) => (
+                  <div key={`criminal-reviewed-${profile.userId}`} className="bg-white rounded-xl border border-purple-200 p-4">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {profile.userName ?? "Unnamed handyman"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{profile.userEmail ?? "No email"}</p>
+                      </div>
+
+                      <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium">
+                        Criminal Record Check Reviewed
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-foreground">
               Insurance Review{" "}
               <span className="text-muted-foreground font-normal">({pendingInsurance.length})</span>
             </h2>
@@ -696,6 +1152,51 @@ export default function AdminPanel() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {resolvedReports.length > 0 && (
+          <div>
+            <h2 className="text-base font-semibold text-foreground mb-4">
+              Past Safety Reports{" "}
+              <span className="text-muted-foreground font-normal">({resolvedReports.length})</span>
+            </h2>
+
+            <div className="space-y-3">
+              {resolvedReports.map((report) => (
+                <div key={`past-report-${report.id}`} className="bg-white rounded-xl border border-border/60 p-4">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-medium text-foreground">
+                          Report #{report.id}
+                        </p>
+                        <StatusBadge status={report.status} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Reason: {report.reason}
+                        {report.jobId ? ` · Job #${report.jobId}` : ""}
+                        {report.reportedUserId ? ` · Reported user #${report.reportedUserId}` : ""}
+                      </p>
+                      {report.adminNotes && (
+                        <p className="text-xs text-muted-foreground mt-2 bg-muted/50 rounded px-3 py-2">
+                          {report.adminNotes}
+                        </p>
+                      )}
+                    </div>
+
+                    {report.jobId && (
+                      <Button asChild variant="outline" size="sm">
+                        <a href={`/jobs/${report.jobId}`} target="_blank" rel="noreferrer">
+                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                          View Job
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
