@@ -8,6 +8,12 @@ type RelatedLink = {
   label: string;
 };
 
+type ArticleSection = {
+  heading: string;
+  paragraphs: string[];
+  bullets?: string[];
+};
+
 type SeoLandingPageProps = {
   title: string;
   pageTitle: string;
@@ -31,6 +37,7 @@ type SeoLandingPageProps = {
   bottomTitle: string;
   bottomParagraph: string;
   relatedLinks?: RelatedLink[];
+  articleSections?: ArticleSection[];
 };
 
 export default function SeoLandingPage({
@@ -53,6 +60,7 @@ export default function SeoLandingPage({
   bottomTitle,
   bottomParagraph,
   relatedLinks = [],
+  articleSections = [],
 }: SeoLandingPageProps) {
   useEffect(() => {
     document.title = pageTitle;
@@ -67,6 +75,8 @@ export default function SeoLandingPage({
 
     meta.content = metaDescription;
   }, [pageTitle, metaDescription]);
+
+  const hasArticleContent = articleSections.length > 0;
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -195,6 +205,50 @@ export default function SeoLandingPage({
             </div>
           </div>
         </section>
+
+        {hasArticleContent ? (
+          <section className="border-t border-slate-200 bg-white">
+            <article className="container max-w-4xl py-16">
+              <div className="mb-10">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                  SaskHandy Guide
+                </p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+                  Helpful guide for Saskatoon homeowners
+                </h2>
+              </div>
+
+              <div className="space-y-12">
+                {articleSections.map((section) => (
+                  <section key={section.heading}>
+                    <h3 className="text-2xl font-bold tracking-tight text-slate-950">
+                      {section.heading}
+                    </h3>
+
+                    <div className="mt-4 space-y-4">
+                      {section.paragraphs.map((paragraph) => (
+                        <p key={paragraph} className="text-slate-600 leading-8">
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
+
+                    {section.bullets && section.bullets.length > 0 ? (
+                      <ul className="mt-5 space-y-3">
+                        {section.bullets.map((bullet) => (
+                          <li key={bullet} className="flex gap-3 text-slate-600 leading-7">
+                            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-emerald-700" />
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </section>
+                ))}
+              </div>
+            </article>
+          </section>
+        ) : null}
 
         <section className="border-t border-slate-200 bg-[#f7faf8]">
           <div className="container py-16">
