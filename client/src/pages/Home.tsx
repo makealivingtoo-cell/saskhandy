@@ -14,14 +14,46 @@ import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 
 const categories = [
-  "Furniture Assembly",
-  "TV Mounting",
-  "Plumbing",
-  "Electrical Help",
-  "Yard Work",
-  "Painting",
-  "Home Repairs",
-  "Moving Help",
+  {
+    label: "Furniture Assembly",
+    href: "/furniture-assembly-saskatchewan",
+  },
+  {
+    label: "TV Mounting",
+    href: "/tv-mounting-saskatoon",
+  },
+  {
+    label: "Ring Doorbell Installation",
+    href: "/ring-doorbell-installation-saskatoon",
+  },
+  {
+    label: "Smart Doorbell Installation",
+    href: "/smart-doorbell-installation-saskatoon",
+  },
+  {
+    label: "Plumbing",
+    href: "/plumbing-repairs-saskatchewan",
+  },
+  {
+    label: "Electrical Help",
+    href: "/electrical-help-saskatchewan",
+  },
+  {
+    label: "Yard Work",
+    href: "/yard-work-saskatchewan",
+  },
+  {
+    label: "Painting",
+    href: "/drywall-painting-saskatchewan",
+  },
+  {
+    label: "Home Repairs",
+    href: "/saskatoon-handyman-services",
+  },
+  {
+    label: "Moving Help",
+    href: "/saskatchewan-handyman-services",
+  },
 ];
 
 const trustItems = [
@@ -88,7 +120,9 @@ export default function HomePage() {
               <div className="truncate text-xl font-bold tracking-tight sm:text-2xl">
                 SaskHandy
               </div>
-              <div className="text-xs text-slate-500 sm:text-sm">Local help for home jobs</div>
+              <div className="text-xs text-slate-500 sm:text-sm">
+                Local help for home jobs
+              </div>
             </div>
           </div>
 
@@ -199,11 +233,11 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-3">
               {categories.map((category) => (
                 <Link
-                  key={category}
-                  href="/sign-up"
+                  key={category.label}
+                  href={category.href}
                   className="rounded-full border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
                 >
-                  {category}
+                  {category.label}
                 </Link>
               ))}
             </div>
@@ -235,21 +269,27 @@ export default function HomePage() {
 
                 <div className="mt-8 space-y-6">
                   <div>
-                    <div className="text-lg font-semibold text-slate-900">1. Post your job</div>
+                    <div className="text-lg font-semibold text-slate-900">
+                      1. Post your job
+                    </div>
                     <p className="mt-2 text-slate-600">
                       Describe what you need done and add photos if needed.
                     </p>
                   </div>
 
                   <div>
-                    <div className="text-lg font-semibold text-slate-900">2. Compare bids</div>
+                    <div className="text-lg font-semibold text-slate-900">
+                      2. Compare bids
+                    </div>
                     <p className="mt-2 text-slate-600">
                       Review pricing, availability, and profiles before choosing someone.
                     </p>
                   </div>
 
                   <div>
-                    <div className="text-lg font-semibold text-slate-900">3. Chat and pay</div>
+                    <div className="text-lg font-semibold text-slate-900">
+                      3. Chat and pay
+                    </div>
                     <p className="mt-2 text-slate-600">
                       Keep communication and payment in one place from start to finish.
                     </p>
