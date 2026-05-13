@@ -390,20 +390,24 @@ export async function setHandymanTradeLicenseVerification(
 ) {
   const db = await getDb();
 
+  const dataToUpdate: Record<string, any> = {
+    tradeLicenseVerificationStatus: data.status,
+    tradeLicenseReviewedAt:
+      data.status === "approved" || data.status === "rejected" ? new Date() : null,
+    tradeLicenseReviewedBy:
+      data.status === "approved" || data.status === "rejected" ? data.reviewedBy ?? null : null,
+    tradeLicenseRejectionReason: data.status === "rejected" ? data.rejectionReason ?? null : null,
+    tradeLicenseNotes: data.notes ?? null,
+    updatedAt: new Date(),
+  };
+
+  if (data.status === "rejected") {
+    dataToUpdate.tradeLicenseDocumentUrl = null;
+  }
+
   await db
     .update(handymanProfiles)
-    .set({
-      tradeLicenseVerificationStatus: data.status,
-      tradeLicenseReviewedAt:
-        data.status === "approved" || data.status === "rejected" ? new Date() : null,
-      tradeLicenseReviewedBy:
-        data.status === "approved" || data.status === "rejected"
-          ? data.reviewedBy ?? null
-          : null,
-      tradeLicenseRejectionReason: data.status === "rejected" ? data.rejectionReason ?? null : null,
-      tradeLicenseNotes: data.notes ?? null,
-      updatedAt: new Date(),
-    } as any)
+    .set(dataToUpdate as any)
     .where(eq(handymanProfiles.userId, userId));
 }
 
@@ -482,14 +486,27 @@ export async function getHandymanProfilesForAdmin() {
   return rows;
 }
 
-export async function setHandymanInsuranceVerification(userId: number, insuranceVerified: boolean) {
+export async function setHandymanInsuranceVerification(
+  userId: number,
+  insuranceVerified: boolean,
+  rejectionReason?: string | null
+) {
   const db = await getDb();
+
+  const dataToUpdate: Record<string, any> = {
+    insuranceVerified,
+    insuranceReviewedAt: new Date(),
+    insuranceRejectionReason: insuranceVerified ? null : rejectionReason ?? null,
+    updatedAt: new Date(),
+  };
+
+  if (!insuranceVerified) {
+    dataToUpdate.insuranceCertUrl = null;
+  }
+
   await db
     .update(handymanProfiles)
-    .set({
-      insuranceVerified,
-      updatedAt: new Date(),
-    })
+    .set(dataToUpdate as any)
     .where(eq(handymanProfiles.userId, userId));
 }
 
@@ -503,19 +520,23 @@ export async function setHandymanIdentityVerification(
 ) {
   const db = await getDb();
 
+  const dataToUpdate: Record<string, any> = {
+    identityVerificationStatus: data.status,
+    identityReviewedAt:
+      data.status === "approved" || data.status === "rejected" ? new Date() : null,
+    identityReviewedBy:
+      data.status === "approved" || data.status === "rejected" ? data.reviewedBy ?? null : null,
+    identityRejectionReason: data.status === "rejected" ? data.rejectionReason ?? null : null,
+    updatedAt: new Date(),
+  };
+
+  if (data.status === "rejected") {
+    dataToUpdate.identityDocumentUrl = null;
+  }
+
   await db
     .update(handymanProfiles)
-    .set({
-      identityVerificationStatus: data.status,
-      identityReviewedAt:
-        data.status === "approved" || data.status === "rejected" ? new Date() : null,
-      identityReviewedBy:
-        data.status === "approved" || data.status === "rejected"
-          ? data.reviewedBy ?? null
-          : null,
-      identityRejectionReason: data.status === "rejected" ? data.rejectionReason ?? null : null,
-      updatedAt: new Date(),
-    } as any)
+    .set(dataToUpdate as any)
     .where(eq(handymanProfiles.userId, userId));
 }
 
@@ -530,20 +551,28 @@ export async function setHandymanCriminalRecordCheckStatus(
 ) {
   const db = await getDb();
 
+  const dataToUpdate: Record<string, any> = {
+    criminalRecordCheckStatus: data.status,
+    criminalRecordCheckReviewedAt:
+      data.status === "reviewed" || data.status === "rejected" || data.status === "expired"
+        ? new Date()
+        : null,
+    criminalRecordCheckReviewedBy:
+      data.status === "reviewed" || data.status === "rejected" || data.status === "expired"
+        ? data.reviewedBy ?? null
+        : null,
+    criminalRecordCheckExpiresAt: data.expiresAt ?? null,
+    criminalRecordCheckNotes: data.notes ?? null,
+    updatedAt: new Date(),
+  };
+
+  if (data.status === "rejected") {
+    dataToUpdate.criminalRecordCheckUrl = null;
+  }
+
   await db
     .update(handymanProfiles)
-    .set({
-      criminalRecordCheckStatus: data.status,
-      criminalRecordCheckReviewedAt:
-        data.status === "reviewed" || data.status === "rejected" ? new Date() : null,
-      criminalRecordCheckReviewedBy:
-        data.status === "reviewed" || data.status === "rejected"
-          ? data.reviewedBy ?? null
-          : null,
-      criminalRecordCheckExpiresAt: data.expiresAt ?? null,
-      criminalRecordCheckNotes: data.notes ?? null,
-      updatedAt: new Date(),
-    } as any)
+    .set(dataToUpdate as any)
     .where(eq(handymanProfiles.userId, userId));
 }
 

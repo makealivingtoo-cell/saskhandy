@@ -2235,7 +2235,11 @@ const adminRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
 
-      await setHandymanInsuranceVerification(input.userId, input.insuranceVerified);
+      await setHandymanInsuranceVerification(
+        input.userId,
+        input.insuranceVerified,
+        input.rejectionReason?.trim() || null
+      );
 
       await notifyUser({
         userId: input.userId,
@@ -2245,7 +2249,7 @@ const adminRouter = router({
           ? "Your insurance document has been approved and can now appear as verified on your SaskHandy profile."
           : `Your insurance document was not approved. ${
               input.rejectionReason?.trim() ||
-              "Please upload a clearer or updated document from your profile page."
+              "The rejected file has been removed. Please upload a clearer or updated document from your profile page."
             }`,
         link: "/handyman/profile",
       });
@@ -2280,7 +2284,7 @@ const adminRouter = router({
               ? "Your ID name match has been approved and can now appear on your SaskHandy profile."
               : `Your ID verification was not approved. ${
                   input.rejectionReason?.trim() ||
-                  "Please upload a clearer document that matches your profile name."
+                  "The rejected file has been removed. Please upload a clearer document that matches your profile name."
                 }`,
           link: "/handyman/profile",
         });
@@ -2321,7 +2325,7 @@ const adminRouter = router({
               ? "Your criminal record check document has been reviewed and can now appear on your SaskHandy profile."
               : `Your criminal record check document was not approved. ${
                   input.notes?.trim() ||
-                  "Please upload a clearer or updated document from your profile page."
+                  "The rejected file has been removed. Please upload a clearer or updated document from your profile page."
                 }`,
           link: "/handyman/profile",
         });
@@ -2359,7 +2363,7 @@ const adminRouter = router({
               ? "Your trade licence has been verified and can now appear on your SaskHandy profile."
               : `Your trade licence was not approved. ${
                   input.rejectionReason?.trim() ||
-                  "Please upload a clearer, valid, or matching licence document from your profile page."
+                  "The rejected file has been removed. Please upload a clearer, valid, or matching licence document from your profile page."
                 }`,
           link: "/handyman/profile",
         });
