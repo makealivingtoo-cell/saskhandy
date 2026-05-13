@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { trackCompleteRegistration } from "@/lib/metaPixel";
-import { CheckCircle, ChevronDown, Eye, EyeOff, Hammer, Loader2, Shield, UserCheck, X } from "lucide-react";
+import { CheckCircle, Eye, EyeOff, Hammer, Loader2, Shield, UserCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -48,7 +48,6 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [userType, setUserType] = useState<UserType>("homeowner");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -233,7 +232,6 @@ export default function SignUp() {
                     onClick={() => {
                       setUserType("homeowner");
                       setSelectedSkills([]);
-                      setShowSkillsDropdown(false);
                     }}
                     className={`rounded-xl border px-4 py-3 text-left transition-colors ${
                       userType === "homeowner"
@@ -316,77 +314,41 @@ export default function SignUp() {
 
                   <div className="space-y-2">
                     <div>
-                      <label className="text-sm font-medium text-foreground">
-                        Select your skills
+                      <label htmlFor="skillSelect" className="text-sm font-medium text-foreground">
+                        Add your skills
                       </label>
                       <p className="text-xs text-muted-foreground mt-1">
                         Choose at least one skill so we can match you with relevant jobs.
                       </p>
                     </div>
 
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setShowSkillsDropdown((prev) => !prev)}
-                        className={`w-full rounded-xl border bg-white px-4 py-3 text-left transition-colors ${
-                          selectedSkills.length > 0
-                            ? "border-primary/40"
-                            : "border-border hover:border-primary/30"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-foreground">
-                              {selectedSkills.length > 0
-                                ? `${selectedSkills.length} skill${
-                                    selectedSkills.length === 1 ? "" : "s"
-                                  } selected`
-                                : "Choose your skills"}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                              {selectedSkills.length > 0
-                                ? selectedSkills.join(", ")
-                                : "General helper, plumbing, electrical, painting, and more"}
-                            </p>
-                          </div>
+                    <select
+                      id="skillSelect"
+                      value=""
+                      onChange={(e) => {
+                        const skill = e.target.value;
+                        if (!skill) return;
 
-                          <ChevronDown
-                            className={`w-4 h-4 text-muted-foreground transition-transform ${
-                              showSkillsDropdown ? "rotate-180" : ""
-                            }`}
-                          />
-                        </div>
-                      </button>
+                        setSelectedSkills((prev) =>
+                          prev.includes(skill) ? prev : [...prev, skill]
+                        );
 
-                      {showSkillsDropdown && (
-                        <div className="absolute z-20 mt-2 w-full rounded-xl border border-border bg-white shadow-lg overflow-hidden">
-                          <div className="max-h-64 overflow-y-auto p-2">
-                            {HANDYMAN_SKILLS.map((skill) => {
-                              const isSelected = selectedSkills.includes(skill);
-
-                              return (
-                                <button
-                                  key={skill}
-                                  type="button"
-                                  onClick={() => toggleSkill(skill)}
-                                  className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm text-left transition-colors ${
-                                    isSelected
-                                      ? "bg-primary/10 text-primary"
-                                      : "text-foreground hover:bg-muted"
-                                  }`}
-                                >
-                                  <span>{skill}</span>
-                                  {isSelected && <CheckCircle className="w-4 h-4 shrink-0" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        e.currentTarget.value = "";
+                      }}
+                      className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
+                    >
+                      <option value="">Select a skill to add...</option>
+                      {HANDYMAN_SKILLS.filter((skill) => !selectedSkills.includes(skill)).map(
+                        (skill) => (
+                          <option key={skill} value={skill}>
+                            {skill}
+                          </option>
+                        )
                       )}
-                    </div>
+                    </select>
 
                     {selectedSkills.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 pt-1">
                         {selectedSkills.map((skill) => (
                           <span
                             key={skill}
@@ -547,6 +509,8 @@ export default function SignUp() {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Creating Account...
                   </>
+                ) : userType === "handyman" ? (
+                  "Create Account & Continue to Profile"
                 ) : userType === "handyman" ? (
                   "Create Account & Continue to Profile"
                 ) : (
