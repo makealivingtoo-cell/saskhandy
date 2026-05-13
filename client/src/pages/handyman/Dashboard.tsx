@@ -51,6 +51,7 @@ const handymanNotes = [
   "Homeowners trust details. A short, specific message can help your bid feel more professional.",
   "Small jobs can lead to repeat work when you communicate clearly and show up reliably.",
   "A complete profile helps homeowners feel safer choosing you for the job.",
+  "ID, insurance, criminal check, and licence badges can make your bid stand out when homeowners are unsure.",
   "Check open jobs regularly. Being early can help your bid get noticed.",
 ];
 
@@ -59,6 +60,7 @@ const bidTips = [
   "Explain briefly how you would handle the job.",
   "Keep your price clear and realistic.",
   "Use a professional tone, even for small jobs.",
+  "Invite the homeowner to message you if they have questions before choosing.",
 ];
 
 function getDailyNote(name?: string | null) {
@@ -73,35 +75,63 @@ function getDailyNote(name?: string | null) {
   return handymanNotes[total % handymanNotes.length];
 }
 
-function getProfileItems(profile: any) {
-  let categories: string[] = [];
-
+function getProfileCategories(profile: any) {
   try {
-    categories = JSON.parse(profile?.categories ?? "[]");
+    const parsed = JSON.parse(profile?.categories ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
   } catch {
-    categories = [];
+    return [];
   }
+}
+
+function getBidReadyItems(profile: any, fullName?: string | null) {
+  const categories = getProfileCategories(profile);
 
   return [
     {
-      label: "Bio",
-      completed: Boolean(profile?.bio?.trim()),
+      label: "Full name",
+      completed: Boolean(fullName && fullName.trim().length >= 2),
+      required: true,
     },
     {
-      label: "Skills",
-      completed: categories.length > 0,
+      label: "Profile photo",
+      completed: Boolean(profile?.profileImageUrl),
+      required: true,
     },
+    {
+      label: "Short bio",
+      completed: Boolean(profile?.bio?.trim() && profile.bio.trim().length >= 25),
+      required: true,
+    },
+    {
+      label: "Skills/services",
+      completed: categories.length > 0,
+      required: true,
+    },
+  ];
+}
+
+function getTrustBoosterItems(profile: any) {
+  return [
     {
       label: "Hourly rate",
       completed: Boolean(profile?.hourlyRate),
     },
     {
-      label: "Insurance document",
-      completed: Boolean(profile?.insuranceCertUrl),
+      label: "ID name matched",
+      completed: profile?.identityVerificationStatus === "approved",
     },
     {
-      label: "Insurance verified",
+      label: "Insurance reviewed",
       completed: Boolean(profile?.insuranceVerified),
+    },
+    {
+      label: "Criminal check reviewed",
+      completed: profile?.criminalRecordCheckStatus === "reviewed",
+    },
+    {
+      label: "Trade licence verified",
+      completed: profile?.tradeLicenseVerificationStatus === "approved",
     },
   ];
 }
@@ -150,14 +180,18 @@ export default function HandymanDashboard() {
   const pendingBids = myBids?.filter((b) => b.status === "pending") ?? [];
   const acceptedBids = myBids?.filter((b) => b.status === "accepted") ?? [];
 
-  const profileItems = useMemo(() => getProfileItems(profile), [profile]);
+  const bidReadyItems = useMemo(() => getBidReadyItems(profile, user?.name), [profile, user?.name]);
+  const trustBoosterItems = useMemo(() => getTrustBoosterItems(profile), [profile]);
 
-  const profileCompletion = useMemo(() => {
+  const bidReadyCompletion = useMemo(() => {
     if (!profile) return 0;
 
-    const completedItems = profileItems.filter((item) => item.completed).length;
-    return Math.round((completedItems / profileItems.length) * 100);
-  }, [profile, profileItems]);
+    const completedItems = bidReadyItems.filter((item) => item.completed).length;
+    return Math.round((completedItems / bidReadyItems.length) * 100);
+  }, [profile, bidReadyItems]);
+
+  const isBidReady = bidReadyItems.every((item) => item.completed);
+  const completedTrustBoosters = trustBoosterItems.filter((item) => item.completed).length;
 
   const dailyNote = useMemo(() => getDailyNote(user?.name), [user?.name]);
 
@@ -191,16 +225,33 @@ export default function HandymanDashboard() {
                 {profile?.totalJobs ?? 0} jobs completed
               </span>
 
-              {profile?.insuranceVerified ? (
+              {profile?.identityVerificationStatus === "approved" && (
+                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  ID Name Matched
+                </span>
+              )}
+
+              {profile?.insuranceVerified && (
                 <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                   <Shield className="w-3 h-3" />
-                  Insurance Verified
+                  Insurance Reviewed
                 </span>
-              ) : profile?.verified ? (
-                <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
-                  Verified
+              )}
+
+              {profile?.criminalRecordCheckStatus === "reviewed" && (
+                <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  Criminal Check Reviewed
                 </span>
-              ) : null}
+              )}
+
+              {profile?.tradeLicenseVerificationStatus === "approved" && (
+                <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  Licence Verified
+                </span>
+              )}
             </div>
           </div>
 
@@ -226,30 +277,41 @@ export default function HandymanDashboard() {
         <div className="bg-white rounded-xl border border-border/60 p-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-3">
             <div>
-              <p className="text-sm font-medium text-foreground">Profile completion</p>
+              <p className="text-sm font-medium text-foreground">Bid-ready profile</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                A complete profile helps homeowners trust your bids.
+                These required details must be complete before you can send bids.
               </p>
             </div>
 
-            <p className="text-sm font-semibold text-foreground">{profileCompletion}%</p>
+            <div className="text-left sm:text-right">
+              <p className="text-sm font-semibold text-foreground">{bidReadyCompletion}%</p>
+              <p
+                className={`text-xs font-medium mt-0.5 ${
+                  isBidReady ? "text-emerald-700" : "text-amber-700"
+                }`}
+              >
+                {isBidReady ? "Ready to bid" : "Required before bidding"}
+              </p>
+            </div>
           </div>
 
           <div className="h-2 rounded-full bg-muted overflow-hidden mb-4">
             <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${profileCompletion}%` }}
+              className={`h-full rounded-full transition-all ${
+                isBidReady ? "bg-emerald-600" : "bg-amber-500"
+              }`}
+              style={{ width: `${bidReadyCompletion}%` }}
             />
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {profileItems.map((item) => (
+            {bidReadyItems.map((item) => (
               <span
                 key={item.label}
                 className={`text-xs px-3 py-1 rounded-full border ${
                   item.completed
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-muted text-muted-foreground border-border/60"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
                 }`}
               >
                 {item.completed ? "✓ " : ""}
@@ -258,14 +320,57 @@ export default function HandymanDashboard() {
             ))}
           </div>
 
-          {profileCompletion < 100 && (
+          <div className="mt-4 pt-4 border-t border-border/40">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Trust boosters</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Optional profile signals that can help homeowners feel more confident.
+                </p>
+              </div>
+
+              <p className="text-xs font-medium text-primary">
+                {completedTrustBoosters}/{trustBoosterItems.length} complete
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {trustBoosterItems.map((item) => (
+                <span
+                  key={item.label}
+                  className={`text-xs px-3 py-1 rounded-full border ${
+                    item.completed
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-muted text-muted-foreground border-border/60"
+                  }`}
+                >
+                  {item.completed ? "✓ " : ""}
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {!isBidReady && (
             <div className="mt-4 pt-4 border-t border-border/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Add missing details to make your profile look more reliable to homeowners.
+                Complete the required items so homeowners can review your profile before you bid.
               </p>
 
               <Button asChild size="sm" variant="outline">
-                <Link href="/handyman/profile">Update Profile</Link>
+                <Link href="/handyman/profile">Complete Profile</Link>
+              </Button>
+            </div>
+          )}
+
+          {isBidReady && completedTrustBoosters < trustBoosterItems.length && (
+            <div className="mt-4 pt-4 border-t border-border/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Add ID, insurance, criminal check, or licence verification to improve homeowner trust.
+              </p>
+
+              <Button asChild size="sm" variant="outline">
+                <Link href="/handyman/profile">Add Trust Signals</Link>
               </Button>
             </div>
           )}
@@ -312,10 +417,11 @@ export default function HandymanDashboard() {
 
             <div className="space-y-3">
               {[
+                "Complete your bid-ready profile and add trust signals if you can.",
                 "Browse open jobs that match your skills.",
                 "Send a clear bid with price, availability, and a short message.",
-                "If accepted, complete the job and communicate through SaskHandy.",
-                "After completion, your earnings become available for payout request.",
+                "Reply quickly if the homeowner messages you before choosing.",
+                "If accepted, complete the job and request payout after completion.",
               ].map((step, index) => (
                 <div key={step} className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
