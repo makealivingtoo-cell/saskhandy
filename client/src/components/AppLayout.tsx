@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +62,13 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const [location] = useLocation();
 
   const navItems = user?.userType === "handyman" ? HANDYMAN_NAV : HOMEOWNER_NAV;
+
+  const { data: handymanProfile } = trpc.handymanProfiles.get.useQuery(undefined, {
+    enabled: user?.userType === "handyman",
+  });
+
+  const profileImageUrl =
+    user?.userType === "handyman" ? handymanProfile?.profileImageUrl : null;
 
   const handleLogout = async () => {
     try {
@@ -145,10 +153,18 @@ export function AppLayout({ children, title }: AppLayoutProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2">
-                  <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-semibold text-primary">
-                      {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
-                    </span>
+                  <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center overflow-hidden">
+                    {profileImageUrl ? (
+                      <img
+                        src={profileImageUrl}
+                        alt={`${user?.name ?? "User"} profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs font-semibold text-primary">
+                        {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
+                      </span>
+                    )}
                   </div>
                   <span className="hidden sm:block text-sm font-medium max-w-24 truncate">
                     {user?.name}
