@@ -98,6 +98,10 @@ export default function AdminPanel() {
   const [adminNotes, setAdminNotes] = useState<Record<number, string>>({});
   const [payoutAdminNotes, setPayoutAdminNotes] = useState<Record<number, string>>({});
   const [reportAdminNotes, setReportAdminNotes] = useState<Record<number, string>>({});
+  const [identityRejectReasons, setIdentityRejectReasons] = useState<Record<number, string>>({});
+  const [criminalRejectReasons, setCriminalRejectReasons] = useState<Record<number, string>>({});
+  const [tradeLicenseRejectReasons, setTradeLicenseRejectReasons] = useState<Record<number, string>>({});
+  const [insuranceRejectReasons, setInsuranceRejectReasons] = useState<Record<number, string>>({});
   const [updatingPayoutId, setUpdatingPayoutId] = useState<number | null>(null);
   const [updatingReportId, setUpdatingReportId] = useState<number | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
@@ -801,8 +805,22 @@ export default function AdminPanel() {
                       </p>
                     </div>
 
-                    <div className="flex gap-2 flex-wrap">
-                      {profile.identityDocumentUrl && (
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder="Reject reason, shown to handyman if rejected..."
+                        value={identityRejectReasons[profile.userId] ?? ""}
+                        onChange={(e) =>
+                          setIdentityRejectReasons((prev) => ({
+                            ...prev,
+                            [profile.userId]: e.target.value,
+                          }))
+                        }
+                        rows={2}
+                        className="resize-none min-w-[260px]"
+                      />
+
+                      <div className="flex gap-2 flex-wrap">
+                        {profile.identityDocumentUrl && (
                         <Button asChild variant="outline" size="sm">
                           <a href={profile.identityDocumentUrl} target="_blank" rel="noreferrer">
                             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
@@ -811,37 +829,40 @@ export default function AdminPanel() {
                         </Button>
                       )}
 
-                      <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() =>
-                          setIdentityVerification.mutate({
-                            userId: profile.userId,
-                            status: "approved",
-                          })
-                        }
-                        disabled={setIdentityVerification.isPending}
-                      >
-                        <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                        Mark ID Name Matched
-                      </Button>
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() =>
+                            setIdentityVerification.mutate({
+                              userId: profile.userId,
+                              status: "approved",
+                            })
+                          }
+                          disabled={setIdentityVerification.isPending}
+                        >
+                          <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                          Mark ID Name Matched
+                        </Button>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
-                        onClick={() =>
-                          setIdentityVerification.mutate({
-                            userId: profile.userId,
-                            status: "rejected",
-                            rejectionReason: "ID name did not match profile or document was unclear.",
-                          })
-                        }
-                        disabled={setIdentityVerification.isPending}
-                      >
-                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Reject
-                      </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                          onClick={() =>
+                            setIdentityVerification.mutate({
+                              userId: profile.userId,
+                              status: "rejected",
+                              rejectionReason:
+                                identityRejectReasons[profile.userId]?.trim() ||
+                                "ID name did not match the profile, or the document was unclear.",
+                            })
+                          }
+                          disabled={setIdentityVerification.isPending}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                          Reject ID
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -915,8 +936,22 @@ export default function AdminPanel() {
                       </p>
                     </div>
 
-                    <div className="flex gap-2 flex-wrap">
-                      {profile.criminalRecordCheckUrl && (
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder="Reject reason, shown to handyman if rejected..."
+                        value={criminalRejectReasons[profile.userId] ?? ""}
+                        onChange={(e) =>
+                          setCriminalRejectReasons((prev) => ({
+                            ...prev,
+                            [profile.userId]: e.target.value,
+                          }))
+                        }
+                        rows={2}
+                        className="resize-none min-w-[260px]"
+                      />
+
+                      <div className="flex gap-2 flex-wrap">
+                        {profile.criminalRecordCheckUrl && (
                         <Button asChild variant="outline" size="sm">
                           <a href={profile.criminalRecordCheckUrl} target="_blank" rel="noreferrer">
                             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
@@ -925,37 +960,40 @@ export default function AdminPanel() {
                         </Button>
                       )}
 
-                      <Button
-                        size="sm"
-                        className="bg-purple-600 hover:bg-purple-700"
-                        onClick={() =>
-                          setCriminalRecordCheckStatus.mutate({
-                            userId: profile.userId,
-                            status: "reviewed",
-                          })
-                        }
-                        disabled={setCriminalRecordCheckStatus.isPending}
-                      >
-                        <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                        Mark Reviewed
-                      </Button>
+                        <Button
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700"
+                          onClick={() =>
+                            setCriminalRecordCheckStatus.mutate({
+                              userId: profile.userId,
+                              status: "reviewed",
+                            })
+                          }
+                          disabled={setCriminalRecordCheckStatus.isPending}
+                        >
+                          <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                          Mark Reviewed
+                        </Button>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
-                        onClick={() =>
-                          setCriminalRecordCheckStatus.mutate({
-                            userId: profile.userId,
-                            status: "rejected",
-                            notes: "Document was unclear, expired, or did not match the profile.",
-                          })
-                        }
-                        disabled={setCriminalRecordCheckStatus.isPending}
-                      >
-                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Reject
-                      </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                          onClick={() =>
+                            setCriminalRecordCheckStatus.mutate({
+                              userId: profile.userId,
+                              status: "rejected",
+                              notes:
+                                criminalRejectReasons[profile.userId]?.trim() ||
+                                "Document was unclear, expired, or did not match the profile.",
+                            })
+                          }
+                          disabled={setCriminalRecordCheckStatus.isPending}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                          Reject Check
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1032,8 +1070,22 @@ export default function AdminPanel() {
                       </p>
                     </div>
 
-                    <div className="flex gap-2 flex-wrap">
-                      {profile.tradeLicenseDocumentUrl && (
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder="Reject reason, shown to handyman if rejected..."
+                        value={tradeLicenseRejectReasons[profile.userId] ?? ""}
+                        onChange={(e) =>
+                          setTradeLicenseRejectReasons((prev) => ({
+                            ...prev,
+                            [profile.userId]: e.target.value,
+                          }))
+                        }
+                        rows={2}
+                        className="resize-none min-w-[260px]"
+                      />
+
+                      <div className="flex gap-2 flex-wrap">
+                        {profile.tradeLicenseDocumentUrl && (
                         <Button asChild variant="outline" size="sm">
                           <a href={profile.tradeLicenseDocumentUrl} target="_blank" rel="noreferrer">
                             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
@@ -1042,37 +1094,40 @@ export default function AdminPanel() {
                         </Button>
                       )}
 
-                      <Button
-                        size="sm"
-                        className="bg-sky-600 hover:bg-sky-700"
-                        onClick={() =>
-                          setTradeLicenseVerification.mutate({
-                            userId: profile.userId,
-                            status: "approved",
-                          })
-                        }
-                        disabled={setTradeLicenseVerification.isPending}
-                      >
-                        <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                        Mark Licence Verified
-                      </Button>
+                        <Button
+                          size="sm"
+                          className="bg-sky-600 hover:bg-sky-700"
+                          onClick={() =>
+                            setTradeLicenseVerification.mutate({
+                              userId: profile.userId,
+                              status: "approved",
+                            })
+                          }
+                          disabled={setTradeLicenseVerification.isPending}
+                        >
+                          <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                          Mark Licence Verified
+                        </Button>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive/30 text-destructive hover:bg-destructive/5"
-                        onClick={() =>
-                          setTradeLicenseVerification.mutate({
-                            userId: profile.userId,
-                            status: "rejected",
-                            rejectionReason: "Licence document was unclear, expired, or did not match the profile.",
-                          })
-                        }
-                        disabled={setTradeLicenseVerification.isPending}
-                      >
-                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Reject
-                      </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                          onClick={() =>
+                            setTradeLicenseVerification.mutate({
+                              userId: profile.userId,
+                              status: "rejected",
+                              rejectionReason:
+                                tradeLicenseRejectReasons[profile.userId]?.trim() ||
+                                "Licence document was unclear, expired, or did not match the profile.",
+                            })
+                          }
+                          disabled={setTradeLicenseVerification.isPending}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                          Reject Licence
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1180,8 +1235,22 @@ export default function AdminPanel() {
                         )}
                       </div>
 
-                      <div className="flex gap-2 flex-wrap">
-                        {profile.insuranceCertUrl && (
+                      <div className="space-y-3">
+                        <Textarea
+                          placeholder="Reject reason, shown to handyman if rejected..."
+                          value={insuranceRejectReasons[profile.userId] ?? ""}
+                          onChange={(e) =>
+                            setInsuranceRejectReasons((prev) => ({
+                              ...prev,
+                              [profile.userId]: e.target.value,
+                            }))
+                          }
+                          rows={2}
+                          className="resize-none min-w-[260px]"
+                        />
+
+                        <div className="flex gap-2 flex-wrap">
+                          {profile.insuranceCertUrl && (
                           <Button asChild variant="outline" size="sm">
                             <a href={profile.insuranceCertUrl} target="_blank" rel="noreferrer">
                               <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
@@ -1190,20 +1259,40 @@ export default function AdminPanel() {
                           </Button>
                         )}
 
-                        <Button
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700"
-                          onClick={() =>
-                            setInsuranceVerification.mutate({
-                              userId: profile.userId,
-                              insuranceVerified: true,
-                            })
-                          }
-                          disabled={setInsuranceVerification.isPending}
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                          Approve
-                        </Button>
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() =>
+                              setInsuranceVerification.mutate({
+                                userId: profile.userId,
+                                insuranceVerified: true,
+                              })
+                            }
+                            disabled={setInsuranceVerification.isPending}
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                            Approve
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                            onClick={() =>
+                              setInsuranceVerification.mutate({
+                                userId: profile.userId,
+                                insuranceVerified: false,
+                                rejectionReason:
+                                  insuranceRejectReasons[profile.userId]?.trim() ||
+                                  "Insurance document was unclear, expired, or did not match the profile.",
+                              } as any)
+                            }
+                            disabled={setInsuranceVerification.isPending}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                            Reject Insurance
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

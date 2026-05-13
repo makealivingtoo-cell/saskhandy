@@ -2229,12 +2229,27 @@ const adminRouter = router({
       z.object({
         userId: z.number(),
         insuranceVerified: z.boolean(),
+        rejectionReason: z.string().max(1000).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
 
       await setHandymanInsuranceVerification(input.userId, input.insuranceVerified);
+
+      await notifyUser({
+        userId: input.userId,
+        type: "system",
+        title: input.insuranceVerified ? "Insurance approved" : "Insurance review update",
+        message: input.insuranceVerified
+          ? "Your insurance document has been approved and can now appear as verified on your SaskHandy profile."
+          : `Your insurance document was not approved. ${
+              input.rejectionReason?.trim() ||
+              "Please upload a clearer or updated document from your profile page."
+            }`,
+        link: "/handyman/profile",
+      });
+
       return { success: true };
     }),
 
@@ -2254,6 +2269,22 @@ const adminRouter = router({
         reviewedBy: ctx.user.id,
         rejectionReason: input.rejectionReason?.trim() || null,
       });
+
+      if (input.status === "approved" || input.status === "rejected") {
+        await notifyUser({
+          userId: input.userId,
+          type: "system",
+          title: input.status === "approved" ? "ID name matched" : "ID verification update",
+          message:
+            input.status === "approved"
+              ? "Your ID name match has been approved and can now appear on your SaskHandy profile."
+              : `Your ID verification was not approved. ${
+                  input.rejectionReason?.trim() ||
+                  "Please upload a clearer document that matches your profile name."
+                }`,
+          link: "/handyman/profile",
+        });
+      }
 
       return { success: true };
     }),
@@ -2277,6 +2308,25 @@ const adminRouter = router({
         notes: input.notes?.trim() || null,
       });
 
+      if (input.status === "reviewed" || input.status === "rejected") {
+        await notifyUser({
+          userId: input.userId,
+          type: "system",
+          title:
+            input.status === "reviewed"
+              ? "Criminal record check reviewed"
+              : "Criminal record check update",
+          message:
+            input.status === "reviewed"
+              ? "Your criminal record check document has been reviewed and can now appear on your SaskHandy profile."
+              : `Your criminal record check document was not approved. ${
+                  input.notes?.trim() ||
+                  "Please upload a clearer or updated document from your profile page."
+                }`,
+          link: "/handyman/profile",
+        });
+      }
+
       return { success: true };
     }),
 
@@ -2298,6 +2348,22 @@ const adminRouter = router({
         rejectionReason: input.rejectionReason?.trim() || null,
         notes: input.notes?.trim() || null,
       });
+
+      if (input.status === "approved" || input.status === "rejected") {
+        await notifyUser({
+          userId: input.userId,
+          type: "system",
+          title: input.status === "approved" ? "Trade licence verified" : "Trade licence update",
+          message:
+            input.status === "approved"
+              ? "Your trade licence has been verified and can now appear on your SaskHandy profile."
+              : `Your trade licence was not approved. ${
+                  input.rejectionReason?.trim() ||
+                  "Please upload a clearer, valid, or matching licence document from your profile page."
+                }`,
+          link: "/handyman/profile",
+        });
+      }
 
       return { success: true };
     }),
