@@ -150,7 +150,7 @@ function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: bo
       </div>
 
       {bio && (
-        <p className={`text-muted-foreground leading-relaxed ${compact ? "text-xs line-clamp-2" : "text-sm"}`}>
+        <p className={`text-muted-foreground leading-relaxed ${compact ? "text-xs line-clamp-1" : "text-sm"}`}>
           {bio}
         </p>
       )}
@@ -246,7 +246,7 @@ function BidChatDrawer({
 
       <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto">
-          <div className="border-b border-border/60 px-5 py-4">
+          <div className="border-b border-border/60 px-4 py-3">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
               <HandymanAvatar
@@ -291,7 +291,7 @@ function BidChatDrawer({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-b border-border/60 bg-muted/20">
+        <div className="px-4 py-3 border-b border-border/60 bg-muted/20">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Bid amount</p>
@@ -320,29 +320,26 @@ function BidChatDrawer({
             </div>
           )}
 
-          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
             <div className="flex items-start gap-2">
               <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-foreground">What happens next?</p>
-                <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs leading-relaxed text-muted-foreground">
-                  <li>Choose the handyman you want to work with.</li>
-                  <li>Review secure payment on the next step.</li>
-                  <li>Chat and coordinate the job through SaskHandy.</li>
-                  <li>Payment is only released after you mark the work complete.</li>
-                </ol>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Choose a handyman, review secure payment, then chat and coordinate the job.
+                  Payment is released only after you mark the job complete.
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
             <p className="text-xs leading-relaxed text-amber-800">
-              Only choose a handyman when you feel comfortable. Not sure yet? Message the handyman
-              first to ask about their experience, availability, and past work.
+              Not sure yet? Message the handyman first.
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 mt-4">
+          <div className="flex flex-col gap-1.5 mt-3">
             <Button onClick={() => onAccept(bid)} disabled={acceptPending}>
               {acceptPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -352,7 +349,7 @@ function BidChatDrawer({
               Choose This Handyman
             </Button>
 
-            <p className="text-center text-xs text-muted-foreground">
+            <p className="text-center text-[11px] text-muted-foreground">
               You’ll review secure payment on the next step.
             </p>
 
@@ -381,16 +378,14 @@ function BidChatDrawer({
             </Button>
           </div>
 
-          <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+          <div className="mt-2 flex items-start gap-2 text-[11px] text-muted-foreground">
             <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-            <p>
-              Payment is held securely and released only after you mark the job as completed.
-            </p>
+            <p>Payment is held securely until you mark the job complete.</p>
           </div>
           </div>
         </div>
 
-        <div className="h-[52vh] min-h-[430px] max-h-[520px] p-3 bg-muted/30 border-t border-border/60 shrink-0">
+        <div className="h-[320px] min-h-[300px] max-h-[340px] p-2.5 bg-muted/30 border-t border-border/60 shrink-0">
           <JobChat
             jobId={jobId}
             bidId={bid.id}

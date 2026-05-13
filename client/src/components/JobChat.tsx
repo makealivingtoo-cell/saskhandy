@@ -90,20 +90,20 @@ export function JobChat({
         className
       )}
     >
-      <div className="px-5 py-4 border-b border-border/40 shrink-0">
-        <h3 className="font-semibold text-foreground">{title}</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
+      <div className={cn("border-b border-border/40 shrink-0", compact ? "px-4 py-2.5" : "px-5 py-4")}>
+        <h3 className={cn("font-semibold text-foreground", compact ? "text-sm" : "text-base")}>{title}</h3>
+        <p className={cn("text-muted-foreground mt-0.5", compact ? "text-[11px] line-clamp-1" : "text-xs")}>
           {description ?? `Message ${otherPartyLabel} about this job.`}
         </p>
       </div>
 
       {messagesQuery.isLoading ? (
-        <div className="flex items-center justify-center py-8 flex-1 min-h-0">
+        <div className={cn("flex items-center justify-center flex-1 min-h-0", compact ? "py-4" : "py-8")}>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : groupedMessages.length === 0 ? (
-        <div className="px-6 py-6 text-center flex-1 min-h-0 flex flex-col items-center justify-center">
-          <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+        <div className={cn("text-center flex-1 min-h-0 flex flex-col items-center justify-center", compact ? "px-4 py-4" : "px-6 py-6")}>
+          <MessageSquare className={cn("text-muted-foreground mx-auto mb-2", compact ? "w-6 h-6" : "w-8 h-8")} />
           <p className="text-sm font-medium text-foreground">No messages yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Start the conversation with {otherPartyLabel}.
@@ -112,8 +112,8 @@ export function JobChat({
       ) : (
         <div
           className={cn(
-            "overflow-y-auto px-4 py-4 space-y-3 bg-muted/20 flex-1",
-            compact ? "min-h-0" : "max-h-[420px]"
+            "overflow-y-auto bg-muted/20 flex-1",
+            compact ? "min-h-0 px-3 py-3 space-y-2" : "max-h-[420px] px-4 py-4 space-y-3"
           )}
         >
           {groupedMessages.map((msg) => {
@@ -158,27 +158,23 @@ export function JobChat({
         </div>
       )}
 
-      <div className="border-t border-border/40 p-4 shrink-0">
-        <div
-          className={cn(
-            "mb-3 flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3",
-            compact ? "py-1.5" : "py-2"
-          )}
-        >
-          <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            {compact
-              ? "Keep messages and payment communication on SaskHandy for safety and protection."
-              : "Keep messages, contact details, and payment communication on SaskHandy for safety, payment protection, and dispute support."}
-          </p>
-        </div>
+      <div className={cn("border-t border-border/40 shrink-0", compact ? "p-2.5" : "p-4")}>
+        {!compact && (
+          <div className="mb-3 flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2">
+            <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Keep messages, contact details, and payment communication on SaskHandy for safety,
+              payment protection, and dispute support.
+            </p>
+          </div>
+        )}
 
-        <div className="space-y-3">
+        <div className={cn(compact ? "space-y-2" : "space-y-3")}>
           <Textarea
             placeholder={`Write a message to ${otherPartyLabel}...`}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            rows={compact ? 2 : 3}
+            rows={compact ? 1 : 3}
             className="resize-none"
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -189,9 +185,11 @@ export function JobChat({
           />
 
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] text-muted-foreground">Press Ctrl + Enter to send</p>
+            <p className="text-[11px] text-muted-foreground">
+              {compact ? "Stay on SaskHandy for safety" : "Press Ctrl + Enter to send"}
+            </p>
 
-            <Button onClick={handleSend} disabled={sendMessage.isPending || !message.trim()}>
+            <Button size={compact ? "sm" : "default"} onClick={handleSend} disabled={sendMessage.isPending || !message.trim()}>
               {sendMessage.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
