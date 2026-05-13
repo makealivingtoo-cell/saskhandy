@@ -3,9 +3,18 @@ import { StarRatingDisplay } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
-import { AlertTriangle, Briefcase, CheckCircle, Flag, Loader2, MessageSquare, Shield, Star, User } from "lucide-react";
+import {
+  AlertTriangle,
+  Briefcase,
+  Flag,
+  Loader2,
+  MessageSquare,
+  Shield,
+  Star,
+  User,
+} from "lucide-react";
 import { useMemo } from "react";
-import { Link, useParams } from "wouter";
+import { useParams } from "wouter";
 import { toast } from "sonner";
 
 function ProfileAvatar({
@@ -77,7 +86,10 @@ export default function PublicProfile() {
     { enabled: uid > 0 }
   );
 
-  const categories = useMemo<string[]>(() => parseCategories(profile?.categories), [profile?.categories]);
+  const categories = useMemo<string[]>(
+    () => parseCategories(profile?.categories),
+    [profile?.categories]
+  );
 
   const bidReadyCompletion = useMemo(() => {
     if (!profile) return 0;
@@ -150,23 +162,7 @@ export default function PublicProfile() {
                   </span>
                 )}
 
-                {identityChecked && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-2">
-                <Shield className="w-4 h-4 text-blue-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-blue-800">Identity checked</p>
-                  <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                    This means the handyman’s profile name has been matched to identification. It
-                    does not replace your own judgment. You can message the handyman before choosing
-                    and should only move forward when you feel comfortable.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {profile.insuranceVerified && (
+                {profile.insuranceVerified && (
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
                     Insurance verified
@@ -327,7 +323,6 @@ export default function PublicProfile() {
               </div>
             </div>
           )}
-        </div>
 
           <div className="mt-5 pt-5 border-t border-border/40">
             <Button
