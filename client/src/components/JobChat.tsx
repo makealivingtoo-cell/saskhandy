@@ -86,7 +86,7 @@ export function JobChat({
     <div
       className={cn(
         "bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden",
-        compact ? "h-full flex flex-col" : "mt-6",
+        compact ? "h-full min-h-0 flex flex-col" : "mt-6",
         className
       )}
     >
@@ -98,11 +98,11 @@ export function JobChat({
       </div>
 
       {messagesQuery.isLoading ? (
-        <div className="flex items-center justify-center py-16 flex-1">
+        <div className="flex items-center justify-center py-16 flex-1 min-h-[180px]">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : groupedMessages.length === 0 ? (
-        <div className="px-6 py-12 text-center flex-1 flex flex-col items-center justify-center">
+        <div className="px-6 py-12 text-center flex-1 min-h-[180px] flex flex-col items-center justify-center">
           <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm font-medium text-foreground">No messages yet</p>
           <p className="text-xs text-muted-foreground mt-1">

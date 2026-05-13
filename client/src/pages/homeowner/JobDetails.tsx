@@ -244,8 +244,9 @@ function BidChatDrawer({
         onClick={onClose}
       />
 
-      <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl flex flex-col">
-        <div className="border-b border-border/60 px-5 py-4 shrink-0">
+      <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="border-b border-border/60 px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
               <HandymanAvatar
@@ -290,7 +291,7 @@ function BidChatDrawer({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-b border-border/60 bg-muted/20 shrink-0">
+        <div className="px-5 py-4 border-b border-border/60 bg-muted/20">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Bid amount</p>
@@ -386,9 +387,10 @@ function BidChatDrawer({
               Payment is held securely and released only after you mark the job as completed.
             </p>
           </div>
+          </div>
         </div>
 
-        <div className="flex-1 min-h-0 p-4 bg-muted/30">
+        <div className="h-[44vh] min-h-[360px] p-4 bg-muted/30 border-t border-border/60 shrink-0">
           <JobChat
             jobId={jobId}
             bidId={bid.id}
@@ -396,7 +398,7 @@ function BidChatDrawer({
             title="Bid Chat"
             description={`Message ${bid.handymanName ?? "this handyman"} before choosing. Ask about experience, availability, and what they need for the job.`}
             compact
-            className="h-full mt-0"
+            className="h-full min-h-0 mt-0"
           />
         </div>
       </div>
