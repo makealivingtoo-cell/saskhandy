@@ -797,6 +797,226 @@ export default function HandymanProfile() {
             </div>
           </div>
 
+          <div className="grid gap-4 mt-4">
+            <div
+              className={cn(
+                "rounded-xl p-4 border",
+                identityState === "approved"
+                  ? "bg-blue-50 border-blue-200"
+                  : identityState === "pending"
+                  ? "bg-amber-50 border-amber-200"
+                  : identityState === "rejected"
+                  ? "bg-red-50 border-red-200"
+                  : "bg-muted/40 border-border/60"
+              )}
+            >
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">ID Name Match</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Upload government ID so SaskHandy can confirm your profile name matches your ID.
+                    This can show homeowners an “ID Name Matched” badge after admin approval.
+                  </p>
+
+                  {profile?.identityDocumentUrl && (
+                    <a
+                      href={profile.identityDocumentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:underline"
+                    >
+                      View uploaded ID
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+
+                  <p className="text-xs font-medium mt-2 capitalize">
+                    Status: {identityState.replaceAll("_", " ")}
+                  </p>
+                </div>
+
+                <div className="shrink-0">
+                  <input
+                    ref={identityFileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={handleIdentityUpload}
+                  />
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={openIdentityFilePicker}
+                    disabled={uploadingIdentity || updateProfile.isPending}
+                  >
+                    {uploadingIdentity ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    {profile?.identityDocumentUrl ? "Replace ID" : "Upload ID"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                "rounded-xl p-4 border",
+                criminalState === "reviewed"
+                  ? "bg-purple-50 border-purple-200"
+                  : criminalState === "pending"
+                  ? "bg-amber-50 border-amber-200"
+                  : criminalState === "rejected"
+                  ? "bg-red-50 border-red-200"
+                  : "bg-muted/40 border-border/60"
+              )}
+            >
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    Criminal Record Check Review
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Upload an official criminal record check document for SaskHandy admin review.
+                    We only show “Criminal Check Reviewed” after the document is reviewed.
+                  </p>
+
+                  {profile?.criminalRecordCheckUrl && (
+                    <a
+                      href={profile.criminalRecordCheckUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:underline"
+                    >
+                      View uploaded check
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+
+                  <p className="text-xs font-medium mt-2 capitalize">
+                    Status: {criminalState.replaceAll("_", " ")}
+                  </p>
+                </div>
+
+                <div className="shrink-0">
+                  <input
+                    ref={criminalRecordFileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={handleCriminalRecordUpload}
+                  />
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={openCriminalRecordFilePicker}
+                    disabled={uploadingCriminalRecord || updateProfile.isPending}
+                  >
+                    {uploadingCriminalRecord ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    {profile?.criminalRecordCheckUrl ? "Replace Check" : "Upload Check"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                "rounded-xl p-4 border",
+                tradeLicenseState === "approved"
+                  ? "bg-sky-50 border-sky-200"
+                  : tradeLicenseState === "pending"
+                  ? "bg-amber-50 border-amber-200"
+                  : tradeLicenseState === "rejected"
+                  ? "bg-red-50 border-red-200"
+                  : "bg-muted/40 border-border/60"
+              )}
+            >
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">Trade Licence Verification</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Optional for general handyman work. Use this if you have a trade-specific
+                      licence, such as electrical, gas, plumbing, or another regulated service.
+                    </p>
+
+                    {profile?.tradeLicenseDocumentUrl && (
+                      <a
+                        href={profile.tradeLicenseDocumentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:underline"
+                      >
+                        View uploaded licence
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+
+                    <p className="text-xs font-medium mt-2 capitalize">
+                      Status: {tradeLicenseState.replaceAll("_", " ")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tradeLicenseType">Licence Type</Label>
+                    <Input
+                      id="tradeLicenseType"
+                      placeholder="e.g., Electrical contractor"
+                      value={tradeLicenseType}
+                      onChange={(e) => setTradeLicenseType(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tradeLicenseNumber">Licence Number</Label>
+                    <Input
+                      id="tradeLicenseNumber"
+                      placeholder="Optional"
+                      value={tradeLicenseNumber}
+                      onChange={(e) => setTradeLicenseNumber(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <input
+                    ref={tradeLicenseFileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={handleTradeLicenseUpload}
+                  />
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={openTradeLicenseFilePicker}
+                    disabled={uploadingTradeLicense || updateProfile.isPending}
+                  >
+                    {uploadingTradeLicense ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    {profile?.tradeLicenseDocumentUrl ? "Replace Licence" : "Upload Licence"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="rounded-xl p-4 mt-4 bg-primary/5 border border-primary/20">
             <p className="text-sm font-medium text-primary">Manual payouts</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
