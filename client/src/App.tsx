@@ -23,6 +23,18 @@ import MooseJawHandymanServicesPage from "./pages/MooseJawHandymanServices";
 import PrinceAlbertHandymanServicesPage from "./pages/PrinceAlbertHandymanServices";
 import WarmanHandymanServicesPage from "./pages/WarmanHandymanServices";
 import MartensvilleHandymanServicesPage from "./pages/MartensvilleHandymanServices";
+import {
+  BestTvWallMountSaskatoonPage,
+  DiyVsProfessionalDoorbellInstallationSaskatoonPage,
+  DoorbellSecuritySaskatoonPage,
+  LocalSeoSaskatoonServicesPage,
+  ProfessionalTvMountingSaskatoonPage,
+  RingDoorbellInstallationSaskatoonPage,
+  SmartDoorbellInstallationSaskatoonPage,
+  SmartHomeDoorbellIntegrationSaskatoonPage,
+  TvInstallationServiceSaskatoonPage,
+  TvMountingSaskatoonPage,
+} from "./pages/SaskatoonSeoPages";
 import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
 import SignIn from "./pages/SignIn";
@@ -78,6 +90,18 @@ function Router() {
       <Route path="/prince-albert-handyman-services" component={PrinceAlbertHandymanServicesPage} />
       <Route path="/warman-handyman-services" component={WarmanHandymanServicesPage} />
       <Route path="/martensville-handyman-services" component={MartensvilleHandymanServicesPage} />
+
+      {/* Saskatoon SEO pages */}
+      <Route path="/tv-mounting-saskatoon" component={TvMountingSaskatoonPage} />
+      <Route path="/professional-tv-mounting-saskatoon" component={ProfessionalTvMountingSaskatoonPage} />
+      <Route path="/tv-installation-service-saskatoon" component={TvInstallationServiceSaskatoonPage} />
+      <Route path="/best-tv-wall-mount-saskatoon" component={BestTvWallMountSaskatoonPage} />
+      <Route path="/ring-doorbell-installation-saskatoon" component={RingDoorbellInstallationSaskatoonPage} />
+      <Route path="/smart-doorbell-installation-saskatoon" component={SmartDoorbellInstallationSaskatoonPage} />
+      <Route path="/smart-home-doorbell-integration-saskatoon" component={SmartHomeDoorbellIntegrationSaskatoonPage} />
+      <Route path="/home-security-doorbell-installation-saskatoon" component={DoorbellSecuritySaskatoonPage} />
+      <Route path="/diy-vs-professional-doorbell-installation-saskatoon" component={DiyVsProfessionalDoorbellInstallationSaskatoonPage} />
+      <Route path="/local-seo-tv-mounting-doorbell-installation-saskatoon" component={LocalSeoSaskatoonServicesPage} />
 
       <Route path="/sign-in" component={SignIn} />
       <Route path="/sign-up" component={SignUp} />
