@@ -14,6 +14,7 @@ import {
   payments,
   payoutRequests,
   reviews,
+  reports,
   supportTicketMessages,
   supportTickets,
   users,
@@ -26,6 +27,7 @@ import {
   type InsertPasswordResetToken,
   type InsertPayment,
   type InsertPayoutRequest,
+  type InsertReport,
   type InsertReview,
   type InsertUser,
 } from "../drizzle/schema";
@@ -417,6 +419,17 @@ export async function getHandymanProfilesForAdmin() {
       insuranceVerified: handymanProfiles.insuranceVerified,
       insuranceCertUrl: handymanProfiles.insuranceCertUrl,
       profileImageUrl: handymanProfiles.profileImageUrl,
+      identityVerificationStatus: handymanProfiles.identityVerificationStatus,
+      identityDocumentUrl: handymanProfiles.identityDocumentUrl,
+      identityReviewedAt: handymanProfiles.identityReviewedAt,
+      identityReviewedBy: handymanProfiles.identityReviewedBy,
+      identityRejectionReason: handymanProfiles.identityRejectionReason,
+      criminalRecordCheckStatus: handymanProfiles.criminalRecordCheckStatus,
+      criminalRecordCheckUrl: handymanProfiles.criminalRecordCheckUrl,
+      criminalRecordCheckReviewedAt: handymanProfiles.criminalRecordCheckReviewedAt,
+      criminalRecordCheckReviewedBy: handymanProfiles.criminalRecordCheckReviewedBy,
+      criminalRecordCheckExpiresAt: handymanProfiles.criminalRecordCheckExpiresAt,
+      criminalRecordCheckNotes: handymanProfiles.criminalRecordCheckNotes,
       stripeAccountId: handymanProfiles.stripeAccountId,
       stripeChargesEnabled: handymanProfiles.stripeChargesEnabled,
       stripePayoutsEnabled: handymanProfiles.stripePayoutsEnabled,
@@ -441,6 +454,60 @@ export async function setHandymanInsuranceVerification(userId: number, insurance
       insuranceVerified,
       updatedAt: new Date(),
     })
+    .where(eq(handymanProfiles.userId, userId));
+}
+
+export async function setHandymanIdentityVerification(
+  userId: number,
+  data: {
+    status: "not_submitted" | "pending" | "approved" | "rejected";
+    reviewedBy?: number | null;
+    rejectionReason?: string | null;
+  }
+) {
+  const db = await getDb();
+
+  await db
+    .update(handymanProfiles)
+    .set({
+      identityVerificationStatus: data.status,
+      identityReviewedAt:
+        data.status === "approved" || data.status === "rejected" ? new Date() : null,
+      identityReviewedBy:
+        data.status === "approved" || data.status === "rejected"
+          ? data.reviewedBy ?? null
+          : null,
+      identityRejectionReason: data.status === "rejected" ? data.rejectionReason ?? null : null,
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(handymanProfiles.userId, userId));
+}
+
+export async function setHandymanCriminalRecordCheckStatus(
+  userId: number,
+  data: {
+    status: "not_submitted" | "pending" | "reviewed" | "rejected" | "expired";
+    reviewedBy?: number | null;
+    expiresAt?: Date | null;
+    notes?: string | null;
+  }
+) {
+  const db = await getDb();
+
+  await db
+    .update(handymanProfiles)
+    .set({
+      criminalRecordCheckStatus: data.status,
+      criminalRecordCheckReviewedAt:
+        data.status === "reviewed" || data.status === "rejected" ? new Date() : null,
+      criminalRecordCheckReviewedBy:
+        data.status === "reviewed" || data.status === "rejected"
+          ? data.reviewedBy ?? null
+          : null,
+      criminalRecordCheckExpiresAt: data.expiresAt ?? null,
+      criminalRecordCheckNotes: data.notes ?? null,
+      updatedAt: new Date(),
+    } as any)
     .where(eq(handymanProfiles.userId, userId));
 }
 
@@ -598,6 +665,82 @@ export async function updateJobStatus(
   await db.update(jobs).set(updateData).where(eq(jobs.id, jobId));
 }
 
+export async function cancelJobWithReason(
+  jobId: number,
+  data: {
+    reason: string;
+    details?: string | null;
+  }
+) {
+  const db = await getDb();
+
+  await db
+    .update(jobs)
+    .set({
+      status: "cancelled",
+      cancelReason: data.reason,
+      cancelDetails: data.details ?? null,
+      cancelledAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(jobs.id, jobId));
+}
+
+export async function markBidReminderSent(jobId: number) {
+  const db = await getDb();
+
+  await db
+    .update(jobs)
+    .set({
+      bidReminderSentAt: new Date(),
+      lastBidReminderCheckedAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(jobs.id, jobId));
+}
+
+export async function markBidReminderChecked(jobId: number) {
+  const db = await getDb();
+
+  await db
+    .update(jobs)
+    .set({
+      lastBidReminderCheckedAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(jobs.id, jobId));
+}
+
+export async function getOpenJobsWithPendingBidsForReminder() {
+  const db = await getDb();
+
+  const openJobs = await db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.status, "open"), isNull(jobs.selectedBidId), isNull(jobs.bidReminderSentAt)))
+    .orderBy(desc(jobs.updatedAt));
+
+  const jobsWithBids = [];
+
+  for (const job of openJobs) {
+    const pendingBids = await db
+      .select()
+      .from(bids)
+      .where(and(eq(bids.jobId, job.id), eq(bids.status, "pending")))
+      .orderBy(desc(bids.createdAt));
+
+    if (pendingBids.length > 0) {
+      jobsWithBids.push({
+        ...normalizeJob(job),
+        pendingBids,
+        latestBidAt: pendingBids[0]?.createdAt ?? null,
+      });
+    }
+  }
+
+  return jobsWithBids;
+}
+
 export async function deleteJobById(jobId: number) {
   const db = await getDb();
   await db.delete(jobs).where(eq(jobs.id, jobId));
@@ -624,6 +767,7 @@ export async function adminDeleteJobById(jobId: number) {
   await db.delete(bids).where(eq(bids.jobId, jobId));
   await db.delete(reviews).where(eq(reviews.jobId, jobId));
   await db.delete(disputes).where(eq(disputes.jobId, jobId));
+  await db.delete(reports).where(eq(reports.jobId, jobId));
   await db.delete(payments).where(eq(payments.jobId, jobId));
   await db.delete(notifications).where(eq(notifications.link, `/jobs/${jobId}`));
   await db.delete(jobs).where(eq(jobs.id, jobId));
@@ -918,6 +1062,49 @@ export async function resolveDispute(
       updatedAt: new Date(),
     })
     .where(eq(disputes.id, disputeId));
+}
+
+// ─── Reports / Safety Flags ───────────────────────────────────────────────────
+export async function createReport(data: InsertReport) {
+  const db = await getDb();
+  const result = await db.insert(reports).values(data);
+  return Number((result as any).insertId);
+}
+
+export async function getAllReports() {
+  const db = await getDb();
+  return db.select().from(reports).orderBy(desc(reports.createdAt));
+}
+
+export async function getReportsForUser(userId: number) {
+  const db = await getDb();
+
+  return db
+    .select()
+    .from(reports)
+    .where(eq(reports.reportedUserId, userId))
+    .orderBy(desc(reports.createdAt));
+}
+
+export async function updateReportStatus(
+  reportId: number,
+  data: {
+    status: "open" | "reviewing" | "resolved" | "dismissed";
+    adminNotes?: string | null;
+  }
+) {
+  const db = await getDb();
+
+  await db
+    .update(reports)
+    .set({
+      status: data.status,
+      adminNotes: data.adminNotes ?? null,
+      resolvedAt:
+        data.status === "resolved" || data.status === "dismissed" ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(reports.id, reportId));
 }
 
 export { supportTickets, supportTicketMessages };

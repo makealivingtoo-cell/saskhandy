@@ -28,34 +28,51 @@ const bioTips = [
   "Keep it friendly, clear, and professional.",
 ];
 
-function getProfileItems({
+function getBidReadyItems({
+  fullName,
   bio,
   selectedCategories,
-  hourlyRate,
-  insuranceCertUrl,
-  insuranceVerified,
   profileImageUrl,
 }: {
+  fullName?: string | null;
   bio: string;
   selectedCategories: string[];
-  hourlyRate: string;
-  insuranceCertUrl?: string | null;
-  insuranceVerified?: boolean | null;
   profileImageUrl?: string | null;
 }) {
   return [
     {
-      label: "Profile photo",
-      completed: Boolean(profileImageUrl),
+      label: "Full name",
+      completed: Boolean(fullName && fullName.trim().length >= 2),
+      required: true,
     },
     {
-      label: "Bio",
-      completed: Boolean(bio.trim()),
+      label: "Profile photo",
+      completed: Boolean(profileImageUrl),
+      required: true,
+    },
+    {
+      label: "Short bio",
+      completed: bio.trim().length >= 25,
+      required: true,
     },
     {
       label: "Skills",
       completed: selectedCategories.length > 0,
+      required: true,
     },
+  ];
+}
+
+function getOptionalTrustItems({
+  hourlyRate,
+  insuranceCertUrl,
+  insuranceVerified,
+}: {
+  hourlyRate: string;
+  insuranceCertUrl?: string | null;
+  insuranceVerified?: boolean | null;
+}) {
+  return [
     {
       label: "Hourly rate",
       completed: Boolean(hourlyRate.trim()),
@@ -130,30 +147,34 @@ export default function HandymanProfile() {
     }
   }, [profile]);
 
-  const profileItems = useMemo(
+  const bidReadyItems = useMemo(
     () =>
-      getProfileItems({
+      getBidReadyItems({
+        fullName: user?.name,
         bio,
         selectedCategories,
+        profileImageUrl: profile?.profileImageUrl,
+      }),
+    [user?.name, bio, selectedCategories, profile?.profileImageUrl]
+  );
+
+  const optionalTrustItems = useMemo(
+    () =>
+      getOptionalTrustItems({
         hourlyRate,
         insuranceCertUrl: profile?.insuranceCertUrl,
         insuranceVerified: profile?.insuranceVerified,
-        profileImageUrl: profile?.profileImageUrl,
       }),
-    [
-      bio,
-      selectedCategories,
-      hourlyRate,
-      profile?.insuranceCertUrl,
-      profile?.insuranceVerified,
-      profile?.profileImageUrl,
-    ]
+    [hourlyRate, profile?.insuranceCertUrl, profile?.insuranceVerified]
   );
 
-  const profileCompletion = useMemo(() => {
-    const completedItems = profileItems.filter((item) => item.completed).length;
-    return Math.round((completedItems / profileItems.length) * 100);
-  }, [profileItems]);
+  const bidReadyCompletion = useMemo(() => {
+    const completedItems = bidReadyItems.filter((item) => item.completed).length;
+    return Math.round((completedItems / bidReadyItems.length) * 100);
+  }, [bidReadyItems]);
+
+  const isBidReady = bidReadyItems.every((item) => item.completed);
+  const missingBidReadyItems = bidReadyItems.filter((item) => !item.completed);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
@@ -349,7 +370,9 @@ export default function HandymanProfile() {
               </div>
 
               <div>
-                <h2 className="font-semibold text-foreground text-lg">{user?.name}</h2>
+                <h2 className="font-semibold text-foreground text-lg">
+                  {user?.name || "Add your full name"}
+                </h2>
 
                 <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                   {profile?.rating && parseFloat(profile.rating) > 0 ? (
@@ -383,28 +406,39 @@ export default function HandymanProfile() {
             </div>
 
             <div className="text-left sm:text-right">
-              <p className="text-xs text-muted-foreground">Profile completion</p>
-              <p className="text-2xl font-bold text-foreground">{profileCompletion}%</p>
+              <p className="text-xs text-muted-foreground">Bid-ready profile</p>
+              <p className="text-2xl font-bold text-foreground">{bidReadyCompletion}%</p>
+              <p
+                className={cn(
+                  "mt-1 text-xs font-medium",
+                  isBidReady ? "text-emerald-700" : "text-amber-700"
+                )}
+              >
+                {isBidReady ? "Ready to send bids" : "Required before bidding"}
+              </p>
             </div>
           </div>
 
           <div className="mb-5">
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-primary rounded-full transition-all"
-                style={{ width: `${profileCompletion}%` }}
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  isBidReady ? "bg-emerald-600" : "bg-amber-500"
+                )}
+                style={{ width: `${bidReadyCompletion}%` }}
               />
             </div>
 
             <div className="flex flex-wrap gap-2 mt-3">
-              {profileItems.map((item) => (
+              {bidReadyItems.map((item) => (
                 <span
                   key={item.label}
                   className={cn(
                     "text-xs px-3 py-1 rounded-full border",
                     item.completed
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-muted text-muted-foreground border-border/60"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
                   )}
                 >
                   {item.completed ? "✓ " : ""}
@@ -412,7 +446,43 @@ export default function HandymanProfile() {
                 </span>
               ))}
             </div>
+
+            {optionalTrustItems.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {optionalTrustItems.map((item) => (
+                  <span
+                    key={item.label}
+                    className={cn(
+                      "text-xs px-3 py-1 rounded-full border",
+                      item.completed
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : "bg-muted text-muted-foreground border-border/60"
+                    )}
+                  >
+                    {item.completed ? "✓ " : ""}
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
+
+          {!isBidReady && (
+            <div className="rounded-xl p-4 bg-amber-50 border border-amber-200 mb-4">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900">
+                    Complete your bid-ready profile
+                  </p>
+                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                    To protect homeowner trust, you need a complete profile before sending bids.
+                    Missing: {missingBidReadyItems.map((item) => item.label.toLowerCase()).join(", ")}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="rounded-xl p-4 bg-primary/5 border border-primary/20 mb-4">
             <div className="flex items-start gap-2">
@@ -422,9 +492,9 @@ export default function HandymanProfile() {
                   How homeowners use your profile
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  When you bid on a job, homeowners can look at your photo, skills, rating, job
-                  history, insurance status, and message. A complete profile can make your bid feel
-                  safer and more professional.
+                  When you bid on a job, homeowners can look at your photo, full name, short bio,
+                  skills, rating, job history, insurance status, and message. A complete profile can
+                  make your bid feel safer and more professional.
                 </p>
               </div>
             </div>
@@ -536,6 +606,7 @@ export default function HandymanProfile() {
             <h3 className="font-semibold text-foreground">Edit Profile</h3>
             <p className="text-xs text-muted-foreground mt-1">
               These details help homeowners understand who they are hiring before accepting a bid.
+              Full name, profile photo, short bio, and skills are required before you can bid.
             </p>
           </div>
 
@@ -549,6 +620,15 @@ export default function HandymanProfile() {
               rows={5}
               className="resize-none"
             />
+
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <p className={cn(bio.trim().length >= 25 ? "text-emerald-700" : "text-amber-700")}>
+                {bio.trim().length >= 25
+                  ? "Bio is long enough for bidding."
+                  : "Write at least 25 characters before bidding."}
+              </p>
+              <p className="text-muted-foreground">{bio.trim().length}/25 minimum</p>
+            </div>
 
             <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
               <p className="text-xs font-medium text-foreground mb-2">Bio tips</p>
@@ -631,7 +711,7 @@ export default function HandymanProfile() {
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            Save Changes
+            Save Profile
           </Button>
         </div>
 

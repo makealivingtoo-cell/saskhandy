@@ -28,6 +28,7 @@ import { z } from "zod";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
   adminDeleteJobById,
+  cancelJobWithReason,
   createBid,
   createDispute,
   createEmailVerificationToken,
@@ -35,6 +36,7 @@ import {
   createJob,
   createLocalUser,
   createNotification,
+  createReport,
   createPasswordResetToken,
   createPayment,
   createPayoutRequest,
@@ -48,6 +50,7 @@ import {
   getAllHandymanProfiles,
   getAllJobsForAdmin,
   getAllPayoutRequests,
+  getAllReports,
   getAllUsers,
   getBidById,
   getBidsForHandyman,
@@ -78,7 +81,10 @@ import {
   recalculateHandymanRating,
   rejectOtherBids,
   resolveDispute,
+  setHandymanCriminalRecordCheckStatus,
+  setHandymanIdentityVerification,
   setHandymanInsuranceVerification,
+  updateReportStatus,
   updateBidStatus,
   updateHandymanProfile,
   updateJob,
@@ -119,6 +125,98 @@ const JOB_CATEGORIES = [
 
 const TERMS_VERSION = "2026-04-11";
 const PRIVACY_VERSION = "2026-04-11";
+
+const restrictedContactPattern =
+  /(\+?\d[\d\s().-]{7,}\d)|([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})|(whatsapp|text me|call me|phone number|phone #|email me|e-transfer|etransfer|cash only|pay cash|outside saskhandy)/i;
+
+function containsRestrictedContactInfo(value?: string | null) {
+  if (!value) return false;
+  return restrictedContactPattern.test(value);
+}
+
+function throwRestrictedContactError() {
+  throw new TRPCError({
+    code: "BAD_REQUEST",
+    message:
+      "Please keep contact details and payment communication inside SaskHandy for safety and payment protection.",
+  });
+}
+
+function parseProfileCategories(value?: string | null): string[] {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [];
+  } catch {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+}
+
+function isHandymanProfileComplete(params: {
+  userName?: string | null;
+  profile?: any | null;
+}) {
+  const profile = params.profile;
+  const categories = parseProfileCategories(profile?.categories);
+
+  const missingFields: string[] = [];
+
+  if (!params.userName || params.userName.trim().length < 2) {
+    missingFields.push("full name");
+  }
+
+  if (!profile?.profileImageUrl) {
+    missingFields.push("profile photo");
+  }
+
+  if (!profile?.bio || profile.bio.trim().length < 25) {
+    missingFields.push("short bio");
+  }
+
+  if (categories.length < 1) {
+    missingFields.push("skills");
+  }
+
+  return {
+    isComplete: missingFields.length === 0,
+    missingFields,
+    categories,
+  };
+}
+
+function getProfileIdentityChecked(profile: any | null | undefined) {
+  return (
+    profile?.identityChecked === true ||
+    profile?.idNameMatched === true ||
+    profile?.identityVerificationStatus === "approved" ||
+    profile?.idVerificationStatus === "approved"
+  );
+}
+
+function buildHandymanBidTrustFields(params: {
+  bid: any;
+  user: any | null;
+  profile: any | null;
+}) {
+  const categories = parseProfileCategories(params.profile?.categories);
+
+  return {
+    ...params.bid,
+    handymanName: params.user?.name,
+    handymanRating: params.profile?.rating,
+    handymanTotalJobs: params.profile?.totalJobs ?? 0,
+    handymanReviewCount: params.profile?.reviewCount ?? params.profile?.totalReviews ?? 0,
+    handymanInsuranceVerified: params.profile?.insuranceVerified ?? false,
+    handymanProfileImageUrl: params.profile?.profileImageUrl ?? null,
+    handymanBio: params.profile?.bio ?? null,
+    handymanSkills: categories,
+    handymanIdentityChecked: getProfileIdentityChecked(params.profile),
+  };
+}
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -639,20 +737,18 @@ const handymanProfilesRouter = router({
     return getHandymanProfile(ctx.user.id);
   }),
 
-  getById: publicProcedure
-    .input(z.object({ userId: z.number() }))
-    .query(async ({ input }) => {
-      const profile = await getHandymanProfile(input.userId);
-      const user = await safeGetUserById(input.userId);
+  getById: publicProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
+    const profile = await getHandymanProfile(input.userId);
+    const user = await safeGetUserById(input.userId);
 
-      if (!profile || !user) return null;
+    if (!profile || !user) return null;
 
-      return {
-        ...profile,
-        userName: user?.name,
-        userEmail: user?.email,
-      };
-    }),
+    return {
+      ...profile,
+      userName: user?.name,
+      userEmail: user?.email,
+    };
+  }),
 
   getAll: publicProcedure.query(async () => {
     return getAllHandymanProfiles();
@@ -746,12 +842,8 @@ const jobsRouter = router({
       const handymanProfiles = await getAllHandymanProfiles();
 
       const matchingProfiles = handymanProfiles.filter((profile) => {
-        try {
-          const categories = JSON.parse(profile.categories ?? "[]");
-          return Array.isArray(categories) && categories.includes(input.category);
-        } catch {
-          return false;
-        }
+        const categories = parseProfileCategories(profile.categories);
+        return categories.includes(input.category);
       });
 
       for (const profile of matchingProfiles) {
@@ -860,7 +952,23 @@ const jobsRouter = router({
     }),
 
   cancel: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
+    .input(
+      z.object({
+        jobId: z.number(),
+        reason: z
+          .enum([
+            "dont_trust_profile",
+            "bids_too_expensive",
+            "no_longer_needed",
+            "hired_outside_saskhandy",
+            "not_enough_bidder_info",
+            "timing_didnt_work",
+            "other",
+          ])
+          .optional(),
+        details: z.string().max(1000).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
@@ -880,7 +988,11 @@ const jobsRouter = router({
         });
       }
 
-      await updateJobStatus(input.jobId, "cancelled");
+      await cancelJobWithReason(input.jobId, {
+        reason: input.reason ?? "not_provided",
+        details: input.details?.trim() || null,
+      });
+
       return { success: true };
     }),
 
@@ -888,15 +1000,13 @@ const jobsRouter = router({
     return getJobsByHomeowner(ctx.user.id);
   }),
 
-  getById: publicProcedure
-    .input(z.object({ jobId: z.number() }))
-    .query(async ({ input }) => {
-      const job = await getJobById(input.jobId);
-      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+  getById: publicProcedure.input(z.object({ jobId: z.number() })).query(async ({ input }) => {
+    const job = await getJobById(input.jobId);
+    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const homeowner = await safeGetUserById(job.homeownerId);
-      return { ...job, homeownerName: homeowner?.name };
-    }),
+    const homeowner = await safeGetUserById(job.homeownerId);
+    return { ...job, homeownerName: homeowner?.name };
+  }),
 
   getOpen: publicProcedure
     .input(
@@ -994,6 +1104,28 @@ const bidsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open for bids" });
       }
 
+      const handymanProfile = await getHandymanProfile(ctx.user.id);
+      const profileStatus = isHandymanProfileComplete({
+        userName: ctx.user.name,
+        profile: handymanProfile,
+      });
+
+      if (!handymanProfile || !profileStatus.isComplete) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Complete your profile before sending bids. Missing: ${profileStatus.missingFields.join(
+            ", "
+          )}. Homeowners are more likely to choose handymen with a clear photo, short bio, and listed skills.`,
+        });
+      }
+
+      if (
+        containsRestrictedContactInfo(input.message) ||
+        containsRestrictedContactInfo(input.availability)
+      ) {
+        throwRestrictedContactError();
+      }
+
       const existingBids = await getBidsForJob(input.jobId);
       const alreadyBid = existingBids.find(
         (b) => b.handymanId === ctx.user.id && b.status === "pending"
@@ -1039,44 +1171,39 @@ const bidsRouter = router({
       return { bidId };
     }),
 
-  getForJob: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      const job = await getJobById(input.jobId);
+  getForJob: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
+    const job = await getJobById(input.jobId);
 
-      if (!job) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Job not found.",
+    if (!job) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Job not found.",
+      });
+    }
+
+    const bidList = await getBidsForJob(input.jobId);
+
+    const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
+
+    const visibleBids = canViewAllBids
+      ? bidList
+      : bidList.filter((bid) => bid.handymanId === ctx.user.id);
+
+    const enriched = await Promise.all(
+      visibleBids.map(async (bid) => {
+        const user = await safeGetUserById(bid.handymanId);
+        const profile = await getHandymanProfile(bid.handymanId);
+
+        return buildHandymanBidTrustFields({
+          bid,
+          user,
+          profile,
         });
-      }
+      })
+    );
 
-      const bidList = await getBidsForJob(input.jobId);
-
-      const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
-
-      const visibleBids = canViewAllBids
-        ? bidList
-        : bidList.filter((bid) => bid.handymanId === ctx.user.id);
-
-      const enriched = await Promise.all(
-        visibleBids.map(async (bid) => {
-          const user = await safeGetUserById(bid.handymanId);
-          const profile = await getHandymanProfile(bid.handymanId);
-
-          return {
-            ...bid,
-            handymanName: user?.name,
-            handymanRating: profile?.rating,
-            handymanTotalJobs: profile?.totalJobs,
-            handymanInsuranceVerified: profile?.insuranceVerified ?? false,
-            handymanProfileImageUrl: profile?.profileImageUrl ?? null,
-          };
-        })
-      );
-
-      return enriched;
-    }),
+    return enriched;
+  }),
 
   getForJobSummary: protectedProcedure
     .input(z.object({ jobId: z.number() }))
@@ -1103,14 +1230,11 @@ const bidsRouter = router({
           const user = await safeGetUserById(bid.handymanId);
           const profile = await getHandymanProfile(bid.handymanId);
 
-          return {
-            ...bid,
-            handymanName: user?.name,
-            handymanRating: profile?.rating,
-            handymanTotalJobs: profile?.totalJobs,
-            handymanInsuranceVerified: profile?.insuranceVerified ?? false,
-            handymanProfileImageUrl: profile?.profileImageUrl ?? null,
-          };
+        return buildHandymanBidTrustFields({
+          bid,
+          user,
+          profile,
+        });
         })
       );
 
@@ -1140,104 +1264,98 @@ const bidsRouter = router({
     return enriched;
   }),
 
-  accept: protectedProcedure
-    .input(z.object({ bidId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const bid = await getBidById(input.bidId);
-      if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
+  accept: protectedProcedure.input(z.object({ bidId: z.number() })).mutation(async ({ ctx, input }) => {
+    const bid = await getBidById(input.bidId);
+    if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const job = await getJobById(bid.jobId);
-      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+    const job = await getJobById(bid.jobId);
+    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (job.homeownerId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    if (job.homeownerId !== ctx.user.id) {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
 
-      if (job.status !== "open") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open" });
-      }
+    if (job.status !== "open") {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open" });
+    }
 
-      await updateBidStatus(input.bidId, "accepted");
-      await rejectOtherBids(bid.jobId, input.bidId);
+    await updateBidStatus(input.bidId, "accepted");
+    await rejectOtherBids(bid.jobId, input.bidId);
 
-      await updateJobStatus(bid.jobId, "awaiting_payment", {
-        selectedHandymanId: bid.handymanId,
-        selectedBidId: input.bidId,
-      });
+    await updateJobStatus(bid.jobId, "awaiting_payment", {
+      selectedHandymanId: bid.handymanId,
+      selectedBidId: input.bidId,
+    });
 
-      const amount = parseFloat(bid.bidAmount);
-      const platformFee = parseFloat((amount * 0.2).toFixed(2));
-      const handymanPayout = parseFloat((amount * 0.8).toFixed(2));
+    const amount = parseFloat(bid.bidAmount);
+    const platformFee = parseFloat((amount * 0.2).toFixed(2));
+    const handymanPayout = parseFloat((amount * 0.8).toFixed(2));
 
-      await createPayment({
-        jobId: bid.jobId,
-        homeownerId: ctx.user.id,
-        handymanId: bid.handymanId,
-        amount: amount.toFixed(2),
-        platformFee: platformFee.toFixed(2),
-        handymanPayout: handymanPayout.toFixed(2),
-        status: "pending",
-      });
+    await createPayment({
+      jobId: bid.jobId,
+      homeownerId: ctx.user.id,
+      handymanId: bid.handymanId,
+      amount: amount.toFixed(2),
+      platformFee: platformFee.toFixed(2),
+      handymanPayout: handymanPayout.toFixed(2),
+      status: "pending",
+    });
 
-      await notifyUser({
-        userId: bid.handymanId,
-        type: "bid_accepted",
-        title: "Bid accepted",
-        message: `Your bid for "${job.title}" was accepted. Waiting for homeowner payment.`,
-        link: "/handyman/dashboard",
-      });
+    await notifyUser({
+      userId: bid.handymanId,
+      type: "bid_accepted",
+      title: "Bid accepted",
+      message: `Your bid for "${job.title}" was accepted. Waiting for homeowner payment.`,
+      link: "/handyman/dashboard",
+    });
 
-      const handyman = await safeGetUserById(bid.handymanId);
-      if (handyman?.email) {
-        void safeSendEmail("sendBidAcceptedEmail", () =>
-          sendBidAcceptedEmail({
-            to: handyman.email,
-            handymanName: handyman.name,
-            jobTitle: job.title,
-            bidAmount: amount,
-            jobId: job.id,
-          })
-        );
-      }
+    const handyman = await safeGetUserById(bid.handymanId);
+    if (handyman?.email) {
+      void safeSendEmail("sendBidAcceptedEmail", () =>
+        sendBidAcceptedEmail({
+          to: handyman.email,
+          handymanName: handyman.name,
+          jobTitle: job.title,
+          bidAmount: amount,
+          jobId: job.id,
+        })
+      );
+    }
 
-      return { success: true, amount, platformFee, handymanPayout };
-    }),
+    return { success: true, amount, platformFee, handymanPayout };
+  }),
 
-  reject: protectedProcedure
-    .input(z.object({ bidId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const bid = await getBidById(input.bidId);
-      if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
+  reject: protectedProcedure.input(z.object({ bidId: z.number() })).mutation(async ({ ctx, input }) => {
+    const bid = await getBidById(input.bidId);
+    if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const job = await getJobById(bid.jobId);
-      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+    const job = await getJobById(bid.jobId);
+    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (job.homeownerId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    if (job.homeownerId !== ctx.user.id) {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
 
-      await updateBidStatus(input.bidId, "rejected");
-      return { success: true };
-    }),
+    await updateBidStatus(input.bidId, "rejected");
+    return { success: true };
+  }),
 });
 
 const paymentsRouter = router({
-  getByJob: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      const job = await getJobById(input.jobId);
-      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+  getByJob: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
+    const job = await getJobById(input.jobId);
+    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (
-        job.homeownerId !== ctx.user.id &&
-        job.selectedHandymanId !== ctx.user.id &&
-        ctx.user.role !== "admin"
-      ) {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    if (
+      job.homeownerId !== ctx.user.id &&
+      job.selectedHandymanId !== ctx.user.id &&
+      ctx.user.role !== "admin"
+    ) {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
 
-      return getPaymentByJob(input.jobId);
-    }),
+    return getPaymentByJob(input.jobId);
+  }),
 
   getHandymanEarnings: protectedProcedure.query(async ({ ctx }) => {
     const summary = await getHandymanPayoutSummary(ctx.user.id);
@@ -1399,26 +1517,22 @@ const reviewsRouter = router({
       return { success: true };
     }),
 
-  getForUser: publicProcedure
-    .input(z.object({ userId: z.number() }))
-    .query(async ({ input }) => {
-      const reviewList = await getReviewsForUser(input.userId);
+  getForUser: publicProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
+    const reviewList = await getReviewsForUser(input.userId);
 
-      const enriched = await Promise.all(
-        reviewList.map(async (r) => {
-          const reviewer = await safeGetUserById(r.reviewerId);
-          return { ...r, reviewerName: reviewer?.name };
-        })
-      );
+    const enriched = await Promise.all(
+      reviewList.map(async (r) => {
+        const reviewer = await safeGetUserById(r.reviewerId);
+        return { ...r, reviewerName: reviewer?.name };
+      })
+    );
 
-      return enriched;
-    }),
+    return enriched;
+  }),
 
-  getMyReview: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      return getReviewForJob(input.jobId, ctx.user.id);
-    }),
+  getMyReview: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
+    return getReviewForJob(input.jobId, ctx.user.id);
+  }),
 });
 
 const disputesRouter = router({
@@ -1484,22 +1598,20 @@ const disputesRouter = router({
       return { disputeId };
     }),
 
-  getByJob: protectedProcedure
-    .input(z.object({ jobId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      const job = await getJobById(input.jobId);
-      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+  getByJob: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
+    const job = await getJobById(input.jobId);
+    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (
-        job.homeownerId !== ctx.user.id &&
-        job.selectedHandymanId !== ctx.user.id &&
-        ctx.user.role !== "admin"
-      ) {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    if (
+      job.homeownerId !== ctx.user.id &&
+      job.selectedHandymanId !== ctx.user.id &&
+      ctx.user.role !== "admin"
+    ) {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
 
-      return getDisputeByJob(input.jobId);
-    }),
+    return getDisputeByJob(input.jobId);
+  }),
 
   getAll: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -1682,6 +1794,10 @@ const messagesRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
+      if (containsRestrictedContactInfo(input.content)) {
+        throwRestrictedContactError();
+      }
+
       let recipientUserId: number | null | undefined = null;
 
       if (input.bidId) {
@@ -1837,6 +1953,115 @@ const messagesRouter = router({
     }),
 });
 
+
+const reportsRouter = router({
+  create: protectedProcedure
+    .input(
+      z.object({
+        reportedUserId: z.number().optional(),
+        jobId: z.number().optional(),
+        bidId: z.number().optional(),
+        messageId: z.number().optional(),
+        reason: z.enum([
+          "unsafe",
+          "suspicious_profile",
+          "inappropriate_message",
+          "off_platform_payment",
+          "false_information",
+          "other",
+        ]),
+        details: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!input.reportedUserId && !input.jobId && !input.bidId && !input.messageId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Please choose something to report.",
+        });
+      }
+
+      let jobId = input.jobId;
+      let reportedUserId = input.reportedUserId;
+
+      if (input.bidId) {
+        const bid = await getBidById(input.bidId);
+        if (!bid) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Bid not found." });
+        }
+
+        jobId = jobId ?? bid.jobId;
+        reportedUserId = reportedUserId ?? bid.handymanId;
+      }
+
+      if (jobId) {
+        const job = await getJobById(jobId);
+        if (!job) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+        }
+
+        const isHomeowner = job.homeownerId === ctx.user.id;
+        const isSelectedHandyman = job.selectedHandymanId === ctx.user.id;
+        const isAdmin = ctx.user.role === "admin";
+
+        if (!isHomeowner && !isSelectedHandyman && !isAdmin) {
+          const bid = input.bidId ? await getBidById(input.bidId) : null;
+          const isBidHandyman = bid?.handymanId === ctx.user.id;
+
+          if (!isBidHandyman) {
+            throw new TRPCError({ code: "FORBIDDEN" });
+          }
+        }
+      }
+
+      const reportId = await createReport({
+        reporterUserId: ctx.user.id,
+        reportedUserId: reportedUserId ?? null,
+        jobId: jobId ?? null,
+        bidId: input.bidId ?? null,
+        messageId: input.messageId ?? null,
+        reason: input.reason,
+        details: input.details?.trim() || null,
+        status: "open",
+      });
+
+      await notifyUser({
+        userId: ctx.user.id,
+        type: "system",
+        title: "Report received",
+        message: "Thanks for reporting your concern. The SaskHandy team will review it.",
+        link: jobId ? `/jobs/${jobId}` : "/support",
+      });
+
+      return { success: true, reportId };
+    }),
+
+  getAll: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+    return getAllReports();
+  }),
+
+  updateStatus: protectedProcedure
+    .input(
+      z.object({
+        reportId: z.number(),
+        status: z.enum(["open", "reviewing", "resolved", "dismissed"]),
+        adminNotes: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      await updateReportStatus(input.reportId, {
+        status: input.status,
+        adminNotes: input.adminNotes?.trim() || null,
+      });
+
+      return { success: true };
+    }),
+});
+
+
 const notificationsRouter = router({
   getMine: protectedProcedure
     .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
@@ -1848,12 +2073,10 @@ const notificationsRouter = router({
     return getUnreadNotificationCount(ctx.user.id);
   }),
 
-  markRead: protectedProcedure
-    .input(z.object({ notificationId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      await markNotificationRead(input.notificationId, ctx.user.id);
-      return { success: true };
-    }),
+  markRead: protectedProcedure.input(z.object({ notificationId: z.number() })).mutation(async ({ ctx, input }) => {
+    await markNotificationRead(input.notificationId, ctx.user.id);
+    return { success: true };
+  }),
 
   markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
     await markAllNotificationsRead(ctx.user.id);
@@ -1875,69 +2098,57 @@ const adminRouter = router({
     return getAllJobsForAdmin();
   }),
 
-  deleteJob: protectedProcedure
-    .input(
-      z.object({
-        jobId: z.number(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+  deleteJob: protectedProcedure.input(z.object({ jobId: z.number() })).mutation(async ({ ctx, input }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
 
-      const job = await getJobById(input.jobId);
+    const job = await getJobById(input.jobId);
 
-      if (!job) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Job not found",
-        });
-      }
+    if (!job) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Job not found",
+      });
+    }
 
-      await adminDeleteJobById(input.jobId);
+    await adminDeleteJobById(input.jobId);
 
-      return { success: true };
-    }),
+    return { success: true };
+  }),
 
-  deleteUser: protectedProcedure
-    .input(
-      z.object({
-        userId: z.number(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-      }
+  deleteUser: protectedProcedure.input(z.object({ userId: z.number() })).mutation(async ({ ctx, input }) => {
+    if (ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
 
-      if (ctx.user.id === input.userId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "You cannot delete your own admin account.",
-        });
-      }
+    if (ctx.user.id === input.userId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "You cannot delete your own admin account.",
+      });
+    }
 
-      const user = await safeGetUserById(input.userId);
+    const user = await safeGetUserById(input.userId);
 
-      if (!user) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User not found",
-        });
-      }
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
 
-      if (user.role === "admin") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Admin users cannot be deleted from this action.",
-        });
-      }
+    if (user.role === "admin") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Admin users cannot be deleted from this action.",
+      });
+    }
 
-      await deleteUserById(input.userId);
+    await deleteUserById(input.userId);
 
-      return { success: true };
-    }),
+    return { success: true };
+  }),
 
   getStats: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -1973,6 +2184,48 @@ const adminRouter = router({
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
 
       await setHandymanInsuranceVerification(input.userId, input.insuranceVerified);
+      return { success: true };
+    }),
+
+  setIdentityVerification: protectedProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        status: z.enum(["not_submitted", "pending", "approved", "rejected"]),
+        rejectionReason: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      await setHandymanIdentityVerification(input.userId, {
+        status: input.status,
+        reviewedBy: ctx.user.id,
+        rejectionReason: input.rejectionReason?.trim() || null,
+      });
+
+      return { success: true };
+    }),
+
+  setCriminalRecordCheckStatus: protectedProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        status: z.enum(["not_submitted", "pending", "reviewed", "rejected", "expired"]),
+        expiresAt: z.string().datetime().optional(),
+        notes: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      await setHandymanCriminalRecordCheckStatus(input.userId, {
+        status: input.status,
+        reviewedBy: ctx.user.id,
+        expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+        notes: input.notes?.trim() || null,
+      });
+
       return { success: true };
     }),
 
@@ -2216,31 +2469,27 @@ const supportRouter = router({
     return getAllSupportTickets();
   }),
 
-  getById: protectedProcedure
-    .input(z.object({ ticketId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      const ticket = await getSupportTicketById(input.ticketId);
-      if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
+  getById: protectedProcedure.input(z.object({ ticketId: z.number() })).query(async ({ ctx, input }) => {
+    const ticket = await getSupportTicketById(input.ticketId);
+    if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
 
-      return ticket;
-    }),
+    return ticket;
+  }),
 
-  getMessages: protectedProcedure
-    .input(z.object({ ticketId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      const ticket = await getSupportTicketById(input.ticketId);
-      if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
+  getMessages: protectedProcedure.input(z.object({ ticketId: z.number() })).query(async ({ ctx, input }) => {
+    const ticket = await getSupportTicketById(input.ticketId);
+    if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
 
-      return getSupportTicketMessages(input.ticketId);
-    }),
+    return getSupportTicketMessages(input.ticketId);
+  }),
 
   reply: protectedProcedure
     .input(
@@ -2296,6 +2545,7 @@ export const appRouter = router({
   payments: paymentsRouter,
   reviews: reviewsRouter,
   disputes: disputesRouter,
+  reports: reportsRouter,
   messages: messagesRouter,
   notifications: notificationsRouter,
   admin: adminRouter,

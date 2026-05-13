@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  Flag,
   Image as ImageIcon,
   Loader2,
   MapPin,
@@ -30,8 +31,151 @@ import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 
+const cancellationReasons = [
+  {
+    value: "dont_trust_profile",
+    label: "I don’t trust the handyman/profile",
+  },
+  {
+    value: "bids_too_expensive",
+    label: "Bids were too expensive",
+  },
+  {
+    value: "no_longer_needed",
+    label: "I no longer need the job done",
+  },
+  {
+    value: "hired_outside_saskhandy",
+    label: "I hired someone outside SaskHandy",
+  },
+  {
+    value: "not_enough_bidder_info",
+    label: "I didn’t get enough information from bidders",
+  },
+  {
+    value: "timing_didnt_work",
+    label: "Timing or availability didn’t work",
+  },
+  {
+    value: "other",
+    label: "Other",
+  },
+] as const;
+
+type CancellationReason = (typeof cancellationReasons)[number]["value"];
+
 function getBidInsuranceVerified(bid: any) {
   return bid?.handymanInsuranceVerified === true;
+}
+
+function getBidCompletedJobs(bid: any) {
+  if (typeof bid?.handymanTotalJobs === "number") return bid.handymanTotalJobs;
+  if (typeof bid?.handymanCompletedJobs === "number") return bid.handymanCompletedJobs;
+  return 0;
+}
+
+function getBidReviewCount(bid: any) {
+  if (typeof bid?.handymanReviewCount === "number") return bid.handymanReviewCount;
+  if (typeof bid?.handymanTotalReviews === "number") return bid.handymanTotalReviews;
+  return 0;
+}
+
+function getBidBio(bid: any) {
+  return bid?.handymanBio ?? bid?.handymanProfileBio ?? bid?.bio ?? null;
+}
+
+function getBidSkills(bid: any): string[] {
+  const rawSkills = bid?.handymanSkills ?? bid?.skills ?? bid?.handymanServices ?? [];
+
+  if (Array.isArray(rawSkills)) {
+    return rawSkills.filter(Boolean).map(String);
+  }
+
+  if (typeof rawSkills === "string") {
+    try {
+      const parsed = JSON.parse(rawSkills);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+    } catch {
+      return rawSkills
+        .split(",")
+        .map((skill) => skill.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+}
+
+function getBidIdentityChecked(bid: any) {
+  return bid?.handymanIdentityChecked === true || bid?.handymanIdNameMatched === true;
+}
+
+function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: boolean }) {
+  const completedJobs = getBidCompletedJobs(bid);
+  const reviewCount = getBidReviewCount(bid);
+  const bio = getBidBio(bid);
+  const skills = getBidSkills(bid).slice(0, compact ? 3 : 5);
+  const hasRating = !!bid?.handymanRating;
+  const isNew = completedJobs === 0;
+  const hasNoReviews = reviewCount === 0 && !hasRating;
+
+  return (
+    <div className={compact ? "mt-2 space-y-2" : "mt-3 space-y-3"}>
+      <div className="flex flex-wrap gap-1.5">
+        {getBidIdentityChecked(bid) && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+            <Shield className="h-3 w-3" />
+            Identity checked
+          </span>
+        )}
+
+        {getBidInsuranceVerified(bid) && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+            <Shield className="h-3 w-3" />
+            Insurance verified
+          </span>
+        )}
+
+        {isNew && (
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+            New to SaskHandy
+          </span>
+        )}
+
+        {hasNoReviews && (
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+            No reviews yet
+          </span>
+        )}
+      </div>
+
+      {bio && (
+        <p className={`text-muted-foreground leading-relaxed ${compact ? "text-xs line-clamp-2" : "text-sm"}`}>
+          {bio}
+        </p>
+      )}
+
+      {skills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {skills.map((skill) => (
+            <span
+              key={skill}
+              className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {hasNoReviews && (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          This handyman has not completed a reviewed job on SaskHandy yet. You can message them
+          before choosing to ask about their experience, availability, and past work.
+        </p>
+      )}
+    </div>
+  );
 }
 
 function HandymanAvatar({
@@ -75,6 +219,7 @@ function BidChatDrawer({
   onClose,
   onAccept,
   onReject,
+  onReport,
   acceptPending,
   rejectPending,
 }: {
@@ -84,6 +229,7 @@ function BidChatDrawer({
   onClose: () => void;
   onAccept: (bid: any) => void;
   onReject: (bidId: number) => void;
+  onReport: (bid: any) => void;
   acceptPending: boolean;
   rejectPending: boolean;
 }) {
@@ -114,27 +260,22 @@ function BidChatDrawer({
                 </p>
 
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                  {bid.handymanRating && (
+                  {bid.handymanRating ? (
                     <StarRatingDisplay
                       rating={parseFloat(bid.handymanRating)}
                       size="sm"
                       showValue
                     />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No rating yet</span>
                   )}
 
-                  {bid.handymanTotalJobs !== undefined && (
-                    <span className="text-xs text-muted-foreground">
-                      {bid.handymanTotalJobs} jobs completed
-                    </span>
-                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {getBidCompletedJobs(bid)} jobs completed
+                  </span>
                 </div>
 
-                {getBidInsuranceVerified(bid) && (
-                  <span className="inline-flex items-center gap-1 mt-2 text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
-                    <Shield className="w-3 h-3" />
-                    Insurance Verified
-                  </span>
-                )}
+                <HandymanTrustSummary bid={bid} compact />
               </div>
             </div>
 
@@ -178,6 +319,28 @@ function BidChatDrawer({
             </div>
           )}
 
+          <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <div className="flex items-start gap-2">
+              <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">What happens next?</p>
+                <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs leading-relaxed text-muted-foreground">
+                  <li>Choose the handyman you want to work with.</li>
+                  <li>Review secure payment on the next step.</li>
+                  <li>Chat and coordinate the job through SaskHandy.</li>
+                  <li>Payment is only released after you mark the work complete.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs leading-relaxed text-amber-800">
+              Only choose a handyman when you feel comfortable. Not sure yet? Message the handyman
+              first to ask about their experience, availability, and past work.
+            </p>
+          </div>
+
           <div className="flex flex-col gap-2 mt-4">
             <Button onClick={() => onAccept(bid)} disabled={acceptPending}>
               {acceptPending ? (
@@ -185,8 +348,12 @@ function BidChatDrawer({
               ) : (
                 <Shield className="w-4 h-4 mr-2" />
               )}
-              Accept Bid & Secure Payment
+              Choose This Handyman
             </Button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              You’ll review secure payment on the next step.
+            </p>
 
             <Button
               variant="outline"
@@ -200,6 +367,16 @@ function BidChatDrawer({
                 <XCircle className="w-4 h-4 mr-2" />
               )}
               Reject Bid
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => onReport(bid)}
+            >
+              <Flag className="w-4 h-4 mr-2" />
+              Report a concern
             </Button>
           </div>
 
@@ -217,7 +394,7 @@ function BidChatDrawer({
             bidId={bid.id}
             otherPartyLabel={bid.handymanName ?? "this handyman"}
             title="Bid Chat"
-            description={`Message ${bid.handymanName ?? "this handyman"} before accepting the bid.`}
+            description={`Message ${bid.handymanName ?? "this handyman"} before choosing. Ask about experience, availability, and what they need for the job.`}
             compact
             className="h-full mt-0"
           />
@@ -242,6 +419,10 @@ export default function JobDetails() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedBidId, setSelectedBidId] = useState<number | null>(null);
   const [paymentBid, setPaymentBid] = useState<any | null>(null);
+  const [showCancelReasonForm, setShowCancelReasonForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState<CancellationReason | "">("");
+  const [cancelDetails, setCancelDetails] = useState("");
+  const [reportingBidId, setReportingBidId] = useState<number | null>(null);
 
   const { data: job, isLoading: jobLoading } = trpc.jobs.getById.useQuery(
     { jobId },
@@ -327,9 +508,20 @@ export default function JobDetails() {
 
   const cancelJob = trpc.jobs.cancel.useMutation({
     onSuccess: async () => {
-      toast.success("Job cancelled.");
+      toast.success("Job cancelled. Thanks for sharing why — this helps improve SaskHandy.");
+      setShowCancelReasonForm(false);
+      setCancelReason("");
+      setCancelDetails("");
       await utils.jobs.getById.invalidate({ jobId });
       await utils.jobs.getByHomeowner.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const createReport = trpc.reports.create.useMutation({
+    onSuccess: async () => {
+      toast.success("Report submitted. SaskHandy will review this concern.");
+      setReportingBidId(null);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -374,6 +566,32 @@ export default function JobDetails() {
   const handleAcceptBid = (bid: any) => {
     setPaymentBid(bid);
     acceptBid.mutate({ bidId: bid.id });
+  };
+
+  const handleCancelJob = () => {
+    if (!cancelReason) {
+      toast.error("Please choose a cancellation reason.");
+      return;
+    }
+
+    cancelJob.mutate({
+      jobId,
+      reason: cancelReason,
+      details: cancelDetails.trim() || undefined,
+    });
+  };
+
+  const handleReportBid = (bid: any) => {
+    setReportingBidId(bid.id);
+
+    createReport.mutate({
+      jobId,
+      bidId: bid.id,
+      reportedUserId: bid.handymanId,
+      reason: "unsafe",
+      details:
+        "Homeowner reported a concern from the bid drawer. Follow up with the homeowner for details.",
+    });
   };
 
   return (
@@ -518,7 +736,7 @@ export default function JobDetails() {
                 <Button
                   variant="outline"
                   className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
-                  onClick={() => cancelJob.mutate({ jobId })}
+                  onClick={() => setShowCancelReasonForm(true)}
                   disabled={cancelJob.isPending}
                 >
                   {cancelJob.isPending ? (
@@ -529,6 +747,77 @@ export default function JobDetails() {
                   Cancel Job
                 </Button>
               )}
+            </div>
+          </div>
+        )}
+
+        {showCancelReasonForm && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
+            <div className="flex items-start gap-2 mb-4">
+              <AlertTriangle className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="font-semibold text-amber-900">Why are you cancelling this job?</h3>
+                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                  This helps SaskHandy understand why homeowners don’t move forward after receiving
+                  bids, so we can improve trust and the hiring process.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {cancellationReasons.map((reason) => (
+                <button
+                  key={reason.value}
+                  type="button"
+                  onClick={() => setCancelReason(reason.value)}
+                  className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition ${
+                    cancelReason === reason.value
+                      ? "border-amber-500 bg-white text-amber-950"
+                      : "border-amber-200 bg-white/60 text-amber-900 hover:bg-white"
+                  }`}
+                >
+                  {reason.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              <Textarea
+                placeholder="Optional: share any extra context..."
+                value={cancelDetails}
+                onChange={(e) => setCancelDetails(e.target.value)}
+                rows={3}
+                className="bg-white"
+              />
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="destructive"
+                onClick={handleCancelJob}
+                disabled={!cancelReason || cancelJob.isPending}
+                className="flex-1"
+              >
+                {cancelJob.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4 mr-2" />
+                )}
+                Confirm Cancellation
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCancelReasonForm(false);
+                  setCancelReason("");
+                  setCancelDetails("");
+                }}
+                disabled={cancelJob.isPending}
+                className="flex-1"
+              >
+                Keep Job Open
+              </Button>
             </div>
           </div>
         )}
@@ -840,8 +1129,9 @@ export default function JobDetails() {
                   <div>
                     <p className="text-sm font-medium text-foreground">Choosing a bid</p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      You can chat with a handyman before accepting. Keep communication on SaskHandy
-                      so the job details, payment, and dispute process stay protected.
+                      You can chat with a handyman before choosing. Ask about their experience,
+                      availability, and past work. Keep communication on SaskHandy so the job
+                      details, payment, and dispute process stay protected.
                     </p>
                   </div>
                 </div>
@@ -904,21 +1194,25 @@ export default function JobDetails() {
                             </div>
 
                             <div className="flex items-center gap-2 flex-wrap">
-                              {bid.handymanRating && (
+                              {bid.handymanRating ? (
                                 <StarRatingDisplay
                                   rating={parseFloat(bid.handymanRating)}
                                   size="sm"
                                   showValue
                                 />
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No rating yet</span>
                               )}
 
-                              {bid.handymanTotalJobs !== undefined && (
-                                <span className="text-xs text-muted-foreground">
-                                  {bid.handymanTotalJobs} jobs completed
-                                </span>
-                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {getBidCompletedJobs(bid)} jobs completed
+                              </span>
                             </div>
                           </div>
+                        </div>
+
+                        <div className="ml-10">
+                          <HandymanTrustSummary bid={bid} compact />
                         </div>
 
                         {bid.message && (
@@ -947,7 +1241,7 @@ export default function JobDetails() {
                             variant={selectedBidId === bid.id ? "outline" : "default"}
                           >
                             <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                            {selectedBidId === bid.id ? "Chat Open" : "Open Chat"}
+                            {selectedBidId === bid.id ? "Bid Open" : "Review Bid"}
                           </Button>
 
                           <Link href={`/profile/${bid.handymanId}`}>
@@ -973,8 +1267,9 @@ export default function JobDetails() {
         onClose={() => setSelectedBidId(null)}
         onAccept={handleAcceptBid}
         onReject={(bidId) => rejectBid.mutate({ bidId })}
+        onReport={handleReportBid}
         acceptPending={acceptBid.isPending}
-        rejectPending={rejectBid.isPending}
+        rejectPending={rejectBid.isPending || createReport.isPending || reportingBidId === selectedBid?.id}
       />
 
       {showPaymentModal && modalBid && (

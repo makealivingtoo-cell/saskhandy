@@ -21,6 +21,7 @@ import {
   Shield,
   Star,
   TrendingUp,
+  UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
@@ -31,6 +32,51 @@ const bidTips = [
   "Mention when you are available.",
   "Write a short note showing you understand the work.",
 ];
+
+function parseProfileCategories(value?: string | string[] | null): string[] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).map(String);
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [];
+  } catch {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+}
+
+function getProfileCompletionStatus(user: any, profile: any) {
+  const categories = parseProfileCategories(profile?.categories);
+  const missingFields: string[] = [];
+
+  if (!user?.name || user.name.trim().length < 2) {
+    missingFields.push("full name");
+  }
+
+  if (!profile?.profileImageUrl) {
+    missingFields.push("profile photo");
+  }
+
+  if (!profile?.bio || profile.bio.trim().length < 25) {
+    missingFields.push("short bio");
+  }
+
+  if (categories.length < 1) {
+    missingFields.push("skills");
+  }
+
+  return {
+    isComplete: missingFields.length === 0,
+    missingFields,
+    categories,
+  };
+}
 
 export default function HandymanJobDetails() {
   const { id } = useParams();
@@ -59,6 +105,16 @@ export default function HandymanJobDetails() {
     {
       enabled:
         !!jobId &&
+        !!isAuthenticated &&
+        !!user &&
+        (user.userType === "handyman" || user.role === "admin"),
+    }
+  );
+
+  const { data: handymanProfile, isLoading: profileLoading } = trpc.handymanProfiles.get.useQuery(
+    undefined,
+    {
+      enabled:
         !!isAuthenticated &&
         !!user &&
         (user.userType === "handyman" || user.role === "admin"),
@@ -150,6 +206,9 @@ export default function HandymanJobDetails() {
   const estimatedPayout =
     bidAmount && !Number.isNaN(parsedBidAmount) ? (parsedBidAmount * 0.8).toFixed(2) : null;
 
+  const profileStatus = getProfileCompletionStatus(user, handymanProfile);
+  const canPlaceBid = user?.role === "admin" || profileStatus.isComplete;
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto">
@@ -208,7 +267,42 @@ export default function HandymanJobDetails() {
           <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
         </div>
 
-        {job.status === "open" && !myBid && (
+        {job.status === "open" && !myBid && !profileLoading && !canPlaceBid && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <UserCheck className="w-5 h-5" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-amber-900">
+                  Complete your profile before sending bids
+                </p>
+                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                  Homeowners are more likely to choose handymen with a clear photo, short bio, and
+                  listed skills. Complete these items before bidding:
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {profileStatus.missingFields.map((field) => (
+                    <span
+                      key={field}
+                      className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-800"
+                    >
+                      {field}
+                    </span>
+                  ))}
+                </div>
+
+                <Button asChild size="sm" className="mt-4 bg-amber-700 hover:bg-amber-800">
+                  <Link href="/handyman/profile">Complete Profile</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {job.status === "open" && !myBid && canPlaceBid && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -368,11 +462,19 @@ export default function HandymanJobDetails() {
                 <div>
                   <p className="font-semibold text-foreground text-sm">Interested in this job?</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Send a clear bid with your price, availability, and short message.
+                    {canPlaceBid
+                      ? "Send a clear bid with your price, availability, and short message."
+                      : "Complete your profile first so homeowners can review who they are hiring."}
                   </p>
                 </div>
 
-                <Button onClick={() => setShowBidForm(true)}>Place a Bid</Button>
+                {canPlaceBid ? (
+                  <Button onClick={() => setShowBidForm(true)}>Place a Bid</Button>
+                ) : (
+                  <Button asChild variant="outline">
+                    <Link href="/handyman/profile">Complete Profile</Link>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-5">
@@ -381,6 +483,16 @@ export default function HandymanJobDetails() {
                   <p className="text-xs text-muted-foreground mt-1">
                     The homeowner will see your price, message, availability, and profile details.
                   </p>
+
+                  <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <Shield className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
+                      <p className="text-xs leading-relaxed text-emerald-800">
+                        Keep your bid professional and keep communication on SaskHandy. Homeowners
+                        can message you before choosing, so use your note to build confidence.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -448,15 +560,22 @@ export default function HandymanJobDetails() {
 
                 <div className="flex gap-2">
                   <Button
-                    onClick={() =>
+                    onClick={() => {
+                      if (!canPlaceBid) {
+                        toast.error("Complete your profile before sending bids.");
+                        return;
+                      }
+
                       createBid.mutate({
                         jobId,
                         bidAmount: parseFloat(bidAmount),
                         message: bidMessage || undefined,
                         availability: availability || undefined,
-                      })
+                      });
+                    }}
+                    disabled={
+                      !canPlaceBid || !bidAmount || parseFloat(bidAmount) <= 0 || createBid.isPending
                     }
-                    disabled={!bidAmount || parseFloat(bidAmount) <= 0 || createBid.isPending}
                     className="flex-1"
                   >
                     {createBid.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}

@@ -82,6 +82,34 @@ export const handymanProfiles = mysqlTable("handyman_profiles", {
   insuranceCertUrl: text("insuranceCertUrl"),
   profileImageUrl: text("profileImageUrl"),
 
+  identityVerificationStatus: mysqlEnum("identityVerificationStatus", [
+    "not_submitted",
+    "pending",
+    "approved",
+    "rejected",
+  ])
+    .default("not_submitted")
+    .notNull(),
+  identityDocumentUrl: text("identityDocumentUrl"),
+  identityReviewedAt: timestamp("identityReviewedAt"),
+  identityReviewedBy: int("identityReviewedBy"),
+  identityRejectionReason: text("identityRejectionReason"),
+
+  criminalRecordCheckStatus: mysqlEnum("criminalRecordCheckStatus", [
+    "not_submitted",
+    "pending",
+    "reviewed",
+    "rejected",
+    "expired",
+  ])
+    .default("not_submitted")
+    .notNull(),
+  criminalRecordCheckUrl: text("criminalRecordCheckUrl"),
+  criminalRecordCheckReviewedAt: timestamp("criminalRecordCheckReviewedAt"),
+  criminalRecordCheckReviewedBy: int("criminalRecordCheckReviewedBy"),
+  criminalRecordCheckExpiresAt: timestamp("criminalRecordCheckExpiresAt"),
+  criminalRecordCheckNotes: text("criminalRecordCheckNotes"),
+
   stripeAccountId: varchar("stripeAccountId", { length: 255 }),
   stripeChargesEnabled: boolean("stripeChargesEnabled").default(false).notNull(),
   stripePayoutsEnabled: boolean("stripePayoutsEnabled").default(false).notNull(),
@@ -117,6 +145,14 @@ export const jobs = mysqlTable("jobs", {
     .notNull(),
   selectedHandymanId: int("selectedHandymanId"),
   selectedBidId: int("selectedBidId"),
+
+  cancelReason: varchar("cancelReason", { length: 120 }),
+  cancelDetails: text("cancelDetails"),
+  cancelledAt: timestamp("cancelledAt"),
+
+  bidReminderSentAt: timestamp("bidReminderSentAt"),
+  lastBidReminderCheckedAt: timestamp("lastBidReminderCheckedAt"),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   expiresAt: timestamp("expiresAt"),
@@ -253,6 +289,35 @@ export const disputes = mysqlTable("disputes", {
 
 export type Dispute = typeof disputes.$inferSelect;
 export type InsertDispute = typeof disputes.$inferInsert;
+
+// ─── Reports / Safety Flags ───────────────────────────────────────────────────
+export const reports = mysqlTable("reports", {
+  id: int("id").autoincrement().primaryKey(),
+  reporterUserId: int("reporterUserId").notNull(),
+  reportedUserId: int("reportedUserId"),
+  jobId: int("jobId"),
+  bidId: int("bidId"),
+  messageId: int("messageId"),
+  reason: mysqlEnum("reason", [
+    "unsafe",
+    "suspicious_profile",
+    "inappropriate_message",
+    "off_platform_payment",
+    "false_information",
+    "other",
+  ]).notNull(),
+  details: text("details"),
+  status: mysqlEnum("status", ["open", "reviewing", "resolved", "dismissed"])
+    .default("open")
+    .notNull(),
+  adminNotes: text("adminNotes"),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = typeof reports.$inferInsert;
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
 export const messages = mysqlTable("messages", {

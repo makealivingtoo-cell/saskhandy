@@ -7,7 +7,14 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { constructWebhookEvent } from "../stripe";
-import { getDb } from "../db";
+import {
+  createNotification,
+  getDb,
+  getOpenJobsWithPendingBidsForReminder,
+  getUserById,
+  markBidReminderChecked,
+  markBidReminderSent,
+} from "../db";
 import { payments, jobs } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -141,6 +148,130 @@ async function markPaymentCanceled(intent: any) {
   console.warn("[Webhook] Payment canceled:", intent.id);
 }
 
+const BID_REMINDER_ACTIVE_HOURS = 5;
+const BID_REMINDER_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+const QUIET_HOUR_START = 23;
+const QUIET_HOUR_END = 6;
+
+function isQuietHour(date: Date) {
+  const hour = date.getHours();
+  return hour >= QUIET_HOUR_START || hour < QUIET_HOUR_END;
+}
+
+function getNextActiveStart(date: Date) {
+  const next = new Date(date);
+
+  if (next.getHours() >= QUIET_HOUR_START) {
+    next.setDate(next.getDate() + 1);
+    next.setHours(QUIET_HOUR_END, 0, 0, 0);
+    return next;
+  }
+
+  if (next.getHours() < QUIET_HOUR_END) {
+    next.setHours(QUIET_HOUR_END, 0, 0, 0);
+    return next;
+  }
+
+  return next;
+}
+
+function calculateActiveHoursBetween(startDate: Date, endDate: Date) {
+  if (endDate <= startDate) return 0;
+
+  let cursor = new Date(startDate);
+  let activeMs = 0;
+
+  while (cursor < endDate) {
+    if (isQuietHour(cursor)) {
+      cursor = getNextActiveStart(cursor);
+      continue;
+    }
+
+    const quietStart = new Date(cursor);
+    quietStart.setHours(QUIET_HOUR_START, 0, 0, 0);
+
+    const segmentEnd = quietStart < endDate ? quietStart : endDate;
+
+    if (segmentEnd > cursor) {
+      activeMs += segmentEnd.getTime() - cursor.getTime();
+    }
+
+    cursor = segmentEnd;
+
+    if (isQuietHour(cursor)) {
+      cursor = getNextActiveStart(cursor);
+    }
+  }
+
+  return activeMs / (1000 * 60 * 60);
+}
+
+let bidReminderInterval: NodeJS.Timeout | null = null;
+let bidReminderCheckRunning = false;
+
+async function checkUnansweredBidReminders() {
+  if (bidReminderCheckRunning) return;
+
+  bidReminderCheckRunning = true;
+
+  try {
+    const jobsWithPendingBids = await getOpenJobsWithPendingBidsForReminder();
+    const now = new Date();
+
+    for (const job of jobsWithPendingBids) {
+      if (!job.latestBidAt) continue;
+
+      await markBidReminderChecked(job.id);
+
+      const activeHours = calculateActiveHoursBetween(new Date(job.latestBidAt), now);
+
+      if (activeHours < BID_REMINDER_ACTIVE_HOURS) {
+        continue;
+      }
+
+      const homeowner = await getUserById(job.homeownerId);
+
+      await createNotification({
+        userId: job.homeownerId,
+        type: "system",
+        title: "You have bids waiting",
+        message: `Your job "${job.title}" has ${job.pendingBids.length} bid${
+          job.pendingBids.length === 1 ? "" : "s"
+        } waiting. You can review bids, message handymen before choosing, and only move forward when you feel comfortable.`,
+        link: `/jobs/${job.id}`,
+        read: false,
+      });
+
+      await markBidReminderSent(job.id);
+
+      console.log(
+        `[BidReminder] Sent reminder for job ${job.id} to homeowner ${
+          homeowner?.email ?? job.homeownerId
+        } after ${activeHours.toFixed(1)} active hours.`
+      );
+    }
+  } catch (err: any) {
+    console.error("[BidReminder] Check failed:", err?.message ?? err);
+  } finally {
+    bidReminderCheckRunning = false;
+  }
+}
+
+function startBidReminderLoop() {
+  if (bidReminderInterval) return;
+
+  // Run once shortly after startup, then every 15 minutes.
+  setTimeout(() => {
+    void checkUnansweredBidReminders();
+  }, 60 * 1000);
+
+  bidReminderInterval = setInterval(() => {
+    void checkUnansweredBidReminders();
+  }, BID_REMINDER_CHECK_INTERVAL_MS);
+
+  console.log("[BidReminder] Reminder loop started.");
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -254,6 +385,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    startBidReminderLoop();
   });
 }
 
