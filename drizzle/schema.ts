@@ -82,6 +82,11 @@ export const handymanProfiles = mysqlTable("handyman_profiles", {
   insuranceCertUrl: text("insuranceCertUrl"),
   profileImageUrl: text("profileImageUrl"),
 
+  serviceArea: text("serviceArea"),
+  externalGoogleReviewsUrl: text("externalGoogleReviewsUrl"),
+  externalFacebookReviewsUrl: text("externalFacebookReviewsUrl"),
+  externalWebsiteUrl: text("externalWebsiteUrl"),
+
   identityVerificationStatus: mysqlEnum("identityVerificationStatus", [
     "not_submitted",
     "pending",

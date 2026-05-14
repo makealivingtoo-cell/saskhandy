@@ -22,6 +22,7 @@ import {
   MapPin,
   ShieldCheck,
   Sparkles,
+  UserCheck,
   Upload,
   X,
 } from "lucide-react";
@@ -161,7 +162,7 @@ export default function PostJob() {
 
   const createJob = trpc.jobs.create.useMutation({
     onSuccess: () => {
-      toast.success("Job posted. Handymen can now review it and send bids.");
+      toast.success("Job posted. ID-matched handymen can now review it and send bids.");
       navigate("/dashboard");
     },
     onError: (err) => toast.error(err.message),
@@ -353,7 +354,7 @@ export default function PostJob() {
         <div className="mb-8">
           <h1 className="text-2xl font-serif text-foreground mb-1">Post a New Job</h1>
           <p className="text-muted-foreground text-sm">
-            Share the details once, then compare bids from local handymen.
+            Share the details once, then compare bids, profiles, trust badges, and messages from local handymen.
           </p>
         </div>
 
@@ -438,6 +439,62 @@ export default function PostJob() {
                   <p className="text-sm text-muted-foreground leading-relaxed">{tip}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+
+            <div className="min-w-0">
+              <h2 className="font-semibold text-emerald-950 text-sm">
+                SaskHandy Safety & Payment Protection
+              </h2>
+              <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                After your job is posted, review each handyman’s profile photo, service area, bio,
+                skills, reviews, external review links, and verification badges before choosing.
+                You can message handymen first if you are unsure.
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-3 mt-4">
+                <div className="rounded-xl bg-white border border-emerald-200 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <UserCheck className="w-4 h-4 text-emerald-700" />
+                    <p className="text-xs font-semibold text-emerald-950">ID Name Matched</p>
+                  </div>
+                  <p className="text-xs text-emerald-800 leading-relaxed">
+                    Handymen need approved ID Name Matched status before bidding.
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white border border-emerald-200 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                    <p className="text-xs font-semibold text-emerald-950">Payment held securely</p>
+                  </div>
+                  <p className="text-xs text-emerald-800 leading-relaxed">
+                    Payment is held through SaskHandy and released only after you mark the job complete.
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-white border border-emerald-200 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle className="w-4 h-4 text-emerald-700" />
+                    <p className="text-xs font-semibold text-emerald-950">Message first</p>
+                  </div>
+                  <p className="text-xs text-emerald-800 leading-relaxed">
+                    Ask about experience, availability, materials, and past work before choosing.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-emerald-700 mt-3 leading-relaxed">
+                Verification badges help you review trust signals, but they do not guarantee safety
+                or replace your own judgment.
+              </p>
             </div>
           </div>
         </div>
@@ -674,10 +731,10 @@ export default function PostJob() {
             <div className="flex items-start gap-2">
               <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-primary mb-1">How payment works</p>
+                <p className="text-sm font-medium text-primary mb-1">How payment protection works</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Payment is only charged when you accept a bid. Funds are held securely and
-                  released to the handyman only after you confirm the work is complete.
+                  Payment is only charged when you accept a bid. Funds are held securely through
+                  SaskHandy and released to the handyman only after you confirm the work is complete.
                 </p>
               </div>
             </div>

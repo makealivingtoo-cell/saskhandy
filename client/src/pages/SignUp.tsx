@@ -31,10 +31,12 @@ const HANDYMAN_PROFILE_REQUIREMENTS = [
   "Profile photo",
   "Short bio",
   "Skills/services",
+  "ID Name Matched approval",
 ];
 
 const HANDYMAN_TRUST_BOOSTERS = [
-  "ID name match",
+  "Service area",
+  "External review links",
   "Insurance review",
   "Criminal record check review",
   "Trade licence verification, if applicable",
@@ -84,7 +86,7 @@ export default function SignUp() {
       } else {
         toast.success(
           userType === "handyman"
-            ? "Account created. Verify your email, then complete your profile before bidding."
+            ? "Account created. Verify your email, then complete your profile and ID Name Matched approval before bidding."
             : "Account created. Check your email to verify your account."
         );
       }
@@ -256,7 +258,7 @@ export default function SignUp() {
                   >
                     <span className="block text-sm font-semibold">Handyman</span>
                     <span className="block text-xs mt-1 text-muted-foreground">
-                      Build a profile and bid on local jobs.
+                      Build a verified profile and bid on local jobs.
                     </span>
                   </button>
                 </div>
@@ -271,11 +273,12 @@ export default function SignUp() {
 
                     <div>
                       <p className="text-sm font-semibold text-foreground">
-                        Complete your profile before bidding
+                        Complete your Safety First profile before bidding
                       </p>
                       <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                         Homeowners review your profile before choosing a bid. After signup, you’ll
-                        need a profile photo, short bio, and listed skills before you can send bids.
+                        need a profile photo, short bio, listed skills, and ID Name Matched approval
+                        before you can send bids.
                       </p>
                     </div>
                   </div>
@@ -312,13 +315,28 @@ export default function SignUp() {
                     </div>
                   </div>
 
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-semibold text-amber-950">
+                          Safety First requirement
+                        </p>
+                        <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                          Your profile name should match your government ID. SaskHandy must approve
+                          ID Name Matched before you can send bids to homeowners.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <div>
                       <label htmlFor="skillSelect" className="text-sm font-medium text-foreground">
                         Add your skills
                       </label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Choose at least one skill so we can match you with relevant jobs.
+                        Choose at least one skill so we can match you with relevant local jobs.
                       </p>
                     </div>
 
@@ -510,9 +528,7 @@ export default function SignUp() {
                     Creating Account...
                   </>
                 ) : userType === "handyman" ? (
-                  "Create Account & Continue to Profile"
-                ) : userType === "handyman" ? (
-                  "Create Account & Continue to Profile"
+                  "Create Account & Continue to Safety Profile"
                 ) : (
                   "Create Account"
                 )}

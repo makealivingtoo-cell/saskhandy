@@ -9,8 +9,10 @@ import {
   Briefcase,
   CheckCircle,
   DollarSign,
+  ExternalLink,
   Lightbulb,
   Loader2,
+  MapPin,
   Search,
   Shield,
   Star,
@@ -108,14 +110,33 @@ function getBidReadyItems(profile: any, fullName?: string | null) {
       completed: categories.length > 0,
       required: true,
     },
+    {
+      label: "ID name matched",
+      completed: profile?.identityVerificationStatus === "approved",
+      required: true,
+    },
   ];
 }
 
 function getTrustBoosterItems(profile: any) {
+  const hasExternalReviewLink = Boolean(
+    profile?.externalGoogleReviewsUrl ||
+      profile?.externalFacebookReviewsUrl ||
+      profile?.externalWebsiteUrl
+  );
+
   return [
+    {
+      label: "Service area",
+      completed: Boolean(profile?.serviceArea?.trim()),
+    },
     {
       label: "Hourly rate",
       completed: Boolean(profile?.hourlyRate),
+    },
+    {
+      label: "External reviews linked",
+      completed: hasExternalReviewLink,
     },
     {
       label: "ID name matched",
@@ -192,6 +213,14 @@ export default function HandymanDashboard() {
 
   const isBidReady = bidReadyItems.every((item) => item.completed);
   const completedTrustBoosters = trustBoosterItems.filter((item) => item.completed).length;
+  const goldShieldVerified =
+    profile?.identityVerificationStatus === "approved" &&
+    profile?.criminalRecordCheckStatus === "reviewed";
+  const hasExternalReviewLinks = Boolean(
+    profile?.externalGoogleReviewsUrl ||
+      profile?.externalFacebookReviewsUrl ||
+      profile?.externalWebsiteUrl
+  );
 
   const dailyNote = useMemo(() => getDailyNote(user?.name), [user?.name]);
 
@@ -225,6 +254,13 @@ export default function HandymanDashboard() {
                 {profile?.totalJobs ?? 0} jobs completed
               </span>
 
+              {goldShieldVerified && (
+                <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  Gold Shield
+                </span>
+              )}
+
               {profile?.identityVerificationStatus === "approved" && (
                 <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                   <Shield className="w-3 h-3" />
@@ -253,6 +289,52 @@ export default function HandymanDashboard() {
                 </span>
               )}
             </div>
+
+            {profile?.serviceArea && (
+              <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{profile.serviceArea}</span>
+              </div>
+            )}
+
+            {hasExternalReviewLinks && (
+              <div className="flex items-center gap-2 text-xs mt-2 flex-wrap">
+                <span className="text-muted-foreground">External reviews:</span>
+
+                {profile?.externalGoogleReviewsUrl && (
+                  <a
+                    href={profile.externalGoogleReviewsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Google <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+
+                {profile?.externalFacebookReviewsUrl && (
+                  <a
+                    href={profile.externalFacebookReviewsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Facebook <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+
+                {profile?.externalWebsiteUrl && (
+                  <a
+                    href={profile.externalWebsiteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Website <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           <Button asChild>
@@ -274,12 +356,34 @@ export default function HandymanDashboard() {
           </div>
         </div>
 
+        {!isBidReady && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-950">
+                Safety First: ID approval required before bidding
+              </p>
+              <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                To protect homeowner trust, SaskHandy now requires ID Name Matched approval before
+                handymen can send bids. Complete your profile and submit your ID on the profile page.
+              </p>
+
+              <Button asChild size="sm" variant="outline" className="mt-3 bg-white">
+                <Link href="/handyman/profile">Complete Verification</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl border border-border/60 p-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-3">
             <div>
               <p className="text-sm font-medium text-foreground">Bid-ready profile</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                These required details must be complete before you can send bids.
+                These required details, including ID Name Matched approval, must be complete before you can send bids.
               </p>
             </div>
 
@@ -325,7 +429,7 @@ export default function HandymanDashboard() {
               <div>
                 <p className="text-sm font-medium text-foreground">Trust boosters</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Optional profile signals that can help homeowners feel more confident.
+                  Local details and verification signals that can help homeowners feel more confident.
                 </p>
               </div>
 
@@ -366,7 +470,7 @@ export default function HandymanDashboard() {
           {isBidReady && completedTrustBoosters < trustBoosterItems.length && (
             <div className="mt-4 pt-4 border-t border-border/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Add ID, insurance, criminal check, or licence verification to improve homeowner trust.
+                Add service area, external reviews, insurance, criminal check, or licence verification to improve homeowner trust.
               </p>
 
               <Button asChild size="sm" variant="outline">
@@ -417,7 +521,7 @@ export default function HandymanDashboard() {
 
             <div className="space-y-3">
               {[
-                "Complete your bid-ready profile and add trust signals if you can.",
+                "Complete your bid-ready profile, including ID Name Matched approval.",
                 "Browse open jobs that match your skills.",
                 "Send a clear bid with price, availability, and a short message.",
                 "Reply quickly if the homeowner messages you before choosing.",

@@ -182,6 +182,10 @@ function isHandymanProfileComplete(params: {
     missingFields.push("skills");
   }
 
+  if (!getProfileIdentityChecked(profile)) {
+    missingFields.push("ID name match approval");
+  }
+
   return {
     isComplete: missingFields.length === 0,
     missingFields,
@@ -214,8 +218,15 @@ function buildHandymanBidTrustFields(params: {
     handymanInsuranceVerified: params.profile?.insuranceVerified ?? false,
     handymanProfileImageUrl: params.profile?.profileImageUrl ?? null,
     handymanBio: params.profile?.bio ?? null,
+    handymanServiceArea: params.profile?.serviceArea ?? null,
+    handymanExternalGoogleReviewsUrl: params.profile?.externalGoogleReviewsUrl ?? null,
+    handymanExternalFacebookReviewsUrl: params.profile?.externalFacebookReviewsUrl ?? null,
+    handymanExternalWebsiteUrl: params.profile?.externalWebsiteUrl ?? null,
     handymanSkills: categories,
     handymanIdentityChecked: getProfileIdentityChecked(params.profile),
+    handymanGoldShieldVerified:
+      getProfileIdentityChecked(params.profile) &&
+      params.profile?.criminalRecordCheckStatus === "reviewed",
     handymanCriminalRecordCheckReviewed:
       params.profile?.criminalRecordCheckStatus === "reviewed",
     handymanTradeLicenseVerified:
@@ -768,6 +779,10 @@ const handymanProfilesRouter = router({
         hourlyRate: z.number().optional(),
         insuranceCertUrl: z.string().optional(),
         profileImageUrl: z.string().optional(),
+        serviceArea: z.string().max(500).optional(),
+        externalGoogleReviewsUrl: z.string().url().optional().or(z.literal("")),
+        externalFacebookReviewsUrl: z.string().url().optional().or(z.literal("")),
+        externalWebsiteUrl: z.string().url().optional().or(z.literal("")),
         identityDocumentUrl: z.string().optional(),
         criminalRecordCheckUrl: z.string().optional(),
         tradeLicenseDocumentUrl: z.string().optional(),
@@ -798,6 +813,22 @@ const handymanProfilesRouter = router({
 
       if ("profileImageUrl" in input) {
         dataToSave.profileImageUrl = input.profileImageUrl;
+      }
+
+      if ("serviceArea" in input) {
+        dataToSave.serviceArea = input.serviceArea?.trim() || null;
+      }
+
+      if ("externalGoogleReviewsUrl" in input) {
+        dataToSave.externalGoogleReviewsUrl = input.externalGoogleReviewsUrl?.trim() || null;
+      }
+
+      if ("externalFacebookReviewsUrl" in input) {
+        dataToSave.externalFacebookReviewsUrl = input.externalFacebookReviewsUrl?.trim() || null;
+      }
+
+      if ("externalWebsiteUrl" in input) {
+        dataToSave.externalWebsiteUrl = input.externalWebsiteUrl?.trim() || null;
       }
 
       if ("identityDocumentUrl" in input) {
@@ -842,6 +873,10 @@ const handymanProfilesRouter = router({
           hourlyRate: input.hourlyRate?.toFixed(2),
           insuranceCertUrl: input.insuranceCertUrl,
           profileImageUrl: input.profileImageUrl,
+          serviceArea: input.serviceArea?.trim() || null,
+          externalGoogleReviewsUrl: input.externalGoogleReviewsUrl?.trim() || null,
+          externalFacebookReviewsUrl: input.externalFacebookReviewsUrl?.trim() || null,
+          externalWebsiteUrl: input.externalWebsiteUrl?.trim() || null,
           identityDocumentUrl: input.identityDocumentUrl,
           identityVerificationStatus: input.identityDocumentUrl ? "pending" : "not_submitted",
           criminalRecordCheckUrl: input.criminalRecordCheckUrl,
@@ -1164,9 +1199,9 @@ const bidsRouter = router({
       if (!handymanProfile || !profileStatus.isComplete) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Complete your profile before sending bids. Missing: ${profileStatus.missingFields.join(
+          message: `Complete your bid-ready profile before sending bids. Missing: ${profileStatus.missingFields.join(
             ", "
-          )}. Homeowners are more likely to choose handymen with a clear photo, short bio, and listed skills.`,
+          )}. To protect homeowner trust, handymen need a clear photo, short bio, listed skills, and approved ID name match before bidding.`,
         });
       }
 
@@ -2565,10 +2600,28 @@ const supportRouter = router({
           "If something goes wrong during or after the job, a dispute can be opened. Admin reviews the case and can release payment or refund the homeowner.",
       },
       {
-        id: "insurance",
-        title: "What does insurance verified mean?",
+        id: "identity-check",
+        title: "What does ID Name Matched mean?",
         answer:
-          "It means the handyman uploaded an insurance document and it was reviewed and approved by admin.",
+          "It means the handyman uploaded identification and SaskHandy confirmed the name on the ID matches the name on their profile.",
+      },
+      {
+        id: "gold-shield",
+        title: "What does Gold Shield mean?",
+        answer:
+          "Gold Shield means the handyman has ID Name Matched and Criminal Record Check Reviewed badges. It helps homeowners review trust signals, but it does not replace your own judgment.",
+      },
+      {
+        id: "external-reviews",
+        title: "What are external reviews?",
+        answer:
+          "Some handymen may link to Google, Facebook, or website reviews while they build SaskHandy reviews. These links are shown as external review sources.",
+      },
+      {
+        id: "insurance",
+        title: "What does insurance reviewed mean?",
+        answer:
+          "It means the handyman uploaded an insurance document and it was reviewed by admin.",
       },
       {
         id: "payouts",

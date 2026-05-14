@@ -13,6 +13,7 @@ import {
   ExternalLink,
   FileCheck,
   Loader2,
+  MapPin,
   RefreshCw,
   Shield,
   Trash2,
@@ -119,7 +120,7 @@ export default function AdminPanel() {
   const setInsuranceVerification = trpc.admin.setInsuranceVerification.useMutation({
     onSuccess: (_, variables) => {
       toast.success(
-        variables.insuranceVerified ? "Insurance approved." : "Insurance verification removed."
+        variables.insuranceVerified ? "Insurance reviewed." : "Insurance review removed."
       );
       refetchInsurance();
     },
@@ -130,7 +131,7 @@ export default function AdminPanel() {
     onSuccess: (_, variables) => {
       toast.success(
         variables.status === "approved"
-          ? "Identity marked as checked."
+          ? "ID Name Matched approved."
           : variables.status === "rejected"
           ? "Identity verification rejected."
           : "Identity status updated."
@@ -331,6 +332,19 @@ export default function AdminPanel() {
           ))}
         </div>
 
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-start gap-2">
+            <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-950">Safety First admin note</p>
+              <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                Use careful language: ID Name Matched, Criminal Record Check Reviewed, Insurance
+                Reviewed, and Licence Verified. Avoid implying SaskHandy guarantees safety.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
@@ -508,9 +522,16 @@ export default function AdminPanel() {
                           <p className="text-sm font-medium text-foreground">
                             {profile.userName ?? "Unnamed handyman"}
                           </p>
+                          {profile.identityVerificationStatus === "approved" &&
+                            profile.criminalRecordCheckStatus === "reviewed" && (
+                              <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                                Gold Shield
+                              </span>
+                            )}
+
                           {profile.identityVerificationStatus === "approved" && (
                             <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
-                              Identity Checked
+                              ID Name Matched
                             </span>
                           )}
 
@@ -528,7 +549,7 @@ export default function AdminPanel() {
 
                           {profile.insuranceVerified && (
                             <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
-                              Insurance Verified
+Insurance Reviewed
                             </span>
                           )}
                         </div>
@@ -536,6 +557,54 @@ export default function AdminPanel() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {profile.userEmail ?? "No email"}
                         </p>
+
+                        {profile.serviceArea && (
+                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span>Service area: {profile.serviceArea}</span>
+                          </p>
+                        )}
+
+                        {(profile.externalGoogleReviewsUrl ||
+                          profile.externalFacebookReviewsUrl ||
+                          profile.externalWebsiteUrl) && (
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                            <span className="text-muted-foreground">External links:</span>
+
+                            {profile.externalGoogleReviewsUrl && (
+                              <a
+                                href={profile.externalGoogleReviewsUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                Google <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+
+                            {profile.externalFacebookReviewsUrl && (
+                              <a
+                                href={profile.externalFacebookReviewsUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                Facebook <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+
+                            {profile.externalWebsiteUrl && (
+                              <a
+                                href={profile.externalWebsiteUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                Website <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        )}
 
                         {profile.hourlyRate && (
                           <p className="text-xs text-muted-foreground mt-2">
@@ -873,7 +942,7 @@ export default function AdminPanel() {
           {approvedIdentityReviews.length > 0 && (
             <div className="mt-5">
               <h3 className="text-sm font-semibold text-foreground mb-3">
-                Identity Checked ({approvedIdentityReviews.length})
+                ID Name Matched ({approvedIdentityReviews.length})
               </h3>
 
               <div className="space-y-3">
@@ -1271,7 +1340,7 @@ export default function AdminPanel() {
                             disabled={setInsuranceVerification.isPending}
                           >
                             <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                            Approve
+                            Mark Reviewed
                           </Button>
 
                           <Button
@@ -1305,7 +1374,7 @@ export default function AdminPanel() {
         {verifiedInsurance.length > 0 && (
           <div>
             <h2 className="text-base font-semibold text-foreground mb-4">
-              Verified Insurance{" "}
+              Reviewed Insurance{" "}
               <span className="text-muted-foreground font-normal">({verifiedInsurance.length})</span>
             </h2>
 
@@ -1353,7 +1422,7 @@ export default function AdminPanel() {
 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
-                          Verified
+                          Reviewed
                         </span>
 
                         {profile.insuranceCertUrl && (

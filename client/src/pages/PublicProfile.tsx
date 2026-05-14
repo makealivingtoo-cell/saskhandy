@@ -6,8 +6,10 @@ import { format } from "date-fns";
 import {
   AlertTriangle,
   Briefcase,
+  ExternalLink,
   Flag,
   Loader2,
+  MapPin,
   MessageSquare,
   Shield,
   Star,
@@ -50,6 +52,27 @@ function getIdentityChecked(profile: any) {
     profile?.identityVerificationStatus === "approved" ||
     profile?.idVerificationStatus === "approved"
   );
+}
+
+function getGoldShieldVerified(profile: any) {
+  return getIdentityChecked(profile) && profile?.criminalRecordCheckStatus === "reviewed";
+}
+
+function getExternalReviewLinks(profile: any) {
+  return [
+    {
+      label: "Google reviews",
+      url: profile?.externalGoogleReviewsUrl,
+    },
+    {
+      label: "Facebook reviews",
+      url: profile?.externalFacebookReviewsUrl,
+    },
+    {
+      label: "Website / portfolio",
+      url: profile?.externalWebsiteUrl,
+    },
+  ].filter((item) => Boolean(item.url));
 }
 
 function getReviewCount(profile: any, reviewsLength: number) {
@@ -95,10 +118,11 @@ export default function PublicProfile() {
     if (!profile) return 0;
 
     let score = 0;
-    if (profile.userName?.trim()) score += 25;
-    if (profile.profileImageUrl) score += 25;
-    if (profile.bio?.trim() && profile.bio.trim().length >= 25) score += 25;
-    if (categories.length > 0) score += 25;
+    if (profile.userName?.trim()) score += 20;
+    if (profile.profileImageUrl) score += 20;
+    if (profile.bio?.trim() && profile.bio.trim().length >= 25) score += 20;
+    if (categories.length > 0) score += 20;
+    if (getIdentityChecked(profile)) score += 20;
 
     return Math.min(score, 100);
   }, [profile, categories.length]);
@@ -145,6 +169,8 @@ export default function PublicProfile() {
   const identityChecked = getIdentityChecked(profile);
   const criminalRecordCheckReviewed = profile.criminalRecordCheckStatus === "reviewed";
   const tradeLicenseVerified = profile.tradeLicenseVerificationStatus === "approved";
+  const goldShieldVerified = getGoldShieldVerified(profile);
+  const externalReviewLinks = getExternalReviewLinks(profile);
 
   return (
     <AppLayout>
@@ -157,10 +183,17 @@ export default function PublicProfile() {
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1 className="text-xl font-serif text-foreground">{displayName}</h1>
 
+                {goldShieldVerified && (
+                  <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    Gold Shield
+                  </span>
+                )}
+
                 {identityChecked && (
                   <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
-                    Identity checked
+                    ID Name Matched
                   </span>
                 )}
 
@@ -181,7 +214,7 @@ export default function PublicProfile() {
                 {profile.insuranceVerified && (
                   <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Shield className="w-3 h-3" />
-                    Insurance verified
+                    Insurance reviewed
                   </span>
                 )}
 
@@ -217,9 +250,34 @@ export default function PublicProfile() {
                 </p>
               )}
 
+              {profile.serviceArea && (
+                <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <span>{profile.serviceArea}</span>
+                </div>
+              )}
+
+              {externalReviewLinks.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                  <span className="text-muted-foreground">External reviews:</span>
+                  {externalReviewLinks.map((link) => (
+                    <a
+                      key={link.label}
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      {link.label}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ))}
+                </div>
+              )}
+
               <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                Review this handyman’s services, experience, profile details, rating, and trust
-                signals before choosing them for a job.
+                Review this handyman’s services, experience, service area, external review links,
+                rating, and trust signals before choosing them for a job.
               </p>
             </div>
           </div>
@@ -238,8 +296,8 @@ export default function PublicProfile() {
             </div>
 
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              SaskHandy requires a full name, profile photo, short bio, and skills before a handyman
-              can send bids.
+              SaskHandy requires a full name, profile photo, short bio, skills, and ID Name Matched
+              approval before a handyman can send bids.
             </p>
           </div>
 
@@ -250,8 +308,8 @@ export default function PublicProfile() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Message before choosing</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    You can ask about experience, availability, materials, and job details before
-                    moving forward.
+                    You can ask about experience, availability, materials, service area, external
+                    reviews, and job details before moving forward.
                   </p>
                 </div>
               </div>
@@ -279,8 +337,38 @@ export default function PublicProfile() {
                   <p className="text-sm font-medium text-amber-900">No SaskHandy reviews yet</p>
                   <p className="text-xs text-amber-800 mt-1 leading-relaxed">
                     This handyman has not completed a reviewed job on SaskHandy yet. Consider
-                    messaging them first to ask about their experience, past work, and availability.
+                    messaging them first and reviewing any external links they added for past work or reviews.
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {externalReviewLinks.length > 0 && (
+            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <div className="flex items-start gap-2">
+                <ExternalLink className="w-4 h-4 text-blue-700 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">External review sources</p>
+                  <p className="text-xs text-blue-800 mt-1 leading-relaxed">
+                    This handyman linked outside review or portfolio sources while building
+                    SaskHandy reviews. Review these links yourself before choosing.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {externalReviewLinks.map((link) => (
+                      <a
+                        key={link.label}
+                        href={link.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full bg-white border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700 hover:underline"
+                      >
+                        {link.label}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -309,14 +397,30 @@ export default function PublicProfile() {
             </div>
           )}
 
+          {goldShieldVerified && (
+            <div className="mt-5 pt-5 border-t border-border/40">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-2">
+                <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Gold Shield</p>
+                  <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                    Gold Shield means this handyman has ID Name Matched and Criminal Record Check
+                    Reviewed badges. It helps you review trust signals, but it does not guarantee
+                    safety or replace your own judgment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {identityChecked && (
             <div className="mt-5 pt-5 border-t border-border/40">
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-2">
                 <Shield className="w-4 h-4 text-blue-700 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-blue-800">Identity checked</p>
+                  <p className="text-sm font-medium text-blue-800">ID Name Matched</p>
                   <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                    This means the handyman’s profile name has been matched to identification. It
+                    This means SaskHandy reviewed identification and confirmed the handyman’s profile name matches the ID. It
                     does not replace your own judgment. You can message the handyman before choosing
                     and should only move forward when you feel comfortable.
                   </p>
@@ -361,10 +465,9 @@ export default function PublicProfile() {
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-2">
                 <Shield className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-emerald-800">Insurance verified</p>
+                  <p className="text-sm font-medium text-emerald-800">Insurance reviewed</p>
                   <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
-                    This handyman uploaded an insurance document that was reviewed and approved by
-                    admin.
+                    This handyman uploaded an insurance document that was reviewed by admin.
                   </p>
                 </div>
               </div>

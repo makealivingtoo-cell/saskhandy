@@ -8,6 +8,7 @@ import {
   MapPin,
   ShieldCheck,
   Star,
+  UserCheck,
   Wrench,
 } from "lucide-react";
 import { useEffect } from "react";
@@ -58,19 +59,22 @@ const categories = [
 
 const trustItems = [
   {
-    title: "Compare bids",
-    description: "Post once and receive bids from local handymen.",
+    title: "Review trust signals",
+    description:
+      "Look for ID Name Matched, Gold Shield, insurance, licence, reviews, and external review links before choosing.",
+    icon: UserCheck,
+  },
+  {
+    title: "Chat before choosing",
+    description:
+      "Ask about experience, availability, service area, and job details before accepting a bid.",
     icon: CheckCircle2,
   },
   {
     title: "Secure payments",
-    description: "Keep payments inside the platform until the job is complete.",
+    description:
+      "Payment is held securely through SaskHandy and only released after you mark the job complete.",
     icon: ShieldCheck,
-  },
-  {
-    title: "Ratings and reviews",
-    description: "Build trust with visible feedback from completed jobs.",
-    icon: Star,
   },
 ];
 
@@ -167,15 +171,15 @@ export default function HomePage() {
               <div className="max-w-2xl">
                 <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
                   <MapPin className="h-4 w-4" />
-                  Saskatchewan homeowners meet local handymen
+                  Saskatchewan homeowners meet local, profile-reviewed handymen
                 </div>
 
                 <h1 className="max-w-xl text-5xl font-bold leading-tight tracking-tight text-slate-950 md:text-6xl">
-                  Book trusted help for home jobs
+                  Hire local help with more confidence
                 </h1>
 
                 <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
-                  Post a job, compare bids, chat with local handymen, and pay securely in one place.
+                  Post a job, compare bids, review handyman profiles, message before choosing, and pay securely in one place.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -244,6 +248,69 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="border-b border-slate-200 bg-emerald-50/50">
+          <div className="container py-14 md:py-16">
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+              <div>
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
+                  <ShieldCheck className="h-4 w-4" />
+                  Safety First
+                </div>
+
+                <h2 className="text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
+                  Review who you’re hiring before you choose
+                </h2>
+
+                <p className="mt-4 text-lg leading-8 text-slate-600">
+                  SaskHandy helps homeowners compare more than price. Review each handyman’s
+                  profile photo, service area, bio, skills, reviews, external review links, and
+                  verification badges before moving forward.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[28px] border border-emerald-200 bg-white p-6 shadow-sm">
+                  <ShieldCheck className="mb-4 h-6 w-6 text-emerald-700" />
+                  <h3 className="text-lg font-semibold text-slate-900">ID Name Matched</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Handymen need approved ID Name Matched status before sending bids.
+                  </p>
+                </div>
+
+                <div className="rounded-[28px] border border-amber-200 bg-white p-6 shadow-sm">
+                  <ShieldCheck className="mb-4 h-6 w-6 text-amber-700" />
+                  <h3 className="text-lg font-semibold text-slate-900">Gold Shield</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Gold Shield means ID Name Matched plus Criminal Record Check Reviewed.
+                  </p>
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                  <MapPin className="mb-4 h-6 w-6 text-emerald-700" />
+                  <h3 className="text-lg font-semibold text-slate-900">Local service area</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    See where each handyman works so they feel less like a stranger from the internet.
+                  </p>
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                  <Star className="mb-4 h-6 w-6 text-yellow-500" />
+                  <h3 className="text-lg font-semibold text-slate-900">External reviews</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    New handymen can link Google, Facebook, or portfolio reviews while building
+                    SaskHandy reviews.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-6 max-w-3xl text-xs leading-6 text-slate-500">
+              Verification badges help you review trust signals, but they do not guarantee safety or
+              replace your own judgment. Message before choosing and only move forward when you feel comfortable.
+            </p>
+          </div>
+        </section>
+
         <section className="bg-white">
           <div className="container py-16 md:py-20">
             <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
@@ -282,7 +349,7 @@ export default function HomePage() {
                       2. Compare bids
                     </div>
                     <p className="mt-2 text-slate-600">
-                      Review pricing, availability, and profiles before choosing someone.
+                      Review pricing, availability, service areas, reviews, and trust badges before choosing someone.
                     </p>
                   </div>
 
@@ -291,7 +358,7 @@ export default function HomePage() {
                       3. Chat and pay
                     </div>
                     <p className="mt-2 text-slate-600">
-                      Keep communication and payment in one place from start to finish.
+                      Message before choosing and keep payment protected through SaskHandy from start to finish.
                     </p>
                   </div>
                 </div>
@@ -320,7 +387,7 @@ export default function HomePage() {
                 Why use SaskHandy
               </h2>
               <p className="mt-4 text-lg text-slate-600">
-                A cleaner way to hire for small home jobs without chasing random numbers on Facebook.
+                A safer, cleaner way to hire for small home jobs without relying on random names from Facebook groups.
               </p>
             </div>
 
@@ -378,7 +445,7 @@ export default function HomePage() {
                   Ready to post your first job?
                 </h2>
                 <p className="mt-4 text-lg text-emerald-50/90">
-                  Start with one real job and build the marketplace from there.
+                  Post once, review bids carefully, message before choosing, and pay securely through SaskHandy.
                 </p>
               </div>
 

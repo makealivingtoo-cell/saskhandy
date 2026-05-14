@@ -31,6 +31,7 @@ const bidTips = [
   "Give a clear price based on the job details.",
   "Mention when you are available.",
   "Write a short note showing you understand the work.",
+  "Invite the homeowner to message you before choosing if they have questions.",
 ];
 
 function parseProfileCategories(value?: string | string[] | null): string[] {
@@ -51,6 +52,14 @@ function parseProfileCategories(value?: string | string[] | null): string[] {
   }
 }
 
+function getProfileIdentityChecked(profile: any | null | undefined) {
+  return (
+    profile?.identityVerificationStatus === "approved" ||
+    profile?.identityChecked === true ||
+    profile?.idNameMatched === true
+  );
+}
+
 function getProfileCompletionStatus(user: any, profile: any) {
   const categories = parseProfileCategories(profile?.categories);
   const missingFields: string[] = [];
@@ -69,6 +78,10 @@ function getProfileCompletionStatus(user: any, profile: any) {
 
   if (categories.length < 1) {
     missingFields.push("skills");
+  }
+
+  if (!getProfileIdentityChecked(profile)) {
+    missingFields.push("ID name match approval");
   }
 
   return {
@@ -208,6 +221,9 @@ export default function HandymanJobDetails() {
 
   const profileStatus = getProfileCompletionStatus(user, handymanProfile);
   const canPlaceBid = user?.role === "admin" || profileStatus.isComplete;
+  const identityApproved = getProfileIdentityChecked(handymanProfile);
+  const goldShieldVerified =
+    identityApproved && handymanProfile?.criminalRecordCheckStatus === "reviewed";
 
   return (
     <AppLayout>
@@ -279,8 +295,9 @@ export default function HandymanJobDetails() {
                   Complete your profile before sending bids
                 </p>
                 <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                  Homeowners are more likely to choose handymen with a clear photo, short bio, and
-                  listed skills. Complete these items before bidding:
+                  To protect homeowner trust, SaskHandy now requires a clear photo, short bio,
+                  listed skills, and approved ID Name Matched status before bidding. Complete these
+                  items first:
                 </p>
 
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -297,6 +314,26 @@ export default function HandymanJobDetails() {
                 <Button asChild size="sm" className="mt-4 bg-amber-700 hover:bg-amber-800">
                   <Link href="/handyman/profile">Complete Profile</Link>
                 </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {job.status === "open" && !myBid && canPlaceBid && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <Shield className="w-5 h-5" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-emerald-950">
+                  {goldShieldVerified ? "Gold Shield profile" : "ID Name Matched"}
+                </p>
+                <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                  Your profile meets SaskHandy’s bid-ready requirements. Homeowners will be able to
+                  review your photo, bio, skills, ID badge, and message before choosing.
+                </p>
               </div>
             </div>
           </div>
@@ -464,7 +501,7 @@ export default function HandymanJobDetails() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {canPlaceBid
                       ? "Send a clear bid with your price, availability, and short message."
-                      : "Complete your profile first so homeowners can review who they are hiring."}
+                      : "Complete your bid-ready profile first, including ID Name Matched approval, so homeowners can review who they are hiring."}
                   </p>
                 </div>
 
@@ -489,7 +526,8 @@ export default function HandymanJobDetails() {
                       <Shield className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
                       <p className="text-xs leading-relaxed text-emerald-800">
                         Keep your bid professional and keep communication on SaskHandy. Homeowners
-                        can message you before choosing, so use your note to build confidence.
+                        can review your ID Name Matched status and message you before choosing, so
+                        use your note to build confidence.
                       </p>
                     </div>
                   </div>
@@ -562,7 +600,7 @@ export default function HandymanJobDetails() {
                   <Button
                     onClick={() => {
                       if (!canPlaceBid) {
-                        toast.error("Complete your profile before sending bids.");
+                        toast.error("Complete your bid-ready profile, including ID Name Matched approval, before sending bids.");
                         return;
                       }
 

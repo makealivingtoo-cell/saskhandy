@@ -13,9 +13,9 @@ type ChatMessage = {
 
 const quickQuestions = [
   "How does SaskHandy work?",
-  "What services can I request?",
-  "How do handymen get jobs?",
-  "How does payment work?",
+  "What is ID Name Matched?",
+  "What is Gold Shield?",
+  "How does payment protection work?",
 ];
 
 export default function HomeAiAssistant() {
@@ -24,7 +24,7 @@ export default function HomeAiAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      text: "Hi! I can answer questions about SaskHandy, posting jobs, handyman services, payments, and getting started.",
+      text: "Hi! I can answer questions about SaskHandy, posting jobs, reviewing handyman trust signals, ID Name Matched, Gold Shield, payments, and getting started.",
     },
   ]);
 
@@ -45,7 +45,7 @@ export default function HomeAiAssistant() {
         ...prev,
         {
           role: "assistant",
-          text: "Sorry, I had trouble answering that. You can still sign up to post a job or browse SaskHandy services.",
+          text: "Sorry, I had trouble answering that. You can still sign up to post a job, review handyman profiles, message before choosing, and use secure payment through SaskHandy.",
         },
       ]);
     },
@@ -75,7 +75,7 @@ export default function HomeAiAssistant() {
               <Sparkles className="h-4 w-4" />
               <div>
                 <div className="text-sm font-semibold">SaskHandy Assistant</div>
-                <div className="text-xs text-emerald-50">Ask about SaskHandy</div>
+                <div className="text-xs text-emerald-50">Ask about hiring safely</div>
               </div>
             </div>
 
@@ -160,7 +160,7 @@ export default function HomeAiAssistant() {
             </div>
 
             <div className="mt-3 text-center text-xs text-slate-500">
-              Ready to begin?{" "}
+              Ready to post and compare bids?{" "}
               <Link href="/sign-up" className="font-semibold text-emerald-700 hover:underline">
                 Get Started
               </Link>

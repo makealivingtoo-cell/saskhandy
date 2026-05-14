@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  ExternalLink,
   Flag,
   Image as ImageIcon,
   Loader2,
@@ -118,22 +119,59 @@ function getBidTradeLicenseVerified(bid: any) {
   return bid?.handymanTradeLicenseVerified === true;
 }
 
+function getBidGoldShieldVerified(bid: any) {
+  return (
+    bid?.handymanGoldShieldVerified === true ||
+    (getBidIdentityChecked(bid) && getBidCriminalRecordCheckReviewed(bid))
+  );
+}
+
+function getBidServiceArea(bid: any) {
+  return bid?.handymanServiceArea ?? bid?.serviceArea ?? null;
+}
+
+function getBidExternalReviewLinks(bid: any) {
+  return [
+    {
+      label: "Google reviews",
+      url: bid?.handymanExternalGoogleReviewsUrl,
+    },
+    {
+      label: "Facebook reviews",
+      url: bid?.handymanExternalFacebookReviewsUrl,
+    },
+    {
+      label: "Website / portfolio",
+      url: bid?.handymanExternalWebsiteUrl,
+    },
+  ].filter((item) => Boolean(item.url));
+}
+
 function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: boolean }) {
   const completedJobs = getBidCompletedJobs(bid);
   const reviewCount = getBidReviewCount(bid);
   const bio = getBidBio(bid);
   const skills = getBidSkills(bid).slice(0, compact ? 3 : 5);
   const hasRating = !!bid?.handymanRating;
+  const serviceArea = getBidServiceArea(bid);
+  const externalReviewLinks = getBidExternalReviewLinks(bid);
   const isNew = completedJobs === 0;
   const hasNoReviews = reviewCount === 0 && !hasRating;
 
   return (
     <div className={compact ? "mt-2 space-y-2" : "mt-3 space-y-3"}>
       <div className="flex flex-wrap gap-1.5">
+        {getBidGoldShieldVerified(bid) && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+            <Shield className="h-3 w-3" />
+            Gold Shield
+          </span>
+        )}
+
         {getBidIdentityChecked(bid) && (
           <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
             <Shield className="h-3 w-3" />
-            Identity checked
+ID Name Matched
           </span>
         )}
 
@@ -154,7 +192,7 @@ function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: bo
         {getBidInsuranceVerified(bid) && (
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
             <Shield className="h-3 w-3" />
-            Insurance verified
+Insurance reviewed
           </span>
         )}
 
@@ -170,6 +208,31 @@ function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: bo
           </span>
         )}
       </div>
+
+      {serviceArea && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="w-3.5 h-3.5 shrink-0" />
+          <span>{serviceArea}</span>
+        </div>
+      )}
+
+      {externalReviewLinks.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted-foreground">External reviews:</span>
+          {externalReviewLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              {link.label}
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          ))}
+        </div>
+      )}
 
       {bio && (
         <p className={`text-muted-foreground leading-relaxed ${compact ? "text-xs line-clamp-1" : "text-sm"}`}>
@@ -193,7 +256,7 @@ function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: bo
       {hasNoReviews && (
         <p className="text-xs leading-relaxed text-muted-foreground">
           This handyman has not completed a reviewed job on SaskHandy yet. You can message them
-          before choosing to ask about their experience, availability, and past work.
+          before choosing and review any external links they have added for past work or reviews.
         </p>
       )}
     </div>
@@ -278,9 +341,18 @@ function BidChatDrawer({
               />
 
               <div className="min-w-0">
-                <p className="font-semibold text-foreground truncate">
-                  {bid.handymanName ?? "Handyman"}
-                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-foreground truncate">
+                    {bid.handymanName ?? "Handyman"}
+                  </p>
+
+                  {getBidGoldShieldVerified(bid) && (
+                    <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Gold Shield
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
                   {bid.handymanRating ? (
@@ -346,10 +418,13 @@ function BidChatDrawer({
             <div className="flex items-start gap-2">
               <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-foreground">What happens next?</p>
+                <p className="text-sm font-semibold text-foreground">
+                  SaskHandy Safety & Payment Protection
+                </p>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Choose a handyman, review secure payment, then chat and coordinate the job.
-                  Payment is released only after you mark the job complete.
+                  Review this handyman’s profile, service area, badges, reviews, and messages before
+                  choosing. Payment is held securely through SaskHandy and only released after you
+                  mark the job complete.
                 </p>
               </div>
             </div>
@@ -1046,7 +1121,7 @@ export default function JobDetails() {
                     {getBidInsuranceVerified(acceptedBid) && (
                       <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                         <Shield className="w-3 h-3" />
-                        Insurance Verified
+                        Insurance Reviewed
                       </span>
                     )}
                   </div>
@@ -1148,9 +1223,10 @@ export default function JobDetails() {
                   <div>
                     <p className="text-sm font-medium text-foreground">Choosing a bid</p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      You can chat with a handyman before choosing. Ask about their experience,
-                      availability, and past work. Keep communication on SaskHandy so the job
-                      details, payment, and dispute process stay protected.
+                      You can chat with a handyman before choosing. Review their photo, service
+                      area, ID Name Matched badge, Gold Shield status, external review links, and
+                      past work. Keep communication on SaskHandy so the job details, payment, and
+                      dispute process stay protected.
                     </p>
                   </div>
                 </div>
@@ -1204,10 +1280,24 @@ export default function JobDetails() {
                                 {bid.handymanName ?? "Handyman"}
                               </p>
 
+                              {getBidGoldShieldVerified(bid) && (
+                                <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                  <Shield className="w-3 h-3" />
+                                  Gold Shield
+                                </span>
+                              )}
+
+                              {getBidIdentityChecked(bid) && !getBidGoldShieldVerified(bid) && (
+                                <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                  <Shield className="w-3 h-3" />
+                                  ID Name Matched
+                                </span>
+                              )}
+
                               {getBidInsuranceVerified(bid) && (
                                 <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                                   <Shield className="w-3 h-3" />
-                                  Insurance Verified
+                                  Insurance Reviewed
                                 </span>
                               )}
                             </div>
