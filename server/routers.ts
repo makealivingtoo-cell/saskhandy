@@ -774,6 +774,7 @@ const handymanProfilesRouter = router({
   createOrUpdate: protectedProcedure
     .input(
       z.object({
+        name: z.string().min(2).max(120).optional(),
         bio: z.string().optional(),
         categories: z.array(z.string()).optional(),
         hourlyRate: z.number().optional(),
@@ -792,6 +793,21 @@ const handymanProfilesRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const existing = await getHandymanProfile(ctx.user.id);
+
+      if ("name" in input) {
+        if (existing?.identityVerificationStatus === "approved") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Your name cannot be changed after ID Name Matched approval. Contact SaskHandy support if your legal name needs to be corrected.",
+          });
+        }
+
+        await upsertUser({
+          openId: ctx.user.openId,
+          name: input.name?.trim(),
+        });
+      }
 
       const dataToSave: any = {};
 

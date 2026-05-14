@@ -12,6 +12,8 @@ import {
   ExternalLink,
   Info,
   Loader2,
+  Link as LinkIcon,
+  MapPin,
   Save,
   Shield,
   Star,
@@ -33,11 +35,13 @@ function getBidReadyItems({
   bio,
   selectedCategories,
   profileImageUrl,
+  identityVerificationStatus,
 }: {
   fullName?: string | null;
   bio: string;
   selectedCategories: string[];
   profileImageUrl?: string | null;
+  identityVerificationStatus?: string | null;
 }) {
   return [
     {
@@ -60,6 +64,11 @@ function getBidReadyItems({
       completed: selectedCategories.length > 0,
       required: true,
     },
+    {
+      label: "ID name match",
+      completed: identityVerificationStatus === "approved",
+      required: true,
+    },
   ];
 }
 
@@ -70,6 +79,10 @@ function getOptionalTrustItems({
   identityVerificationStatus,
   criminalRecordCheckStatus,
   tradeLicenseVerificationStatus,
+  serviceArea,
+  externalGoogleReviewsUrl,
+  externalFacebookReviewsUrl,
+  externalWebsiteUrl,
 }: {
   hourlyRate: string;
   insuranceCertUrl?: string | null;
@@ -77,11 +90,27 @@ function getOptionalTrustItems({
   identityVerificationStatus?: string | null;
   criminalRecordCheckStatus?: string | null;
   tradeLicenseVerificationStatus?: string | null;
+  serviceArea?: string | null;
+  externalGoogleReviewsUrl?: string | null;
+  externalFacebookReviewsUrl?: string | null;
+  externalWebsiteUrl?: string | null;
 }) {
+  const hasExternalReviewLink = Boolean(
+    externalGoogleReviewsUrl || externalFacebookReviewsUrl || externalWebsiteUrl
+  );
+
   return [
+    {
+      label: "Service area",
+      completed: Boolean(serviceArea?.trim()),
+    },
     {
       label: "Hourly rate",
       completed: Boolean(hourlyRate.trim()),
+    },
+    {
+      label: "External reviews linked",
+      completed: hasExternalReviewLink,
     },
     {
       label: "Insurance file",
@@ -128,9 +157,14 @@ export default function HandymanProfile() {
 
   const { data: categories = [] } = trpc.jobs.categories.useQuery();
 
+  const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hourlyRate, setHourlyRate] = useState("");
+  const [serviceArea, setServiceArea] = useState("");
+  const [externalGoogleReviewsUrl, setExternalGoogleReviewsUrl] = useState("");
+  const [externalFacebookReviewsUrl, setExternalFacebookReviewsUrl] = useState("");
+  const [externalWebsiteUrl, setExternalWebsiteUrl] = useState("");
   const [tradeLicenseType, setTradeLicenseType] = useState("");
   const [tradeLicenseNumber, setTradeLicenseNumber] = useState("");
   const [uploadingInsurance, setUploadingInsurance] = useState(false);
@@ -160,6 +194,7 @@ export default function HandymanProfile() {
 
   useEffect(() => {
     if (profile) {
+      setFullName(user?.name ?? profile.userName ?? "");
       setBio(profile.bio ?? "");
 
       try {
@@ -170,20 +205,25 @@ export default function HandymanProfile() {
       }
 
       setHourlyRate(profile.hourlyRate ? String(parseFloat(profile.hourlyRate)) : "");
+      setServiceArea(profile.serviceArea ?? "");
+      setExternalGoogleReviewsUrl(profile.externalGoogleReviewsUrl ?? "");
+      setExternalFacebookReviewsUrl(profile.externalFacebookReviewsUrl ?? "");
+      setExternalWebsiteUrl(profile.externalWebsiteUrl ?? "");
       setTradeLicenseType(profile.tradeLicenseType ?? "");
       setTradeLicenseNumber(profile.tradeLicenseNumber ?? "");
     }
-  }, [profile]);
+  }, [profile, user?.name]);
 
   const bidReadyItems = useMemo(
     () =>
       getBidReadyItems({
-        fullName: user?.name,
+        fullName,
         bio,
         selectedCategories,
         profileImageUrl: profile?.profileImageUrl,
+        identityVerificationStatus: profile?.identityVerificationStatus,
       }),
-    [user?.name, bio, selectedCategories, profile?.profileImageUrl]
+    [fullName, bio, selectedCategories, profile?.profileImageUrl, profile?.identityVerificationStatus]
   );
 
   const optionalTrustItems = useMemo(
@@ -195,9 +235,17 @@ export default function HandymanProfile() {
         identityVerificationStatus: profile?.identityVerificationStatus,
         criminalRecordCheckStatus: profile?.criminalRecordCheckStatus,
         tradeLicenseVerificationStatus: profile?.tradeLicenseVerificationStatus,
+        serviceArea,
+        externalGoogleReviewsUrl,
+        externalFacebookReviewsUrl,
+        externalWebsiteUrl,
       }),
     [
       hourlyRate,
+      serviceArea,
+      externalGoogleReviewsUrl,
+      externalFacebookReviewsUrl,
+      externalWebsiteUrl,
       profile?.insuranceCertUrl,
       profile?.insuranceVerified,
       profile?.identityVerificationStatus,
@@ -225,6 +273,10 @@ export default function HandymanProfile() {
       bio: bio.trim() || undefined,
       categories: selectedCategories,
       hourlyRate: hourlyRate ? parseFloat(hourlyRate) : undefined,
+      serviceArea: serviceArea.trim() || undefined,
+      externalGoogleReviewsUrl: externalGoogleReviewsUrl.trim() || undefined,
+      externalFacebookReviewsUrl: externalFacebookReviewsUrl.trim() || undefined,
+      externalWebsiteUrl: externalWebsiteUrl.trim() || undefined,
       tradeLicenseType: tradeLicenseType.trim() || undefined,
       tradeLicenseNumber: tradeLicenseNumber.trim() || undefined,
     });
@@ -507,8 +559,13 @@ export default function HandymanProfile() {
     : "pending";
 
   const identityState = profile?.identityVerificationStatus ?? "not_submitted";
+  const nameLocked = identityState === "approved";
   const criminalState = profile?.criminalRecordCheckStatus ?? "not_submitted";
   const tradeLicenseState = profile?.tradeLicenseVerificationStatus ?? "not_submitted";
+  const goldShieldVerified = identityState === "approved" && criminalState === "reviewed";
+  const hasExternalReviewLinks = Boolean(
+    profile?.externalGoogleReviewsUrl || profile?.externalFacebookReviewsUrl || profile?.externalWebsiteUrl
+  );
 
   return (
     <AppLayout title="My Profile">
@@ -530,6 +587,49 @@ export default function HandymanProfile() {
                     </span>
                   )}
                 </div>
+
+                {profile?.serviceArea && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                    <MapPin className="w-3 h-3" />
+                    <span>{profile.serviceArea}</span>
+                  </div>
+                )}
+
+                {hasExternalReviewLinks && (
+                  <div className="flex items-center gap-2 text-xs mt-2 flex-wrap">
+                    <span className="text-muted-foreground">External reviews:</span>
+                    {profile?.externalGoogleReviewsUrl && (
+                      <a
+                        href={profile.externalGoogleReviewsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        Google <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {profile?.externalFacebookReviewsUrl && (
+                      <a
+                        href={profile.externalFacebookReviewsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        Facebook <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {profile?.externalWebsiteUrl && (
+                      <a
+                        href={profile.externalWebsiteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        Website <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -569,6 +669,13 @@ export default function HandymanProfile() {
                   <span className="text-xs text-muted-foreground">
                     {profile?.totalJobs ?? 0} jobs completed
                   </span>
+
+                  {goldShieldVerified && (
+                    <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Gold Shield
+                    </span>
+                  )}
 
                   {profile?.identityVerificationStatus === "approved" && (
                     <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
@@ -699,8 +806,8 @@ export default function HandymanProfile() {
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   When you bid on a job, homeowners can look at your photo, full name, short bio,
-                  skills, rating, job history, insurance status, and message. A complete profile can
-                  make your bid feel safer and more professional.
+                  skills, service area, verification badges, external review links, rating, job
+                  history, and message. ID Name Matched is required before bidding.
                 </p>
               </div>
             </div>
@@ -815,7 +922,7 @@ export default function HandymanProfile() {
                   <p className="text-sm font-medium text-foreground">ID Name Match</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                     Upload government ID so SaskHandy can confirm your profile name matches your ID.
-                    This can show homeowners an “ID Name Matched” badge after admin approval.
+                    ID Name Matched is required before bidding and can show homeowners a trust badge.
                   </p>
 
                   {profile?.identityDocumentUrl && (
@@ -1032,8 +1139,91 @@ export default function HandymanProfile() {
             <h3 className="font-semibold text-foreground">Edit Profile</h3>
             <p className="text-xs text-muted-foreground mt-1">
               These details help homeowners understand who they are hiring before accepting a bid.
-              Full name, profile photo, short bio, and skills are required before you can bid.
+              Full name, profile photo, short bio, skills, and ID Name Matched approval are required before you can bid.
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Legal / Profile Name</Label>
+            <Input
+              id="fullName"
+              placeholder="Your full legal name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              disabled={nameLocked}
+              minLength={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              {nameLocked
+                ? "Your name is locked because ID Name Matched has been approved. Contact SaskHandy support if your legal name needs to be corrected."
+                : "Use your legal name. This must match your government ID for ID Name Matched approval."}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="serviceArea">Service Area</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="serviceArea"
+                placeholder="Example: Serving Silverwood Heights, Lawson Heights & nearby Saskatoon areas"
+                value={serviceArea}
+                onChange={(e) => setServiceArea(e.target.value)}
+                className="pl-9"
+                maxLength={500}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This local signal helps homeowners feel like they are hiring someone nearby, not a stranger from the internet.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="externalGoogleReviewsUrl">Google Reviews Link</Label>
+              <Input
+                id="externalGoogleReviewsUrl"
+                type="url"
+                placeholder="https://..."
+                value={externalGoogleReviewsUrl}
+                onChange={(e) => setExternalGoogleReviewsUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="externalFacebookReviewsUrl">Facebook Reviews Link</Label>
+              <Input
+                id="externalFacebookReviewsUrl"
+                type="url"
+                placeholder="https://..."
+                value={externalFacebookReviewsUrl}
+                onChange={(e) => setExternalFacebookReviewsUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="externalWebsiteUrl">Website / Portfolio Link</Label>
+              <Input
+                id="externalWebsiteUrl"
+                type="url"
+                placeholder="https://..."
+                value={externalWebsiteUrl}
+                onChange={(e) => setExternalWebsiteUrl(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl p-4 bg-blue-50 border border-blue-200">
+            <div className="flex items-start gap-2">
+              <LinkIcon className="w-4 h-4 text-blue-700 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">External reviews</p>
+                <p className="text-xs text-blue-800 mt-1 leading-relaxed">
+                  Add Google, Facebook, or portfolio links if you already have reviews outside SaskHandy.
+                  These will be labelled as external review sources until you build on-platform reviews.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
