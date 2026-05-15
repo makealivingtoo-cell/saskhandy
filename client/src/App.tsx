@@ -1,7 +1,8 @@
+import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
@@ -66,6 +67,27 @@ import HandymanEarnings from "./pages/handyman/Earnings";
 // Shared
 import PublicProfile from "./pages/PublicProfile";
 import AdminPanel from "./pages/AdminPanel";
+
+
+function MetaPixelPageViewTracker() {
+  const [location] = useLocation();
+  const hasMounted = useRef(false);
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+
+    const fbq = (window as any).fbq;
+
+    if (typeof fbq === "function") {
+      fbq("track", "PageView");
+    }
+  }, [location]);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -145,6 +167,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster richColors position="top-right" />
+          <MetaPixelPageViewTracker />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
