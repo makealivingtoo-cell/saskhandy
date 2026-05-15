@@ -2,13 +2,26 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Loader2, MessageSquare, Send } from "lucide-react";
+import { Loader2, Mail, MessageSquare, Send, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type TicketStatus = "open" | "replied" | "closed";
+
+function getSubmitterLabel(ticket: any) {
+  return ticket.submitterName || ticket.userName || ticket.name || "Unknown user";
+}
+
+function getSubmitterEmail(ticket: any) {
+  return ticket.submitterEmail || ticket.userEmail || ticket.email || null;
+}
+
+function getSubmitterUserType(ticket: any) {
+  return ticket.submitterUserType || ticket.userType || null;
+}
+
 
 export default function AdminSupportPage() {
   const utils = trpc.useUtils();
@@ -155,6 +168,26 @@ export default function AdminSupportPage() {
                     {ticket.category}
                   </p>
 
+                  <div className="space-y-1 mb-2">
+                    <p className="text-xs text-foreground font-medium flex items-center gap-1.5">
+                      <UserRound className="w-3 h-3 text-muted-foreground" />
+                      {getSubmitterLabel(ticket)}
+                    </p>
+
+                    {getSubmitterEmail(ticket) && (
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 break-all">
+                        <Mail className="w-3 h-3 shrink-0" />
+                        {getSubmitterEmail(ticket)}
+                      </p>
+                    )}
+
+                    {getSubmitterUserType(ticket) && (
+                      <p className="text-[11px] text-muted-foreground capitalize">
+                        {getSubmitterUserType(ticket)}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
                     <span>Ticket #{ticket.id}</span>
                     <span>
@@ -191,7 +224,29 @@ export default function AdminSupportPage() {
                     <span className="text-xs text-muted-foreground">
                       Ticket #{selectedTicket.id}
                     </span>
+
+                    <span className="text-xs text-muted-foreground">•</span>
+
+                    <span className="text-xs text-muted-foreground">
+                      Submitted by {getSubmitterLabel(selectedTicket)}
+                    </span>
+
+                    {getSubmitterUserType(selectedTicket) && (
+                      <>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {getSubmitterUserType(selectedTicket)}
+                        </span>
+                      </>
+                    )}
                   </div>
+
+                  {getSubmitterEmail(selectedTicket) && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/30 px-3 py-1 text-xs text-muted-foreground">
+                      <Mail className="w-3 h-3" />
+                      {getSubmitterEmail(selectedTicket)}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2 flex-wrap">
@@ -234,9 +289,21 @@ export default function AdminSupportPage() {
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="text-center py-10 text-sm text-muted-foreground">
-                    No messages yet.
-                  </div>
+                  selectedTicket.content ? (
+                    <div className="rounded-2xl px-4 py-3 max-w-[85%] bg-white border border-border/60">
+                      <p className="text-xs font-medium mb-1">
+                        {getSubmitterLabel(selectedTicket)}
+                      </p>
+                      <p className="text-sm whitespace-pre-wrap">{selectedTicket.content}</p>
+                      <p className="text-[11px] opacity-80 mt-2">
+                        {formatDistanceToNow(new Date(selectedTicket.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 text-sm text-muted-foreground">
+                      No messages yet.
+                    </div>
+                  )
                 ) : (
                   messages.map((msg) => (
                     <div
@@ -249,7 +316,9 @@ export default function AdminSupportPage() {
                       )}
                     >
                       <p className="text-xs font-medium mb-1">
-                        {msg.senderRole === "admin" ? "Admin" : "User"}
+                        {msg.senderRole === "admin"
+                          ? "Admin"
+                          : msg.senderName || getSubmitterLabel(selectedTicket)}
                       </p>
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                       <p className="text-[11px] opacity-80 mt-2">

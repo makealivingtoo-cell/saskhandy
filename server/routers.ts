@@ -2705,11 +2705,25 @@ const supportRouter = router({
         jobId: input.jobId,
       });
 
+      await addSupportTicketMessage({
+        ticketId,
+        senderId: ctx.user.id,
+        senderRole: "user",
+        content: input.content,
+      });
+
       return { ticketId };
     }),
 
   getMine: protectedProcedure.query(async ({ ctx }) => {
-    return getSupportTicketsForUser(ctx.user.id);
+    const tickets = await getSupportTicketsForUser(ctx.user.id);
+
+    return tickets.map((ticket) => ({
+      ...ticket,
+      submitterName: ctx.user.name ?? null,
+      submitterEmail: ctx.user.email ?? null,
+      submitterUserType: ctx.user.userType ?? null,
+    }));
   }),
 
   getAll: protectedProcedure.query(async ({ ctx }) => {
@@ -2717,7 +2731,20 @@ const supportRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
 
-    return getAllSupportTickets();
+    const tickets = await getAllSupportTickets();
+
+    return Promise.all(
+      tickets.map(async (ticket) => {
+        const submitter = await safeGetUserById(ticket.userId);
+
+        return {
+          ...ticket,
+          submitterName: submitter?.name ?? null,
+          submitterEmail: submitter?.email ?? null,
+          submitterUserType: submitter?.userType ?? null,
+        };
+      })
+    );
   }),
 
   getById: protectedProcedure.input(z.object({ ticketId: z.number() })).query(async ({ ctx, input }) => {
@@ -2728,7 +2755,14 @@ const supportRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
 
-    return ticket;
+    const submitter = await safeGetUserById(ticket.userId);
+
+    return {
+      ...ticket,
+      submitterName: submitter?.name ?? null,
+      submitterEmail: submitter?.email ?? null,
+      submitterUserType: submitter?.userType ?? null,
+    };
   }),
 
   getMessages: protectedProcedure.input(z.object({ ticketId: z.number() })).query(async ({ ctx, input }) => {
@@ -2739,7 +2773,20 @@ const supportRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
 
-    return getSupportTicketMessages(input.ticketId);
+    const ticketMessages = await getSupportTicketMessages(input.ticketId);
+
+    return Promise.all(
+      ticketMessages.map(async (message) => {
+        const sender = await safeGetUserById(message.senderId);
+
+        return {
+          ...message,
+          senderName: sender?.name ?? null,
+          senderEmail: sender?.email ?? null,
+          senderUserType: sender?.userType ?? null,
+        };
+      })
+    );
   }),
 
   reply: protectedProcedure
