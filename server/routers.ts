@@ -46,6 +46,8 @@ import {
   deleteJobById,
   deletePasswordResetTokensForUser,
   deleteUserById,
+  getAccountDeletionBlockers,
+  anonymizeUserAccount,
   getAllDisputes,
   getAllHandymanProfiles,
   getAllJobsForAdmin,
@@ -718,6 +720,43 @@ const authRouter = router({
     ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
     return { success: true } as const;
   }),
+
+  getAccountDeletionStatus: protectedProcedure.query(async ({ ctx }) => {
+    return getAccountDeletionBlockers(ctx.user.id);
+  }),
+
+  deleteMyAccount: protectedProcedure
+    .input(
+      z.object({
+        confirmation: z.literal("DELETE"),
+      })
+    )
+    .mutation(async ({ ctx }) => {
+      if (ctx.user.role === "admin") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Admin accounts cannot be deleted from this action.",
+        });
+      }
+
+      const deletionStatus = await getAccountDeletionBlockers(ctx.user.id);
+
+      if (!deletionStatus.canDelete) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `You cannot delete your account yet because you have: ${deletionStatus.blockers.join(
+            ", "
+          )}. Please resolve these first.`,
+        });
+      }
+
+      await anonymizeUserAccount(ctx.user.id);
+
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+
+      return { success: true };
+    }),
 
   setUserType: protectedProcedure
     .input(z.object({ userType: z.enum(["homeowner", "handyman"]) }))

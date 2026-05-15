@@ -271,6 +271,208 @@ export async function updateUserPassword(userId: number, passwordHash: string) {
     .where(eq(users.id, userId));
 }
 
+export async function getAccountDeletionBlockers(userId: number) {
+  const db = await getDb();
+  const blockers: string[] = [];
+
+  const homeownerJobs = await db
+    .select({
+      id: jobs.id,
+      status: jobs.status,
+      selectedBidId: jobs.selectedBidId,
+      selectedHandymanId: jobs.selectedHandymanId,
+    })
+    .from(jobs)
+    .where(eq(jobs.homeownerId, userId));
+
+  const openHomeownerJobs = homeownerJobs.filter((job) => job.status === "open");
+  const awaitingPaymentJobs = homeownerJobs.filter((job) => job.status === "awaiting_payment");
+  const inProgressJobs = homeownerJobs.filter((job) => job.status === "in_progress");
+  const disputedHomeownerJobs = homeownerJobs.filter((job) => job.status === "disputed");
+
+  if (openHomeownerJobs.length > 0) {
+    blockers.push(`${openHomeownerJobs.length} open job${openHomeownerJobs.length === 1 ? "" : "s"}`);
+  }
+
+  if (awaitingPaymentJobs.length > 0) {
+    blockers.push(
+      `${awaitingPaymentJobs.length} job${awaitingPaymentJobs.length === 1 ? "" : "s"} awaiting payment`
+    );
+  }
+
+  if (inProgressJobs.length > 0) {
+    blockers.push(
+      `${inProgressJobs.length} job${inProgressJobs.length === 1 ? "" : "s"} in progress`
+    );
+  }
+
+  if (disputedHomeownerJobs.length > 0) {
+    blockers.push(
+      `${disputedHomeownerJobs.length} disputed job${disputedHomeownerJobs.length === 1 ? "" : "s"}`
+    );
+  }
+
+  const handymanBids = await db
+    .select({
+      id: bids.id,
+      status: bids.status,
+    })
+    .from(bids)
+    .where(eq(bids.handymanId, userId));
+
+  const pendingBids = handymanBids.filter((bid) => bid.status === "pending");
+  const acceptedBids = handymanBids.filter((bid) => bid.status === "accepted");
+
+  if (pendingBids.length > 0) {
+    blockers.push(`${pendingBids.length} pending bid${pendingBids.length === 1 ? "" : "s"}`);
+  }
+
+  if (acceptedBids.length > 0) {
+    blockers.push(`${acceptedBids.length} accepted bid${acceptedBids.length === 1 ? "" : "s"}`);
+  }
+
+  const handymanJobs = await db
+    .select({
+      id: jobs.id,
+      status: jobs.status,
+    })
+    .from(jobs)
+    .where(eq(jobs.selectedHandymanId, userId));
+
+  const activeHandymanJobs = handymanJobs.filter((job) =>
+    ["awaiting_payment", "in_progress", "disputed"].includes(job.status)
+  );
+
+  if (activeHandymanJobs.length > 0) {
+    blockers.push(
+      `${activeHandymanJobs.length} active handyman job${activeHandymanJobs.length === 1 ? "" : "s"}`
+    );
+  }
+
+  const userPayoutRequests = await db
+    .select({
+      id: payoutRequests.id,
+      status: payoutRequests.status,
+    })
+    .from(payoutRequests)
+    .where(eq(payoutRequests.handymanId, userId));
+
+  const pendingPayoutRequests = userPayoutRequests.filter((request) => request.status === "pending");
+
+  if (pendingPayoutRequests.length > 0) {
+    blockers.push(
+      `${pendingPayoutRequests.length} pending payout request${
+        pendingPayoutRequests.length === 1 ? "" : "s"
+      }`
+    );
+  }
+
+  const userPayments = await db
+    .select({
+      id: payments.id,
+      status: payments.status,
+      handymanPayout: payments.handymanPayout,
+    })
+    .from(payments)
+    .where(eq(payments.handymanId, userId));
+
+  const summary = await getHandymanPayoutSummary(userId).catch(() => null);
+  const availableBalance = summary ? parseFloat(summary.availableBalance) : 0;
+
+  if (availableBalance > 0) {
+    blockers.push(`$${availableBalance.toFixed(2)} available payout balance`);
+  }
+
+  const pendingPayments = userPayments.filter((payment) => payment.status === "pending");
+
+  if (pendingPayments.length > 0) {
+    blockers.push(
+      `${pendingPayments.length} pending payment${pendingPayments.length === 1 ? "" : "s"}`
+    );
+  }
+
+  const allDisputes = await db.select().from(disputes);
+  const involvedJobIds = new Set([
+    ...homeownerJobs.map((job) => job.id),
+    ...handymanJobs.map((job) => job.id),
+  ]);
+
+  const openDisputes = allDisputes.filter(
+    (dispute) => involvedJobIds.has(dispute.jobId) && dispute.status === "open"
+  );
+
+  if (openDisputes.length > 0) {
+    blockers.push(`${openDisputes.length} open dispute${openDisputes.length === 1 ? "" : "s"}`);
+  }
+
+  return {
+    canDelete: blockers.length === 0,
+    blockers,
+  };
+}
+
+export async function anonymizeUserAccount(userId: number) {
+  const db = await getDb();
+  const deletedEmail = `deleted-user-${userId}-${Date.now()}@saskhandy.local`;
+
+  await db
+    .update(handymanProfiles)
+    .set({
+      bio: null,
+      categories: "[]",
+      hourlyRate: null,
+      insuranceCertUrl: null,
+      profileImageUrl: null,
+      serviceArea: null,
+      externalGoogleReviewsUrl: null,
+      externalFacebookReviewsUrl: null,
+      externalWebsiteUrl: null,
+      identityDocumentUrl: null,
+      identityVerificationStatus: "not_submitted",
+      identityReviewedAt: null,
+      identityReviewedBy: null,
+      identityRejectionReason: null,
+      criminalRecordCheckUrl: null,
+      criminalRecordCheckStatus: "not_submitted",
+      criminalRecordCheckReviewedAt: null,
+      criminalRecordCheckReviewedBy: null,
+      criminalRecordCheckExpiresAt: null,
+      criminalRecordCheckNotes: null,
+      tradeLicenseDocumentUrl: null,
+      tradeLicenseVerificationStatus: "not_submitted",
+      tradeLicenseType: null,
+      tradeLicenseNumber: null,
+      tradeLicenseReviewedAt: null,
+      tradeLicenseReviewedBy: null,
+      tradeLicenseRejectionReason: null,
+      tradeLicenseNotes: null,
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(handymanProfiles.userId, userId));
+
+  await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+
+  await db
+    .update(users)
+    .set({
+      name: "Deleted User",
+      email: deletedEmail,
+      passwordHash: null,
+      openId: `deleted_${userId}_${Date.now()}`,
+      userType: null,
+      emailVerified: false,
+      emailVerifiedAt: null,
+      marketingOptIn: false,
+      marketingOptInAt: null,
+      lastSignedIn: null,
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(users.id, userId));
+
+  return { success: true };
+}
+
 // ─── Email Verification Tokens ────────────────────────────────────────────────
 export async function createEmailVerificationToken(data: InsertEmailVerificationToken) {
   const db = await getDb();

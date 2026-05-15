@@ -17,6 +17,7 @@ import {
   Save,
   Shield,
   Star,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -172,6 +173,7 @@ export default function HandymanProfile() {
   const [uploadingCriminalRecord, setUploadingCriminalRecord] = useState(false);
   const [uploadingTradeLicense, setUploadingTradeLicense] = useState(false);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   const updateProfile = trpc.handymanProfiles.createOrUpdate.useMutation({
     onSuccess: async () => {
@@ -180,6 +182,37 @@ export default function HandymanProfile() {
     },
     onError: (err) => toast.error(err.message),
   });
+
+  const { data: accountDeletionStatus, refetch: refetchAccountDeletionStatus } =
+    trpc.auth.getAccountDeletionStatus.useQuery(undefined, {
+      enabled: isAuthenticated,
+    });
+
+  const deleteMyAccount = trpc.auth.deleteMyAccount.useMutation({
+    onSuccess: () => {
+      toast.success("Your account has been deleted.");
+      navigate("/");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      refetchAccountDeletionStatus();
+    },
+  });
+
+  const handleDeleteAccount = () => {
+    if (deleteConfirmation !== "DELETE") {
+      toast.error("Type DELETE to confirm account deletion.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete your SaskHandy account? This removes your login access and anonymizes your account. This cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    deleteMyAccount.mutate({ confirmation: "DELETE" });
+  };
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -1375,6 +1408,75 @@ export default function HandymanProfile() {
             </p>
           </div>
         )}
+        <div className="bg-white rounded-2xl border border-destructive/30 shadow-sm p-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+              <Trash2 className="w-5 h-5" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-foreground">Danger Zone</h3>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                You can delete your account only if you have no active jobs, pending bids, open
+                disputes, pending payouts, pending payments, or available payout balance.
+              </p>
+
+              {accountDeletionStatus && !accountDeletionStatus.canDelete && (
+                <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4">
+                  <p className="text-sm font-medium text-amber-900">
+                    Account deletion is currently blocked
+                  </p>
+                  <ul className="mt-2 list-disc pl-5 text-xs text-amber-800 space-y-1">
+                    {accountDeletionStatus.blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="mt-4 space-y-2 max-w-md">
+                <Label htmlFor="deleteConfirmation">Type DELETE to confirm</Label>
+                <Input
+                  id="deleteConfirmation"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="DELETE"
+                  disabled={deleteMyAccount.isPending}
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={
+                    deleteMyAccount.isPending ||
+                    deleteConfirmation !== "DELETE" ||
+                    accountDeletionStatus?.canDelete === false
+                  }
+                >
+                  {deleteMyAccount.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  Delete My Account
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => refetchAccountDeletionStatus()}
+                  disabled={deleteMyAccount.isPending}
+                >
+                  Check Eligibility
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </AppLayout>
   );
