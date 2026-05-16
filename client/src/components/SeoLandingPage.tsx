@@ -28,6 +28,7 @@ type SeoLandingPageProps = {
   title: string;
   pageTitle: string;
   metaDescription: string;
+  canonicalPath?: string;
   badge: string;
   intro: string;
   secondaryIntro?: string;
@@ -54,6 +55,7 @@ export default function SeoLandingPage({
   title,
   pageTitle,
   metaDescription,
+  canonicalPath,
   badge,
   intro,
   secondaryIntro,
@@ -75,16 +77,53 @@ export default function SeoLandingPage({
   useEffect(() => {
     document.title = pageTitle;
 
-    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    const siteUrl = "https://saskhandy.com";
+    const canonicalUrl =
+      canonicalPath && canonicalPath.startsWith("/")
+        ? `${siteUrl}${canonicalPath}`
+        : typeof window !== "undefined"
+        ? window.location.href
+        : siteUrl;
 
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "description";
-      document.head.appendChild(meta);
+    const setMeta = (
+      selector: string,
+      attrName: "name" | "property",
+      attrValue: string,
+      content: string
+    ) => {
+      let element = document.querySelector(selector) as HTMLMetaElement | null;
+
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attrName, attrValue);
+        document.head.appendChild(element);
+      }
+
+      element.content = content;
+    };
+
+    setMeta('meta[name="description"]', "name", "description", metaDescription);
+    setMeta('meta[property="og:title"]', "property", "og:title", pageTitle);
+    setMeta('meta[property="og:description"]', "property", "og:description", metaDescription);
+    setMeta('meta[property="og:type"]', "property", "og:type", "website");
+    setMeta('meta[property="og:url"]', "property", "og:url", canonicalUrl);
+    setMeta('meta[property="og:site_name"]', "property", "og:site_name", "SaskHandy");
+    setMeta('meta[property="og:image"]', "property", "og:image", `${siteUrl}${heroImage}`);
+    setMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+    setMeta('meta[name="twitter:title"]', "name", "twitter:title", pageTitle);
+    setMeta('meta[name="twitter:description"]', "name", "twitter:description", metaDescription);
+    setMeta('meta[name="twitter:image"]', "name", "twitter:image", `${siteUrl}${heroImage}`);
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
     }
 
-    meta.content = metaDescription;
-  }, [pageTitle, metaDescription]);
+    canonical.href = canonicalUrl;
+  }, [pageTitle, metaDescription, canonicalPath, heroImage]);
 
   const hasArticleContent = articleSections.length > 0;
 
