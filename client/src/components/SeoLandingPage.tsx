@@ -24,11 +24,21 @@ type ArticleSection = {
   bullets?: string[];
 };
 
+type FaqItem = {
+  question: string;
+  answer: string;
+};
+
 type SeoLandingPageProps = {
   title: string;
   pageTitle: string;
   metaDescription: string;
   canonicalPath?: string;
+  serviceName?: string;
+  locationName?: string;
+  primaryCategory?: string;
+  seoKeywords?: string[];
+  faqItems?: FaqItem[];
   badge: string;
   intro: string;
   secondaryIntro?: string;
@@ -56,6 +66,11 @@ export default function SeoLandingPage({
   pageTitle,
   metaDescription,
   canonicalPath,
+  serviceName,
+  locationName = "Saskatoon",
+  primaryCategory = "Handyman Services",
+  seoKeywords = [],
+  faqItems = [],
   badge,
   intro,
   secondaryIntro,
@@ -102,6 +117,19 @@ export default function SeoLandingPage({
       element.content = content;
     };
 
+    const setJsonLd = (id: string, data: Record<string, unknown>) => {
+      let element = document.getElementById(id) as HTMLScriptElement | null;
+
+      if (!element) {
+        element = document.createElement("script");
+        element.id = id;
+        element.type = "application/ld+json";
+        document.head.appendChild(element);
+      }
+
+      element.textContent = JSON.stringify(data);
+    };
+
     setMeta('meta[name="description"]', "name", "description", metaDescription);
     setMeta('meta[property="og:title"]', "property", "og:title", pageTitle);
     setMeta('meta[property="og:description"]', "property", "og:description", metaDescription);
@@ -114,6 +142,10 @@ export default function SeoLandingPage({
     setMeta('meta[name="twitter:description"]', "name", "twitter:description", metaDescription);
     setMeta('meta[name="twitter:image"]', "name", "twitter:image", `${siteUrl}${heroImage}`);
 
+    if (seoKeywords.length > 0) {
+      setMeta('meta[name="keywords"]', "name", "keywords", seoKeywords.join(", "));
+    }
+
     let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
 
     if (!canonical) {
@@ -123,9 +155,58 @@ export default function SeoLandingPage({
     }
 
     canonical.href = canonicalUrl;
-  }, [pageTitle, metaDescription, canonicalPath, heroImage]);
+
+    setJsonLd("saskhandy-service-schema", {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      name: serviceName ?? title,
+      serviceType: serviceName ?? primaryCategory,
+      category: primaryCategory,
+      description: metaDescription,
+      areaServed: {
+        "@type": "City",
+        name: locationName,
+        addressRegion: "SK",
+        addressCountry: "CA",
+      },
+      provider: {
+        "@type": "Organization",
+        name: "SaskHandy",
+        url: siteUrl,
+      },
+      url: canonicalUrl,
+    });
+
+    if (faqItems.length > 0) {
+      setJsonLd("saskhandy-faq-schema", {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqItems.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: faq.answer,
+          },
+        })),
+      });
+    }
+  }, [
+    pageTitle,
+    metaDescription,
+    canonicalPath,
+    heroImage,
+    serviceName,
+    locationName,
+    primaryCategory,
+    seoKeywords,
+    faqItems,
+    title,
+  ]);
 
   const hasArticleContent = articleSections.length > 0;
+  const hasSeoKeywords = seoKeywords.length > 0;
+  const hasFaqItems = faqItems.length > 0;
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -317,6 +398,37 @@ export default function SeoLandingPage({
           </div>
         </section>
 
+        {hasSeoKeywords ? (
+          <section className="border-t border-slate-200 bg-white">
+            <div className="container py-12">
+              <div className="max-w-4xl">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                  Common local searches
+                </p>
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
+                  Looking for {serviceName ?? primaryCategory} near you in {locationName}?
+                </h2>
+                <p className="mt-3 text-slate-600 leading-7">
+                  SaskHandy helps homeowners looking for local help post a job, compare bids from
+                  Saskatoon-area handymen, review profiles, message before choosing, and pay
+                  securely through the platform.
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  {seoKeywords.map((keyword) => (
+                    <span
+                      key={keyword}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {hasArticleContent ? (
           <section className="border-t border-slate-200 bg-white">
             <article className="container max-w-4xl py-16">
@@ -358,6 +470,28 @@ export default function SeoLandingPage({
                 ))}
               </div>
             </article>
+          </section>
+        ) : null}
+
+        {hasFaqItems ? (
+          <section className="border-t border-slate-200 bg-white">
+            <div className="container max-w-4xl py-16">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                FAQs
+              </p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+                Frequently asked questions about {serviceName ?? primaryCategory} in {locationName}
+              </h2>
+
+              <div className="mt-8 space-y-4">
+                {faqItems.map((faq) => (
+                  <div key={faq.question} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                    <h3 className="font-semibold text-slate-950">{faq.question}</h3>
+                    <p className="mt-2 text-slate-600 leading-7">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         ) : null}
 
