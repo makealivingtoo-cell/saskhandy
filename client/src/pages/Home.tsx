@@ -99,6 +99,8 @@ const testimonials = [
   },
 ];
 
+const facebookPageUrl = "https://www.facebook.com/profile.php?id=61568009153964";
+
 export default function HomePage() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -437,6 +439,36 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="border-t border-slate-200 bg-[#f7faf8]">
+          <div className="container py-12 md:py-14">
+            <div className="grid gap-6 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-center md:p-8">
+              <div>
+                <div className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                  Follow SaskHandy
+                </div>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+                  Stay updated on local handyman jobs and homeowner tips
+                </h2>
+                <p className="mt-3 max-w-2xl text-slate-600 leading-7">
+                  Follow SaskHandy on Facebook for platform updates, service reminders, handyman
+                  opportunities, and local Saskatoon home project content.
+                </p>
+              </div>
+
+              <Button
+                asChild
+                size="lg"
+                className="rounded-full bg-[#1877F2] px-8 text-base text-white hover:bg-[#166FE5]"
+              >
+                <a href={facebookPageUrl} target="_blank" rel="noopener noreferrer">
+                  Follow on Facebook
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </section>
+
         <section className="bg-white">
           <div className="container py-16 md:py-20">
             <div className="rounded-[36px] bg-emerald-700 px-8 py-12 text-white md:px-14 md:py-16">
@@ -496,6 +528,14 @@ export default function HomePage() {
               <Link href="/terms" className="hover:text-slate-900">
                 Terms & Conditions
               </Link>
+              <a
+                href={facebookPageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-slate-900"
+              >
+                Facebook
+              </a>
             </div>
           </div>
 
