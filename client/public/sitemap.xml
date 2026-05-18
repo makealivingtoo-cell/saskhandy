@@ -18,27 +18,27 @@
 
   <url>
     <loc>https://saskhandy.com/regina-handyman-services</loc>
-    <priority>0.9</priority>
+    <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://saskhandy.com/moose-jaw-handyman-services</loc>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://saskhandy.com/prince-albert-handyman-services</loc>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://saskhandy.com/warman-handyman-services</loc>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://saskhandy.com/martensville-handyman-services</loc>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
 
   <url>
@@ -71,28 +71,129 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- New Saskatoon TV Mounting SEO Pages -->
+  <!-- Saskatoon Core Service SEO Pages -->
   <url>
-    <loc>https://saskhandy.com/tv-mounting-saskatoon</loc>
+    <loc>https://saskhandy.com/local-handyman-services-saskatoon</loc>
+    <priority>0.95</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/deck-repair-saskatoon</loc>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://saskhandy.com/professional-tv-mounting-saskatoon</loc>
+    <loc>https://saskhandy.com/professional-deck-staining-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/fence-repair-and-gate-fix-saskatoon</loc>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/fence-post-replacement-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/drywall-repair-and-patching-saskatoon</loc>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/ceiling-drywall-water-damage-repair-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/interior-painting-handyman-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/baseboard-and-trim-installation-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/faucet-repair-and-installation-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/leaky-toilet-repair-service-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/minor-plumbing-handyman-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/caulking-repair-bathtub-shower-saskatoon</loc>
     <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/ikea-furniture-assembly-saskatoon</loc>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/wayfair-furniture-assembler-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/bbq-assembly-service-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/wall-hanging-mirror-and-art-installation-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/blinds-and-curtain-rod-installation-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/interior-door-hanging-service-saskatoon</loc>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/deadbolt-and-door-lock-replacement-saskatoon</loc>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Saskatoon TV Mounting SEO Pages -->
+  <url>
+    <loc>https://saskhandy.com/tv-mounting-saskatoon</loc>
+    <priority>0.95</priority>
+  </url>
+
+  <url>
+    <loc>https://saskhandy.com/professional-tv-mounting-saskatoon</loc>
+    <priority>0.85</priority>
   </url>
 
   <url>
     <loc>https://saskhandy.com/tv-installation-service-saskatoon</loc>
-    <priority>0.8</priority>
+    <priority>0.85</priority>
   </url>
 
   <url>
     <loc>https://saskhandy.com/best-tv-wall-mount-saskatoon</loc>
-    <priority>0.75</priority>
+    <priority>0.8</priority>
   </url>
 
-  <!-- New Saskatoon Doorbell SEO Pages -->
+  <!-- Saskatoon Doorbell SEO Pages -->
   <url>
     <loc>https://saskhandy.com/ring-doorbell-installation-saskatoon</loc>
     <priority>0.9</priority>
@@ -100,7 +201,7 @@
 
   <url>
     <loc>https://saskhandy.com/smart-doorbell-installation-saskatoon</loc>
-    <priority>0.8</priority>
+    <priority>0.85</priority>
   </url>
 
   <url>
@@ -120,7 +221,7 @@
 
   <url>
     <loc>https://saskhandy.com/local-seo-tv-mounting-doorbell-installation-saskatoon</loc>
-    <priority>0.6</priority>
+    <priority>0.5</priority>
   </url>
 
   <url>
