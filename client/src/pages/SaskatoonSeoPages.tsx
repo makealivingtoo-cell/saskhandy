@@ -883,3 +883,1272 @@ export function LocalSeoSaskatoonServicesPage() {
     />
   );
 }
+
+const priorityServiceLinks = [
+  { href: "/deck-repair-saskatoon", label: "Deck Repair Saskatoon" },
+  { href: "/professional-deck-staining-saskatoon", label: "Deck Staining Saskatoon" },
+  { href: "/fence-repair-and-gate-fix-saskatoon", label: "Fence & Gate Repair" },
+  { href: "/fence-post-replacement-saskatoon", label: "Fence Post Replacement" },
+  { href: "/drywall-repair-and-patching-saskatoon", label: "Drywall Repair" },
+  { href: "/ceiling-drywall-water-damage-repair-saskatoon", label: "Ceiling Water Damage Repair" },
+  { href: "/interior-painting-handyman-saskatoon", label: "Interior Painting" },
+  { href: "/baseboard-and-trim-installation-saskatoon", label: "Baseboard & Trim" },
+  { href: "/faucet-repair-and-installation-saskatoon", label: "Faucet Repair & Installation" },
+  { href: "/leaky-toilet-repair-service-saskatoon", label: "Leaky Toilet Repair" },
+  { href: "/minor-plumbing-handyman-saskatoon", label: "Minor Plumbing Help" },
+  { href: "/caulking-repair-bathtub-shower-saskatoon", label: "Bathtub & Shower Caulking" },
+  { href: "/ikea-furniture-assembly-saskatoon", label: "IKEA Furniture Assembly" },
+  { href: "/wayfair-furniture-assembler-saskatoon", label: "Wayfair Furniture Assembly" },
+  { href: "/bbq-assembly-service-saskatoon", label: "BBQ Assembly" },
+  { href: "/wall-hanging-mirror-and-art-installation-saskatoon", label: "Mirror & Art Hanging" },
+  { href: "/blinds-and-curtain-rod-installation-saskatoon", label: "Blinds & Curtain Rods" },
+  { href: "/interior-door-hanging-service-saskatoon", label: "Interior Door Hanging" },
+  { href: "/deadbolt-and-door-lock-replacement-saskatoon", label: "Deadbolt & Lock Replacement" },
+  { href: "/local-handyman-services-saskatoon", label: "Local Handyman Services" },
+  { href: "/tv-mounting-saskatoon", label: "TV Mounting" },
+  { href: "/ring-doorbell-installation-saskatoon", label: "Ring Doorbell Installation" },
+];
+
+type LocalServicePageConfig = {
+  title: string;
+  pageTitle: string;
+  metaDescription: string;
+  canonicalPath: string;
+  serviceName: string;
+  primaryCategory?: string;
+  badge: string;
+  intro: string;
+  secondaryIntro: string;
+  items: string[];
+  searchKeywords: string[];
+  practicalDetails: string[];
+  quoteFactors: string[];
+  homeownerTips: string[];
+  relatedLinks?: { href: string; label: string }[];
+};
+
+function buildLocalServiceArticleSections(config: LocalServicePageConfig) {
+  return [
+    {
+      heading: `${config.serviceName} in Saskatoon: what homeowners should know`,
+      paragraphs: [
+        `${config.serviceName} is one of those home jobs where the details matter. Homeowners may search for the best ${config.serviceName.toLowerCase()} near me, but what they really need is a clear way to describe the job, compare local options, and choose someone who understands the scope. SaskHandy is built around that process: post the job once, review bids, check profiles, message before choosing, and pay through the platform.`,
+        `In Saskatoon, jobs can vary by home age, neighbourhood, weather exposure, materials, and the condition of the existing area. A simple-looking task can become more involved once a handyman sees the wall, deck, fence, fixture, door frame, trim, or assembly pieces. That is why the job post should include photos, measurements, timing expectations, and any details that could affect the quote.`,
+        `SaskHandy is not a single contractor. It is a local marketplace that helps homeowners connect with Saskatoon-area handymen for practical repair, installation, assembly, and maintenance work. The better the job description, the easier it is for handymen to send realistic bids.`
+      ],
+      bullets: config.practicalDetails,
+    },
+    {
+      heading: `What affects the quote for ${config.serviceName.toLowerCase()}`,
+      paragraphs: [
+        `Pricing for ${config.serviceName.toLowerCase()} can depend on more than the name of the service. Time, materials, access, size, condition, difficulty, tools, disposal, hardware, surface type, and urgency can all change the final quote. A clear SaskHandy post helps reduce back-and-forth and makes it easier for handymen to decide whether the job fits their experience.`,
+        `For example, a small repair may be quick if the area is accessible and the right materials are already available. The same job can take longer if old parts need to be removed, measurements need to be corrected, hidden damage is found, or special hardware is required. Homeowners should avoid assuming every bid includes materials, disposal, pickup, patching, finishing, or cleanup unless the handyman says so.`,
+        `Before accepting a bid, use SaskHandy messaging to confirm what is included. Ask whether materials are included, whether the handyman needs photos, whether the area should be cleared, and whether there are any conditions that could change the price.`
+      ],
+      bullets: config.quoteFactors,
+    },
+    {
+      heading: `How to post a better ${config.serviceName.toLowerCase()} job`,
+      paragraphs: [
+        `A strong job post helps the right handymen respond. Include the location, photos, measurements, the type of material or product involved, the condition of the area, and the result you want. If the job is urgent, mention the ideal timing. If you already bought parts, fixtures, hardware, paint, boards, trim, brackets, or assembly items, say that clearly.`,
+        `Homeowners should also mention anything that affects access. This can include parking, stairs, pets, tenants, condo rules, exterior access, frozen ground, limited workspace, or whether the job is inside an occupied home. These details may seem small, but they help handymen bid accurately and decide whether they have the right tools for the job.`,
+        `SaskHandy’s chat-before-hiring flow exists for this reason. You can ask questions, clarify details, and compare profiles before choosing who to hire.`
+      ],
+      bullets: config.homeownerTips,
+    },
+    {
+      heading: `Why use SaskHandy for ${config.serviceName.toLowerCase()} near you`,
+      paragraphs: [
+        `Many homeowners start by searching for ${config.serviceName.toLowerCase()} near me or local handyman services in Saskatoon. SaskHandy turns that search into a simple job-posting flow. Instead of calling around one by one, you can post the job, wait for local bids, and compare your options in one place.`,
+        `SaskHandy also gives homeowners more context before choosing. Depending on the handyman profile, you may be able to review a profile photo, bio, service area, skills, reviews, external review links, and verification badges such as ID Name Matched or Gold Shield. These trust signals help you compare options, but they do not replace your own judgment.`,
+        `For best results, post the job with enough detail, review each bid carefully, message before choosing, and confirm the scope before payment.`
+      ],
+      bullets: [
+        "Compare bids from local Saskatoon-area handymen.",
+        "Review profiles and trust signals before choosing.",
+        "Message handymen before accepting a bid.",
+        "Pay through SaskHandy when you choose a handyman.",
+      ],
+    },
+  ];
+}
+
+function buildLocalServiceFaqs(config: LocalServicePageConfig) {
+  return [
+    {
+      question: `How do I find ${config.serviceName.toLowerCase()} near me in Saskatoon?`,
+      answer: `You can post your ${config.serviceName.toLowerCase()} job on SaskHandy, add photos and details, and compare bids from local Saskatoon-area handymen before choosing who to hire.`,
+    },
+    {
+      question: `What should I include in a ${config.serviceName.toLowerCase()} job post?`,
+      answer: `Include photos, measurements, location details, product or material details, timing, access notes, and whether you already have the required parts or materials.`,
+    },
+    {
+      question: `Can I message a handyman before choosing?`,
+      answer: `Yes. Once you receive bids, you can message handymen to ask about experience, materials, timing, and what is included before accepting a bid.`,
+    },
+    {
+      question: `Does SaskHandy guarantee the work?`,
+      answer: `SaskHandy is a marketplace, not the contractor performing the work. Review profiles, ask questions, confirm the scope, and choose the handyman you feel comfortable hiring.`,
+    },
+  ];
+}
+
+function LocalServiceSeoPage({ config }: { config: LocalServicePageConfig }) {
+  const relatedLinks = config.relatedLinks ?? priorityServiceLinks;
+
+  return (
+    <SeoLandingPage
+      title={config.title}
+      pageTitle={config.pageTitle}
+      metaDescription={config.metaDescription}
+      canonicalPath={config.canonicalPath}
+      serviceName={config.serviceName}
+      locationName="Saskatoon"
+      primaryCategory={config.primaryCategory ?? "Handyman Services"}
+      seoKeywords={config.searchKeywords}
+      faqItems={buildLocalServiceFaqs(config)}
+      badge={config.badge}
+      intro={config.intro}
+      secondaryIntro={config.secondaryIntro}
+      heroImage="/images/homeowner-posting-job.jpg"
+      primaryCtaText={homeownerCta}
+      sectionTitle={`Common ${config.serviceName.toLowerCase()} jobs`}
+      sectionDescription={`Post your ${config.serviceName.toLowerCase()} job on SaskHandy and give local handymen the details they need to send accurate bids.`}
+      items={config.items}
+      whyTitle={`Why use SaskHandy for ${config.serviceName.toLowerCase()}?`}
+      whyParagraphs={[
+        `SaskHandy helps Saskatoon homeowners post practical home jobs and compare bids from local handymen instead of calling around one by one.`,
+        `For ${config.serviceName.toLowerCase()}, clear photos, measurements, materials, and timing details can help handymen understand the job and bid more accurately.`,
+        `Before choosing, homeowners can review profiles, message handymen, compare bids, and look for trust signals such as ID Name Matched or Gold Shield where available.`,
+      ]}
+      articleSections={buildLocalServiceArticleSections(config)}
+      bottomTitle={`Post your ${config.serviceName.toLowerCase()} job in Saskatoon`}
+      bottomParagraph={`Describe what you need, upload photos where helpful, and compare bids from local handymen before choosing who to hire.`}
+      relatedLinks={relatedLinks}
+    />
+  );
+}
+
+const deckAndFenceLinks = [
+  { href: "/deck-repair-saskatoon", label: "Deck Repair" },
+  { href: "/professional-deck-staining-saskatoon", label: "Deck Staining" },
+  { href: "/fence-repair-and-gate-fix-saskatoon", label: "Fence & Gate Repair" },
+  { href: "/fence-post-replacement-saskatoon", label: "Fence Post Replacement" },
+  { href: "/local-handyman-services-saskatoon", label: "Local Handyman Services" },
+];
+
+const drywallPaintingLinks = [
+  { href: "/drywall-repair-and-patching-saskatoon", label: "Drywall Repair" },
+  { href: "/ceiling-drywall-water-damage-repair-saskatoon", label: "Ceiling Water Damage Repair" },
+  { href: "/interior-painting-handyman-saskatoon", label: "Interior Painting" },
+  { href: "/baseboard-and-trim-installation-saskatoon", label: "Baseboard & Trim" },
+  { href: "/local-handyman-services-saskatoon", label: "Local Handyman Services" },
+];
+
+const plumbingLinks = [
+  { href: "/faucet-repair-and-installation-saskatoon", label: "Faucet Repair & Installation" },
+  { href: "/leaky-toilet-repair-service-saskatoon", label: "Leaky Toilet Repair" },
+  { href: "/minor-plumbing-handyman-saskatoon", label: "Minor Plumbing Help" },
+  { href: "/caulking-repair-bathtub-shower-saskatoon", label: "Bathtub & Shower Caulking" },
+  { href: "/local-handyman-services-saskatoon", label: "Local Handyman Services" },
+];
+
+const assemblyInstallLinks = [
+  { href: "/ikea-furniture-assembly-saskatoon", label: "IKEA Furniture Assembly" },
+  { href: "/wayfair-furniture-assembler-saskatoon", label: "Wayfair Furniture Assembly" },
+  { href: "/bbq-assembly-service-saskatoon", label: "BBQ Assembly" },
+  { href: "/wall-hanging-mirror-and-art-installation-saskatoon", label: "Mirror & Art Hanging" },
+  { href: "/blinds-and-curtain-rod-installation-saskatoon", label: "Blinds & Curtain Rods" },
+  { href: "/tv-mounting-saskatoon", label: "TV Mounting" },
+];
+
+const doorLockLinks = [
+  { href: "/interior-door-hanging-service-saskatoon", label: "Interior Door Hanging" },
+  { href: "/deadbolt-and-door-lock-replacement-saskatoon", label: "Deadbolt & Lock Replacement" },
+  { href: "/baseboard-and-trim-installation-saskatoon", label: "Baseboard & Trim" },
+  { href: "/local-handyman-services-saskatoon", label: "Local Handyman Services" },
+];
+
+const localServicePages = {
+  deckRepair: {
+    title: "Deck Repair in Saskatoon",
+    pageTitle: "Deck Repair Saskatoon | Compare Local Handyman Bids | SaskHandy",
+    metaDescription:
+      "Need deck repair in Saskatoon? Post your job on SaskHandy for loose boards, railings, stairs, winter damage, and local handyman bids.",
+    canonicalPath: "/deck-repair-saskatoon",
+    serviceName: "Deck Repair",
+    primaryCategory: "Deck Repair",
+    badge: "Deck repair in Saskatoon",
+    intro:
+      "Need help fixing a deck after winter, replacing loose boards, repairing railings, or making outdoor spaces safer for summer?",
+    secondaryIntro:
+      "SaskHandy helps Saskatoon homeowners post deck repair jobs, add photos, compare local bids, and message handymen before choosing.",
+    items: [
+      "Loose deck boards",
+      "Deck stair repairs",
+      "Railing repairs",
+      "Rotten board replacement",
+      "Screw and fastener fixes",
+      "Gate or step adjustments",
+      "Small structural repairs",
+      "Summer safety fixes",
+    ],
+    searchKeywords: [
+      "deck repair Saskatoon",
+      "best deck repair near me",
+      "deck repair near me",
+      "local deck handyman Saskatoon",
+      "deck board repair Saskatoon",
+    ],
+    practicalDetails: [
+      "Mention whether boards are loose, cracked, soft, or visibly rotten.",
+      "Upload photos of stairs, railings, joists, and the damaged area.",
+      "Say whether you need repair only or repair plus staining prep.",
+      "Mention whether materials are already purchased.",
+    ],
+    quoteFactors: [
+      "Number of boards or sections needing repair.",
+      "Whether stairs, railings, posts, or joists are involved.",
+      "Material type and whether matching boards are available.",
+      "Access to the deck and disposal of old boards.",
+    ],
+    homeownerTips: [
+      "Take photos from close up and from a few steps back.",
+      "Mention whether the deck feels unsafe or just worn.",
+      "Share approximate deck size if known.",
+      "Ask if materials and disposal are included in the bid.",
+    ],
+    relatedLinks: deckAndFenceLinks,
+  },
+  deckStaining: {
+    title: "Professional Deck Staining in Saskatoon",
+    pageTitle: "Professional Deck Staining Saskatoon | Local Handyman Bids | SaskHandy",
+    metaDescription:
+      "Looking for deck staining in Saskatoon? Post your job on SaskHandy for cleaning, prep, sanding, staining, and local handyman bids.",
+    canonicalPath: "/professional-deck-staining-saskatoon",
+    serviceName: "Professional Deck Staining",
+    primaryCategory: "Deck Staining",
+    badge: "Deck staining in Saskatoon",
+    intro:
+      "Deck staining can protect outdoor wood, improve curb appeal, and help your deck look ready for Saskatoon’s summer season.",
+    secondaryIntro:
+      "Post the job on SaskHandy and explain whether you need washing, sanding, staining, sealing, or minor repairs before staining.",
+    items: [
+      "Deck staining",
+      "Deck sealing",
+      "Surface prep",
+      "Light sanding",
+      "Cleaning before stain",
+      "Railing staining",
+      "Step staining",
+      "Weathered deck refresh",
+    ],
+    searchKeywords: [
+      "professional deck staining Saskatoon",
+      "deck staining near me",
+      "best deck staining near me",
+      "deck sealing Saskatoon",
+      "local deck staining handyman",
+    ],
+    practicalDetails: [
+      "Mention the deck size and whether railings or stairs are included.",
+      "Say whether old stain is peeling or the wood is bare.",
+      "Include photos showing colour, wear, and access.",
+      "Mention whether you already bought stain or want the handyman to supply it.",
+    ],
+    quoteFactors: [
+      "Deck size and number of surfaces.",
+      "Prep needed before staining.",
+      "Whether washing, sanding, or repairs are included.",
+      "Weather timing and drying conditions.",
+    ],
+    homeownerTips: [
+      "Post photos on a dry day if possible.",
+      "Ask whether stain and supplies are included.",
+      "Confirm whether prep and cleanup are included.",
+      "Mention any preferred stain colour or brand.",
+    ],
+    relatedLinks: deckAndFenceLinks,
+  },
+  fenceGate: {
+    title: "Fence Repair and Gate Fix in Saskatoon",
+    pageTitle: "Fence Repair and Gate Fix Saskatoon | SaskHandy",
+    metaDescription:
+      "Need fence repair or gate fixing in Saskatoon? Post your job for leaning fences, broken gates, loose boards, latch issues, and local bids.",
+    canonicalPath: "/fence-repair-and-gate-fix-saskatoon",
+    serviceName: "Fence Repair and Gate Fix",
+    primaryCategory: "Fence Repair",
+    badge: "Fence and gate repair",
+    intro:
+      "A leaning fence, broken gate, loose latch, or damaged panel can quickly become annoying or unsafe.",
+    secondaryIntro:
+      "SaskHandy helps homeowners post fence and gate repair jobs and compare bids from local Saskatoon handymen.",
+    items: [
+      "Leaning fences",
+      "Broken gate hinges",
+      "Gate latch repairs",
+      "Loose fence boards",
+      "Panel repairs",
+      "Fence rail fixes",
+      "Privacy fence repairs",
+      "Small fence rebuilds",
+    ],
+    searchKeywords: [
+      "fence repair Saskatoon",
+      "gate repair Saskatoon",
+      "fence repair near me",
+      "best fence repair near me",
+      "local fence handyman Saskatoon",
+    ],
+    practicalDetails: [
+      "Mention whether the issue is a gate, post, panel, rail, or board.",
+      "Upload photos of both sides of the fence if possible.",
+      "Say whether the fence is wood, vinyl, chain link, or another material.",
+      "Mention whether the problem affects security, pets, or access.",
+    ],
+    quoteFactors: [
+      "Fence material and age.",
+      "Whether posts need replacement.",
+      "Hinge, latch, or hardware condition.",
+      "Amount of damaged fencing and material availability.",
+    ],
+    homeownerTips: [
+      "Include photos of the gate swing and latch area.",
+      "Mention whether posts are loose or rotted.",
+      "Confirm whether the handyman supplies boards and hardware.",
+      "Ask if the repair is temporary or longer-term.",
+    ],
+    relatedLinks: deckAndFenceLinks,
+  },
+  fencePost: {
+    title: "Fence Post Replacement in Saskatoon",
+    pageTitle: "Fence Post Replacement Saskatoon | Local Handyman Bids | SaskHandy",
+    metaDescription:
+      "Need fence post replacement in Saskatoon? Post your job for loose, leaning, cracked, or rotted posts and compare local bids.",
+    canonicalPath: "/fence-post-replacement-saskatoon",
+    serviceName: "Fence Post Replacement",
+    primaryCategory: "Fence Repair",
+    badge: "Fence post replacement",
+    intro:
+      "Loose or rotted fence posts can cause the whole fence line or gate to lean, sag, or fail.",
+    secondaryIntro:
+      "Use SaskHandy to post photos, describe the fence, and get bids from local handymen for fence post replacement or related repairs.",
+    items: [
+      "Leaning posts",
+      "Rotted wood posts",
+      "Gate post repairs",
+      "Concrete footing issues",
+      "Broken post removal",
+      "New post setting",
+      "Fence line stabilization",
+      "Panel reattachment",
+    ],
+    searchKeywords: [
+      "fence post replacement Saskatoon",
+      "fence post repair near me",
+      "best fence post replacement near me",
+      "local fence repair Saskatoon",
+      "replace fence post Saskatoon",
+    ],
+    practicalDetails: [
+      "Say how many posts appear loose or damaged.",
+      "Mention whether the post supports a gate.",
+      "Upload photos of the base, fence line, and surrounding ground.",
+      "Mention whether underground utilities or irrigation may be nearby.",
+    ],
+    quoteFactors: [
+      "Number of posts and type of fence.",
+      "Ground conditions and old concrete removal.",
+      "Whether panels need to be detached and reattached.",
+      "Materials, disposal, and curing time.",
+    ],
+    homeownerTips: [
+      "Do not force a sagging gate if the post is failing.",
+      "Ask whether the bid includes post, concrete, and removal.",
+      "Mention if the fence is shared with a neighbour.",
+      "Share whether access is from your yard, alley, or neighbour side.",
+    ],
+    relatedLinks: deckAndFenceLinks,
+  },
+  drywallRepair: {
+    title: "Drywall Repair and Patching in Saskatoon",
+    pageTitle: "Drywall Repair and Patching Saskatoon | SaskHandy",
+    metaDescription:
+      "Need drywall repair in Saskatoon? Post your job for holes, dents, cracks, patches, texture touch-ups, and local handyman bids.",
+    canonicalPath: "/drywall-repair-and-patching-saskatoon",
+    serviceName: "Drywall Repair and Patching",
+    primaryCategory: "Drywall Repair",
+    badge: "Drywall repair in Saskatoon",
+    intro:
+      "Drywall holes, dents, cracks, and patch marks can make a room feel unfinished, especially before painting or moving out.",
+    secondaryIntro:
+      "Post your drywall repair job on SaskHandy with photos and get bids from Saskatoon handymen who handle practical patching and repair work.",
+    items: [
+      "Small wall holes",
+      "Drywall dents",
+      "Crack repair",
+      "Patch blending",
+      "Texture touch-ups",
+      "Move-out repairs",
+      "Paint-ready patching",
+      "Minor wall damage",
+    ],
+    searchKeywords: [
+      "drywall repair Saskatoon",
+      "drywall patching near me",
+      "best drywall repair near me",
+      "wall repair Saskatoon",
+      "local drywall handyman",
+    ],
+    practicalDetails: [
+      "Include a photo with an object for size reference.",
+      "Mention whether texture matching is needed.",
+      "Say whether painting is included or patching only.",
+      "Mention whether the damage is from impact, moisture, or settling.",
+    ],
+    quoteFactors: [
+      "Size and number of holes.",
+      "Texture matching difficulty.",
+      "Whether sanding, priming, and painting are included.",
+      "Access, ceiling height, and drying time.",
+    ],
+    homeownerTips: [
+      "Upload photos before and after removing loose material.",
+      "Mention if this is for a rental move-out.",
+      "Ask how many visits may be needed for mud drying.",
+      "Confirm whether paint matching is included.",
+    ],
+    relatedLinks: drywallPaintingLinks,
+  },
+  ceilingWaterDamage: {
+    title: "Ceiling Drywall Water Damage Repair in Saskatoon",
+    pageTitle: "Ceiling Drywall Water Damage Repair Saskatoon | SaskHandy",
+    metaDescription:
+      "Need ceiling drywall water damage repair in Saskatoon? Post your job for stains, damaged ceiling drywall, patching, and local bids.",
+    canonicalPath: "/ceiling-drywall-water-damage-repair-saskatoon",
+    serviceName: "Ceiling Drywall Water Damage Repair",
+    primaryCategory: "Drywall Repair",
+    badge: "Ceiling drywall repair",
+    intro:
+      "Water stains, bubbling, sagging, or damaged ceiling drywall should be handled carefully after the source of water is addressed.",
+    secondaryIntro:
+      "Use SaskHandy to post ceiling drywall repair details and compare local bids for patching, finishing, and paint-ready repair.",
+    items: [
+      "Ceiling stains",
+      "Damaged drywall patches",
+      "Small ceiling holes",
+      "Texture blending",
+      "Paint-ready repairs",
+      "Leak damage patching",
+      "Bathroom ceiling repair",
+      "Basement ceiling repair",
+    ],
+    searchKeywords: [
+      "ceiling drywall water damage repair Saskatoon",
+      "ceiling drywall repair near me",
+      "water damage ceiling repair Saskatoon",
+      "best ceiling repair near me",
+      "local drywall repair Saskatoon",
+    ],
+    practicalDetails: [
+      "Confirm the leak source has been fixed first.",
+      "Upload photos of the stain or damaged area.",
+      "Mention whether the ceiling has texture.",
+      "Say whether painting is needed after patching.",
+    ],
+    quoteFactors: [
+      "Size of the damaged ceiling area.",
+      "Texture matching and paint blending.",
+      "Whether damaged drywall must be cut out.",
+      "Ladder height and room access.",
+    ],
+    homeownerTips: [
+      "Do not cover active leaks with new drywall.",
+      "Mention if the area feels soft or sagging.",
+      "Ask whether primer for stains is included.",
+      "Confirm whether the repair may need multiple visits.",
+    ],
+    relatedLinks: drywallPaintingLinks,
+  },
+  interiorPainting: {
+    title: "Interior Painting Handyman in Saskatoon",
+    pageTitle: "Interior Painting Handyman Saskatoon | SaskHandy",
+    metaDescription:
+      "Looking for interior painting help in Saskatoon? Post your job for rooms, touch-ups, trim, doors, and paint-ready repairs.",
+    canonicalPath: "/interior-painting-handyman-saskatoon",
+    serviceName: "Interior Painting Handyman",
+    primaryCategory: "Interior Painting",
+    badge: "Interior painting help",
+    intro:
+      "Fresh paint can quickly improve a room, but prep, patching, edges, trim, and cleanup all affect the final result.",
+    secondaryIntro:
+      "SaskHandy helps homeowners post interior painting jobs and compare bids from local handymen for practical room updates and touch-ups.",
+    items: [
+      "Room painting",
+      "Wall touch-ups",
+      "Trim painting",
+      "Door painting",
+      "Patch and paint",
+      "Accent walls",
+      "Move-out painting",
+      "Small repaint projects",
+    ],
+    searchKeywords: [
+      "interior painting handyman Saskatoon",
+      "interior painting near me",
+      "best painter near me",
+      "wall painting Saskatoon",
+      "local painting handyman",
+    ],
+    practicalDetails: [
+      "Mention room size and ceiling height.",
+      "Say whether walls need patching first.",
+      "Mention whether paint is supplied.",
+      "Upload photos of walls, trim, and problem areas.",
+    ],
+    quoteFactors: [
+      "Number of rooms and coats required.",
+      "Wall condition and prep work.",
+      "Trim, doors, ceilings, and accent walls.",
+      "Paint supply, furniture moving, and cleanup.",
+    ],
+    homeownerTips: [
+      "Confirm whether the bid includes primer.",
+      "Mention if furniture needs to be moved.",
+      "Ask if trim and doors are included.",
+      "Share paint colour and brand if already chosen.",
+    ],
+    relatedLinks: drywallPaintingLinks,
+  },
+  baseboardTrim: {
+    title: "Baseboard and Trim Installation in Saskatoon",
+    pageTitle: "Baseboard and Trim Installation Saskatoon | SaskHandy",
+    metaDescription:
+      "Need baseboard or trim installation in Saskatoon? Post your job for cutting, fitting, caulking, finishing, and local handyman bids.",
+    canonicalPath: "/baseboard-and-trim-installation-saskatoon",
+    serviceName: "Baseboard and Trim Installation",
+    primaryCategory: "Carpentry",
+    badge: "Baseboard and trim installation",
+    intro:
+      "Baseboards and trim can make a room feel finished, but clean cuts, corners, caulking, and fit matter.",
+    secondaryIntro:
+      "Post your trim project on SaskHandy and include measurements, photos, and whether materials are already purchased.",
+    items: [
+      "Baseboard install",
+      "Door trim",
+      "Window trim",
+      "Quarter round",
+      "Caulking",
+      "Nail filling",
+      "Small carpentry",
+      "Finish touch-ups",
+    ],
+    searchKeywords: [
+      "baseboard installation Saskatoon",
+      "trim installation Saskatoon",
+      "baseboard installer near me",
+      "best trim handyman near me",
+      "local finish carpentry Saskatoon",
+    ],
+    practicalDetails: [
+      "Mention linear footage if known.",
+      "Say whether old trim needs removal.",
+      "Upload photos of corners, doors, and transitions.",
+      "Mention whether painting or caulking is included.",
+    ],
+    quoteFactors: [
+      "Amount of trim and number of corners.",
+      "Material type and whether trim is pre-painted.",
+      "Removal and disposal of old trim.",
+      "Caulking, nail filling, sanding, and painting.",
+    ],
+    homeownerTips: [
+      "Share room measurements if possible.",
+      "Ask whether the handyman has a mitre saw.",
+      "Confirm who supplies trim and fasteners.",
+      "Clarify whether finishing is included.",
+    ],
+    relatedLinks: drywallPaintingLinks,
+  },
+  faucetRepair: {
+    title: "Faucet Repair and Installation in Saskatoon",
+    pageTitle: "Faucet Repair and Installation Saskatoon | SaskHandy",
+    metaDescription:
+      "Need faucet repair or installation in Saskatoon? Post your job for kitchen faucets, bathroom faucets, leaks, and local handyman bids.",
+    canonicalPath: "/faucet-repair-and-installation-saskatoon",
+    serviceName: "Faucet Repair and Installation",
+    primaryCategory: "Minor Plumbing",
+    badge: "Faucet repair and installation",
+    intro:
+      "A dripping, loose, outdated, or broken faucet can waste water and make a kitchen or bathroom frustrating to use.",
+    secondaryIntro:
+      "SaskHandy helps homeowners post minor faucet repair or replacement jobs and compare bids from local handymen.",
+    items: [
+      "Kitchen faucet replacement",
+      "Bathroom faucet replacement",
+      "Leaky faucet repair",
+      "Loose faucet fixes",
+      "Supply line checks",
+      "Old faucet removal",
+      "New fixture install",
+      "Minor plumbing help",
+    ],
+    searchKeywords: [
+      "faucet repair Saskatoon",
+      "faucet installation Saskatoon",
+      "faucet repair near me",
+      "best faucet installer near me",
+      "minor plumbing handyman Saskatoon",
+    ],
+    practicalDetails: [
+      "Mention whether it is kitchen, bathroom, laundry, or utility.",
+      "Upload photos under the sink if possible.",
+      "Say whether you already bought the faucet.",
+      "Mention leaks, corrosion, shutoff valve issues, or tight access.",
+    ],
+    quoteFactors: [
+      "Fixture type and compatibility.",
+      "Condition of shutoff valves and supply lines.",
+      "Access under the sink.",
+      "Whether old fixture removal is difficult.",
+    ],
+    homeownerTips: [
+      "Do not ignore active leaks.",
+      "Ask whether supply lines are included.",
+      "Mention if shutoff valves do not work.",
+      "Confirm whether the handyman handles only minor plumbing tasks.",
+    ],
+    relatedLinks: plumbingLinks,
+  },
+  toiletRepair: {
+    title: "Leaky Toilet Repair Service in Saskatoon",
+    pageTitle: "Leaky Toilet Repair Service Saskatoon | SaskHandy",
+    metaDescription:
+      "Need leaky toilet repair in Saskatoon? Post your job for running toilets, leaking bases, tank parts, seals, and local handyman bids.",
+    canonicalPath: "/leaky-toilet-repair-service-saskatoon",
+    serviceName: "Leaky Toilet Repair Service",
+    primaryCategory: "Minor Plumbing",
+    badge: "Leaky toilet repair",
+    intro:
+      "A leaking or constantly running toilet can waste water, damage flooring, and become more expensive if ignored.",
+    secondaryIntro:
+      "Post your toilet repair job on SaskHandy and describe whether the leak is from the tank, base, supply line, or unknown source.",
+    items: [
+      "Running toilets",
+      "Tank part replacement",
+      "Toilet base leaks",
+      "Supply line leaks",
+      "Flapper replacement",
+      "Fill valve replacement",
+      "Wax ring concerns",
+      "Minor toilet repairs",
+    ],
+    searchKeywords: [
+      "leaky toilet repair Saskatoon",
+      "toilet repair near me",
+      "running toilet repair Saskatoon",
+      "best toilet repair near me",
+      "minor plumbing Saskatoon",
+    ],
+    practicalDetails: [
+      "Mention whether water appears near the base or inside the tank.",
+      "Upload photos of the toilet and shutoff valve.",
+      "Say whether the toilet runs constantly or leaks only when flushed.",
+      "Mention if flooring feels soft or damaged.",
+    ],
+    quoteFactors: [
+      "Leak location and toilet condition.",
+      "Parts needed for tank repairs.",
+      "Whether the toilet must be removed.",
+      "Access, age, and condition of shutoff valve.",
+    ],
+    homeownerTips: [
+      "Turn off the supply valve if water is actively leaking.",
+      "Do not keep flushing if water appears at the base.",
+      "Ask whether parts are included in the bid.",
+      "Mention if the toilet is older or recently installed.",
+    ],
+    relatedLinks: plumbingLinks,
+  },
+  minorPlumbing: {
+    title: "Minor Plumbing Handyman in Saskatoon",
+    pageTitle: "Minor Plumbing Handyman Saskatoon | SaskHandy",
+    metaDescription:
+      "Need minor plumbing help in Saskatoon? Post jobs for faucets, toilets, caulking, vanities, and small fixture repairs on SaskHandy.",
+    canonicalPath: "/minor-plumbing-handyman-saskatoon",
+    serviceName: "Minor Plumbing Handyman",
+    primaryCategory: "Minor Plumbing",
+    badge: "Minor plumbing handyman",
+    intro:
+      "Some plumbing-related jobs are small practical fixes, while others require a licensed plumber. The key is describing the job clearly.",
+    secondaryIntro:
+      "SaskHandy helps homeowners post minor plumbing handyman jobs and compare local bids for small fixtures, leaks, caulking, and repairs.",
+    items: [
+      "Faucet replacement",
+      "Toilet parts",
+      "Caulking repair",
+      "Vanity help",
+      "Minor leak checks",
+      "Fixture replacement",
+      "Sink hardware",
+      "Small bathroom fixes",
+    ],
+    searchKeywords: [
+      "minor plumbing handyman Saskatoon",
+      "plumbing handyman near me",
+      "best minor plumbing near me",
+      "faucet toilet repair Saskatoon",
+      "local plumbing handyman",
+    ],
+    practicalDetails: [
+      "Describe the exact fixture or problem.",
+      "Mention whether water is actively leaking.",
+      "Upload photos of the fixture and shutoff area.",
+      "Say whether you believe a licensed plumber may be required.",
+    ],
+    quoteFactors: [
+      "Whether the job is a simple fixture swap or active leak.",
+      "Access to shutoff valves and plumbing lines.",
+      "Parts and material availability.",
+      "Whether code, permits, or licensed work may be involved.",
+    ],
+    homeownerTips: [
+      "Use a licensed plumber for regulated or complex work.",
+      "Mention if water damage is visible.",
+      "Ask what the handyman is comfortable handling.",
+      "Confirm materials and parts before accepting a bid.",
+    ],
+    relatedLinks: plumbingLinks,
+  },
+  caulking: {
+    title: "Caulking Repair for Bathtub and Shower in Saskatoon",
+    pageTitle: "Bathtub and Shower Caulking Repair Saskatoon | SaskHandy",
+    metaDescription:
+      "Need bathtub or shower caulking repair in Saskatoon? Post your job for old caulk removal, resealing, mildew gaps, and local bids.",
+    canonicalPath: "/caulking-repair-bathtub-shower-saskatoon",
+    serviceName: "Bathtub and Shower Caulking Repair",
+    primaryCategory: "Bathroom Repair",
+    badge: "Bathtub and shower caulking",
+    intro:
+      "Old, cracked, or mouldy caulking around a tub or shower can look bad and may let water reach areas it should not.",
+    secondaryIntro:
+      "Post your caulking repair job on SaskHandy and compare bids for removing old caulk, cleaning the joint, and resealing the area.",
+    items: [
+      "Old caulk removal",
+      "Tub resealing",
+      "Shower resealing",
+      "Bathroom gap sealing",
+      "Mildew-stained caulk",
+      "Kitchen caulking",
+      "Water barrier touch-ups",
+      "Small bathroom repairs",
+    ],
+    searchKeywords: [
+      "bathtub caulking repair Saskatoon",
+      "shower caulking near me",
+      "best caulking repair near me",
+      "bathroom caulking Saskatoon",
+      "tub resealing handyman",
+    ],
+    practicalDetails: [
+      "Mention whether the caulk is cracked, loose, mouldy, or missing.",
+      "Upload photos of the tub, shower, and corners.",
+      "Say whether the area can stay dry before the job.",
+      "Mention if tiles or grout are damaged too.",
+    ],
+    quoteFactors: [
+      "Length of caulk to remove and replace.",
+      "Condition of old caulk and surface.",
+      "Cleaning and drying time.",
+      "Whether grout, tile, or water damage is involved.",
+    ],
+    homeownerTips: [
+      "Avoid using the area right before resealing if possible.",
+      "Ask how long the caulk needs to cure.",
+      "Confirm whether old caulk removal is included.",
+      "Mention if you see soft drywall, loose tile, or active leaking.",
+    ],
+    relatedLinks: plumbingLinks,
+  },
+  ikeaAssembly: {
+    title: "IKEA Furniture Assembly in Saskatoon",
+    pageTitle: "IKEA Furniture Assembly Saskatoon | Local Assembly Help | SaskHandy",
+    metaDescription:
+      "Need IKEA furniture assembly in Saskatoon? Post your job for beds, dressers, cabinets, shelves, wardrobes, and local handyman bids.",
+    canonicalPath: "/ikea-furniture-assembly-saskatoon",
+    serviceName: "IKEA Furniture Assembly",
+    primaryCategory: "Furniture Assembly",
+    badge: "IKEA furniture assembly",
+    intro:
+      "IKEA furniture can look clean and modern, but assembly can take time, space, patience, and the right tools.",
+    secondaryIntro:
+      "SaskHandy helps Saskatoon homeowners post IKEA assembly jobs and compare bids from local handymen.",
+    items: [
+      "Beds and frames",
+      "Dressers",
+      "Wardrobes",
+      "Shelving units",
+      "Cabinets",
+      "Desks",
+      "Tables",
+      "Wall anchoring",
+    ],
+    searchKeywords: [
+      "IKEA furniture assembly Saskatoon",
+      "IKEA assembler near me",
+      "best furniture assembly near me",
+      "local IKEA assembly Saskatoon",
+      "flat pack furniture assembly",
+    ],
+    practicalDetails: [
+      "List the product names or model numbers if known.",
+      "Mention how many boxes need assembly.",
+      "Say whether wall anchoring is needed.",
+      "Upload a photo of the boxes or product label.",
+    ],
+    quoteFactors: [
+      "Number of items and complexity.",
+      "Whether packaging is already opened.",
+      "Room space and access.",
+      "Wall mounting or anchoring requirements.",
+    ],
+    homeownerTips: [
+      "Keep hardware and instructions together.",
+      "Clear space before the handyman arrives.",
+      "Mention if delivery is still in boxes.",
+      "Ask whether packaging cleanup is included.",
+    ],
+    relatedLinks: assemblyInstallLinks,
+  },
+  wayfairAssembly: {
+    title: "Wayfair Furniture Assembler in Saskatoon",
+    pageTitle: "Wayfair Furniture Assembler Saskatoon | SaskHandy",
+    metaDescription:
+      "Need Wayfair furniture assembled in Saskatoon? Post your job for beds, desks, shelves, patio furniture, and local assembly bids.",
+    canonicalPath: "/wayfair-furniture-assembler-saskatoon",
+    serviceName: "Wayfair Furniture Assembler",
+    primaryCategory: "Furniture Assembly",
+    badge: "Wayfair furniture assembly",
+    intro:
+      "Wayfair furniture assembly can range from simple chairs to complicated beds, desks, shelving, cabinets, and patio sets.",
+    secondaryIntro:
+      "Use SaskHandy to post your assembly job, add product details, and compare bids from local Saskatoon handymen.",
+    items: [
+      "Beds",
+      "Desks",
+      "Shelving",
+      "Cabinets",
+      "Outdoor furniture",
+      "Dining sets",
+      "Bookcases",
+      "Storage units",
+    ],
+    searchKeywords: [
+      "Wayfair furniture assembler Saskatoon",
+      "Wayfair assembly near me",
+      "best furniture assembler near me",
+      "furniture assembly Saskatoon",
+      "local handyman furniture assembly",
+    ],
+    practicalDetails: [
+      "Share the product link if you have it.",
+      "Mention number of boxes and furniture pieces.",
+      "Say whether wall anchoring or leveling is needed.",
+      "Upload photos of the delivered boxes.",
+    ],
+    quoteFactors: [
+      "Product complexity and number of parts.",
+      "Whether instructions and hardware are complete.",
+      "Room access and available workspace.",
+      "Whether old furniture needs moving.",
+    ],
+    homeownerTips: [
+      "Do not throw away packaging until assembly is complete.",
+      "Keep all hardware bags together.",
+      "Clear the room before assembly.",
+      "Ask whether disposal or cleanup is included.",
+    ],
+    relatedLinks: assemblyInstallLinks,
+  },
+  bbqAssembly: {
+    title: "BBQ Assembly Service in Saskatoon",
+    pageTitle: "BBQ Assembly Service Saskatoon | SaskHandy",
+    metaDescription:
+      "Need BBQ assembly in Saskatoon? Post your job for grill assembly, patio setup, propane or natural gas BBQ setup, and local bids.",
+    canonicalPath: "/bbq-assembly-service-saskatoon",
+    serviceName: "BBQ Assembly Service",
+    primaryCategory: "Assembly Services",
+    badge: "BBQ assembly in Saskatoon",
+    intro:
+      "A new BBQ can be exciting, but assembly can involve many parts, heavy pieces, tight fasteners, and careful setup.",
+    secondaryIntro:
+      "Post your BBQ assembly job on SaskHandy and compare local bids for getting your grill ready for patio season.",
+    items: [
+      "Gas grill assembly",
+      "Charcoal grill assembly",
+      "Pellet grill setup",
+      "Patio BBQ assembly",
+      "Side burner setup",
+      "Cart assembly",
+      "Outdoor kitchen pieces",
+      "Packaging cleanup",
+    ],
+    searchKeywords: [
+      "BBQ assembly Saskatoon",
+      "BBQ assembly near me",
+      "best BBQ assembly near me",
+      "grill assembly Saskatoon",
+      "local handyman BBQ assembly",
+    ],
+    practicalDetails: [
+      "Mention the BBQ brand and model.",
+      "Say whether it is propane, natural gas, charcoal, or pellet.",
+      "Upload a photo of the box or product label.",
+      "Mention whether the BBQ needs to be moved to a deck or patio.",
+    ],
+    quoteFactors: [
+      "BBQ size, weight, and number of components.",
+      "Whether assembly is indoors, garage, deck, or patio.",
+      "Whether old packaging needs removal.",
+      "Whether connection or testing is included.",
+    ],
+    homeownerTips: [
+      "Confirm whether gas hookup work is included or requires a licensed professional.",
+      "Clear a flat assembly space.",
+      "Keep instructions and hardware available.",
+      "Ask whether the handyman will help move the BBQ into place.",
+    ],
+    relatedLinks: assemblyInstallLinks,
+  },
+  wallHanging: {
+    title: "Wall Hanging, Mirror and Art Installation in Saskatoon",
+    pageTitle: "Wall Hanging Mirror and Art Installation Saskatoon | SaskHandy",
+    metaDescription:
+      "Need mirror, art, shelf, or wall hanging help in Saskatoon? Post your job and compare local handyman bids on SaskHandy.",
+    canonicalPath: "/wall-hanging-mirror-and-art-installation-saskatoon",
+    serviceName: "Wall Hanging, Mirror and Art Installation",
+    primaryCategory: "Installation Services",
+    badge: "Mirror and art hanging",
+    intro:
+      "Heavy mirrors, framed art, shelves, and wall decor need the right placement, anchors, and leveling to look good and stay secure.",
+    secondaryIntro:
+      "SaskHandy helps homeowners post wall hanging jobs and connect with local handymen for practical installation help.",
+    items: [
+      "Heavy mirror hanging",
+      "Framed art installation",
+      "Gallery walls",
+      "Shelf mounting",
+      "Picture hanging",
+      "Curtain hardware",
+      "Wall anchors",
+      "Leveling and layout",
+    ],
+    searchKeywords: [
+      "mirror hanging Saskatoon",
+      "art installation Saskatoon",
+      "wall hanging near me",
+      "best picture hanging near me",
+      "local handyman wall mounting",
+    ],
+    practicalDetails: [
+      "Mention item size and approximate weight.",
+      "Say what type of wall it is if known.",
+      "Upload photos of the item and wall area.",
+      "Mention whether you want one item or a gallery layout.",
+    ],
+    quoteFactors: [
+      "Item weight and hardware requirements.",
+      "Wall type and anchor needs.",
+      "Height, layout, and number of items.",
+      "Whether measuring, spacing, and layout planning are included.",
+    ],
+    homeownerTips: [
+      "Keep brackets, templates, and hardware together.",
+      "Mention if the item is fragile or expensive.",
+      "Ask whether the handyman supplies anchors.",
+      "Confirm desired height before drilling.",
+    ],
+    relatedLinks: assemblyInstallLinks,
+  },
+  blindsCurtain: {
+    title: "Blinds and Curtain Rod Installation in Saskatoon",
+    pageTitle: "Blinds and Curtain Rod Installation Saskatoon | SaskHandy",
+    metaDescription:
+      "Need blinds or curtain rods installed in Saskatoon? Post your job for window coverings, brackets, rods, and local handyman bids.",
+    canonicalPath: "/blinds-and-curtain-rod-installation-saskatoon",
+    serviceName: "Blinds and Curtain Rod Installation",
+    primaryCategory: "Installation Services",
+    badge: "Blinds and curtain rods",
+    intro:
+      "Window coverings can change a room quickly, but accurate measurements, secure brackets, and level installation matter.",
+    secondaryIntro:
+      "Post your blinds or curtain rod installation job on SaskHandy and compare local bids from Saskatoon handymen.",
+    items: [
+      "Curtain rod install",
+      "Blinds install",
+      "Shade mounting",
+      "Bracket installation",
+      "Inside mount blinds",
+      "Outside mount blinds",
+      "Multiple windows",
+      "Hardware replacement",
+    ],
+    searchKeywords: [
+      "blinds installation Saskatoon",
+      "curtain rod installation Saskatoon",
+      "blinds installer near me",
+      "best curtain rod installation near me",
+      "local handyman window coverings",
+    ],
+    practicalDetails: [
+      "Mention number of windows.",
+      "Say whether blinds are inside mount or outside mount.",
+      "Upload photos of window frames and hardware.",
+      "Mention whether drilling into drywall, trim, or masonry is needed.",
+    ],
+    quoteFactors: [
+      "Number and size of windows.",
+      "Mount type and wall/window frame material.",
+      "Whether old hardware needs removal.",
+      "Accuracy of measurements and product fit.",
+    ],
+    homeownerTips: [
+      "Keep product instructions and hardware available.",
+      "Confirm whether measurements are already done.",
+      "Ask whether old blinds or rods will be removed.",
+      "Mention if windows are high or hard to reach.",
+    ],
+    relatedLinks: assemblyInstallLinks,
+  },
+  interiorDoor: {
+    title: "Interior Door Hanging Service in Saskatoon",
+    pageTitle: "Interior Door Hanging Service Saskatoon | SaskHandy",
+    metaDescription:
+      "Need an interior door hung in Saskatoon? Post your job for door replacement, hinge adjustments, trimming, handles, and local bids.",
+    canonicalPath: "/interior-door-hanging-service-saskatoon",
+    serviceName: "Interior Door Hanging Service",
+    primaryCategory: "Carpentry",
+    badge: "Interior door hanging",
+    intro:
+      "Interior doors need accurate fit, hinge alignment, latch placement, and sometimes trimming to close properly.",
+    secondaryIntro:
+      "SaskHandy helps homeowners post interior door hanging jobs and compare local bids from handymen with carpentry experience.",
+    items: [
+      "Bedroom doors",
+      "Bathroom doors",
+      "Closet doors",
+      "Door slab replacement",
+      "Hinge adjustments",
+      "Latch alignment",
+      "Door trimming",
+      "Handle installation",
+    ],
+    searchKeywords: [
+      "interior door hanging Saskatoon",
+      "door installation near me",
+      "best door installer near me",
+      "interior door replacement Saskatoon",
+      "local carpentry handyman",
+    ],
+    practicalDetails: [
+      "Mention whether it is a prehung door or slab.",
+      "Upload photos of the frame, hinges, and old door.",
+      "Say whether hardware is already purchased.",
+      "Mention whether the door sticks, gaps, or will not latch.",
+    ],
+    quoteFactors: [
+      "Prehung door versus slab door.",
+      "Frame condition and squareness.",
+      "Need for trimming, drilling, or mortising.",
+      "Hardware, handle, latch, and disposal requirements.",
+    ],
+    homeownerTips: [
+      "Measure the existing door if possible.",
+      "Keep hinges and hardware available.",
+      "Ask whether painting is included.",
+      "Mention if the frame is damaged or out of square.",
+    ],
+    relatedLinks: doorLockLinks,
+  },
+  deadboltLock: {
+    title: "Deadbolt and Door Lock Replacement in Saskatoon",
+    pageTitle: "Deadbolt and Door Lock Replacement Saskatoon | SaskHandy",
+    metaDescription:
+      "Need deadbolt or door lock replacement in Saskatoon? Post your job for lock swaps, handles, latches, and local handyman bids.",
+    canonicalPath: "/deadbolt-and-door-lock-replacement-saskatoon",
+    serviceName: "Deadbolt and Door Lock Replacement",
+    primaryCategory: "Door Hardware",
+    badge: "Deadbolt and lock replacement",
+    intro:
+      "A secure, smooth-working lock matters for daily convenience and peace of mind.",
+    secondaryIntro:
+      "Post your deadbolt or door lock replacement job on SaskHandy and compare local bids for practical door hardware help.",
+    items: [
+      "Deadbolt replacement",
+      "Door handle replacement",
+      "Latch fixes",
+      "Smart lock install",
+      "Strike plate adjustment",
+      "Lockset replacement",
+      "Interior locks",
+      "Exterior door hardware",
+    ],
+    searchKeywords: [
+      "deadbolt replacement Saskatoon",
+      "door lock replacement near me",
+      "best lock replacement near me",
+      "smart lock installation Saskatoon",
+      "local handyman door lock",
+    ],
+    practicalDetails: [
+      "Mention whether it is an exterior or interior door.",
+      "Say whether you already bought the lock.",
+      "Upload photos of the door edge, latch, and strike plate.",
+      "Mention whether the door is wood, metal, or fiberglass.",
+    ],
+    quoteFactors: [
+      "Type of lock or deadbolt.",
+      "Door condition and existing holes.",
+      "Whether strike plate alignment is needed.",
+      "Smart lock setup or app connection.",
+    ],
+    homeownerTips: [
+      "Keep all new lock parts and keys together.",
+      "Mention if the door does not latch properly.",
+      "Ask whether smart lock setup is included.",
+      "Confirm whether the job is replacement or new drilling.",
+    ],
+    relatedLinks: doorLockLinks,
+  },
+  localHandyman: {
+    title: "Local Handyman Services in Saskatoon",
+    pageTitle: "Local Handyman Services Saskatoon | Compare Bids | SaskHandy",
+    metaDescription:
+      "Need local handyman services in Saskatoon? Post small home jobs on SaskHandy and compare bids for repairs, installs, assembly, and maintenance.",
+    canonicalPath: "/local-handyman-services-saskatoon",
+    serviceName: "Local Handyman Services",
+    primaryCategory: "Handyman Services",
+    badge: "Local handyman services",
+    intro:
+      "SaskHandy helps Saskatoon homeowners post small home jobs and compare bids from local handymen.",
+    secondaryIntro:
+      "From repairs and installs to assembly, mounting, doors, trim, decks, fences, and drywall, SaskHandy is built for practical home projects.",
+    items: [
+      "Small repairs",
+      "TV mounting",
+      "Doorbell installs",
+      "Furniture assembly",
+      "Deck repairs",
+      "Fence repairs",
+      "Drywall patching",
+      "Door hardware",
+    ],
+    searchKeywords: [
+      "local handyman services Saskatoon",
+      "best handyman near me",
+      "handyman near me",
+      "Saskatoon handyman",
+      "home repair handyman Saskatoon",
+    ],
+    practicalDetails: [
+      "Post one job or bundle multiple small tasks together.",
+      "Upload photos for each task if possible.",
+      "Mention timing, budget, and location.",
+      "Use chat to confirm what is included before choosing.",
+    ],
+    quoteFactors: [
+      "Number and type of tasks.",
+      "Materials, tools, and travel time.",
+      "Urgency and scheduling.",
+      "Whether tasks require specialized experience.",
+    ],
+    homeownerTips: [
+      "Bundle small tasks to make the job more worthwhile.",
+      "Be specific about what success looks like.",
+      "Ask handymen which tasks they are comfortable handling.",
+      "Review profiles and trust signals before accepting.",
+    ],
+    relatedLinks: priorityServiceLinks,
+  },
+} satisfies Record<string, LocalServicePageConfig>;
+
+export function DeckRepairSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.deckRepair} />;
+}
+
+export function ProfessionalDeckStainingSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.deckStaining} />;
+}
+
+export function FenceRepairAndGateFixSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.fenceGate} />;
+}
+
+export function FencePostReplacementSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.fencePost} />;
+}
+
+export function DrywallRepairAndPatchingSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.drywallRepair} />;
+}
+
+export function CeilingDrywallWaterDamageRepairSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.ceilingWaterDamage} />;
+}
+
+export function InteriorPaintingHandymanSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.interiorPainting} />;
+}
+
+export function BaseboardAndTrimInstallationSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.baseboardTrim} />;
+}
+
+export function FaucetRepairAndInstallationSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.faucetRepair} />;
+}
+
+export function LeakyToiletRepairServiceSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.toiletRepair} />;
+}
+
+export function MinorPlumbingHandymanSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.minorPlumbing} />;
+}
+
+export function CaulkingRepairBathtubShowerSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.caulking} />;
+}
+
+export function IkeaFurnitureAssemblySaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.ikeaAssembly} />;
+}
+
+export function WayfairFurnitureAssemblerSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.wayfairAssembly} />;
+}
+
+export function BbqAssemblyServiceSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.bbqAssembly} />;
+}
+
+export function WallHangingMirrorAndArtInstallationSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.wallHanging} />;
+}
+
+export function BlindsAndCurtainRodInstallationSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.blindsCurtain} />;
+}
+
+export function InteriorDoorHangingServiceSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.interiorDoor} />;
+}
+
+export function DeadboltAndDoorLockReplacementSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.deadboltLock} />;
+}
+
+export function LocalHandymanServicesSaskatoonPage() {
+  return <LocalServiceSeoPage config={localServicePages.localHandyman} />;
+}

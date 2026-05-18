@@ -25,16 +25,36 @@ import PrinceAlbertHandymanServicesPage from "./pages/PrinceAlbertHandymanServic
 import WarmanHandymanServicesPage from "./pages/WarmanHandymanServices";
 import MartensvilleHandymanServicesPage from "./pages/MartensvilleHandymanServices";
 import {
+  BaseboardAndTrimInstallationSaskatoonPage,
+  BbqAssemblyServiceSaskatoonPage,
   BestTvWallMountSaskatoonPage,
+  BlindsAndCurtainRodInstallationSaskatoonPage,
+  CaulkingRepairBathtubShowerSaskatoonPage,
+  CeilingDrywallWaterDamageRepairSaskatoonPage,
+  DeadboltAndDoorLockReplacementSaskatoonPage,
+  DeckRepairSaskatoonPage,
   DiyVsProfessionalDoorbellInstallationSaskatoonPage,
   DoorbellSecuritySaskatoonPage,
+  DrywallRepairAndPatchingSaskatoonPage,
+  FaucetRepairAndInstallationSaskatoonPage,
+  FencePostReplacementSaskatoonPage,
+  FenceRepairAndGateFixSaskatoonPage,
+  IkeaFurnitureAssemblySaskatoonPage,
+  InteriorDoorHangingServiceSaskatoonPage,
+  InteriorPaintingHandymanSaskatoonPage,
+  LeakyToiletRepairServiceSaskatoonPage,
+  LocalHandymanServicesSaskatoonPage,
   LocalSeoSaskatoonServicesPage,
+  MinorPlumbingHandymanSaskatoonPage,
+  ProfessionalDeckStainingSaskatoonPage,
   ProfessionalTvMountingSaskatoonPage,
   RingDoorbellInstallationSaskatoonPage,
   SmartDoorbellInstallationSaskatoonPage,
   SmartHomeDoorbellIntegrationSaskatoonPage,
   TvInstallationServiceSaskatoonPage,
   TvMountingSaskatoonPage,
+  WallHangingMirrorAndArtInstallationSaskatoonPage,
+  WayfairFurnitureAssemblerSaskatoonPage,
 } from "./pages/SaskatoonSeoPages";
 import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
@@ -124,6 +144,27 @@ function Router() {
       <Route path="/home-security-doorbell-installation-saskatoon" component={DoorbellSecuritySaskatoonPage} />
       <Route path="/diy-vs-professional-doorbell-installation-saskatoon" component={DiyVsProfessionalDoorbellInstallationSaskatoonPage} />
       <Route path="/local-seo-tv-mounting-doorbell-installation-saskatoon" component={LocalSeoSaskatoonServicesPage} />
+
+      <Route path="/deck-repair-saskatoon" component={DeckRepairSaskatoonPage} />
+      <Route path="/professional-deck-staining-saskatoon" component={ProfessionalDeckStainingSaskatoonPage} />
+      <Route path="/fence-repair-and-gate-fix-saskatoon" component={FenceRepairAndGateFixSaskatoonPage} />
+      <Route path="/fence-post-replacement-saskatoon" component={FencePostReplacementSaskatoonPage} />
+      <Route path="/drywall-repair-and-patching-saskatoon" component={DrywallRepairAndPatchingSaskatoonPage} />
+      <Route path="/ceiling-drywall-water-damage-repair-saskatoon" component={CeilingDrywallWaterDamageRepairSaskatoonPage} />
+      <Route path="/interior-painting-handyman-saskatoon" component={InteriorPaintingHandymanSaskatoonPage} />
+      <Route path="/baseboard-and-trim-installation-saskatoon" component={BaseboardAndTrimInstallationSaskatoonPage} />
+      <Route path="/faucet-repair-and-installation-saskatoon" component={FaucetRepairAndInstallationSaskatoonPage} />
+      <Route path="/leaky-toilet-repair-service-saskatoon" component={LeakyToiletRepairServiceSaskatoonPage} />
+      <Route path="/minor-plumbing-handyman-saskatoon" component={MinorPlumbingHandymanSaskatoonPage} />
+      <Route path="/caulking-repair-bathtub-shower-saskatoon" component={CaulkingRepairBathtubShowerSaskatoonPage} />
+      <Route path="/ikea-furniture-assembly-saskatoon" component={IkeaFurnitureAssemblySaskatoonPage} />
+      <Route path="/wayfair-furniture-assembler-saskatoon" component={WayfairFurnitureAssemblerSaskatoonPage} />
+      <Route path="/bbq-assembly-service-saskatoon" component={BbqAssemblyServiceSaskatoonPage} />
+      <Route path="/wall-hanging-mirror-and-art-installation-saskatoon" component={WallHangingMirrorAndArtInstallationSaskatoonPage} />
+      <Route path="/blinds-and-curtain-rod-installation-saskatoon" component={BlindsAndCurtainRodInstallationSaskatoonPage} />
+      <Route path="/interior-door-hanging-service-saskatoon" component={InteriorDoorHangingServiceSaskatoonPage} />
+      <Route path="/deadbolt-and-door-lock-replacement-saskatoon" component={DeadboltAndDoorLockReplacementSaskatoonPage} />
+      <Route path="/local-handyman-services-saskatoon" component={LocalHandymanServicesSaskatoonPage} />
 
       <Route path="/sign-in" component={SignIn} />
       <Route path="/sign-up" component={SignUp} />
