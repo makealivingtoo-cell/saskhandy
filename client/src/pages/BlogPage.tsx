@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Hammer } from "lucide-react";
+import { ArrowRight, Hammer, Search, Wrench } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "wouter";
 
 const posts = [
@@ -23,46 +24,140 @@ const posts = [
   },
 ];
 
-const serviceLinks = [
+const saskatoonServiceGroups = [
+  {
+    title: "Deck, fence, and outdoor repair",
+    description:
+      "Outdoor repairs are seasonal in Saskatoon, especially after winter, spring thaw, and heavy use during summer.",
+    links: [
+      { href: "/deck-repair-saskatoon", label: "Deck repair in Saskatoon" },
+      { href: "/professional-deck-staining-saskatoon", label: "Professional deck staining" },
+      { href: "/fence-repair-and-gate-fix-saskatoon", label: "Fence repair and gate fixes" },
+      { href: "/fence-post-replacement-saskatoon", label: "Fence post replacement" },
+      { href: "/bbq-assembly-service-saskatoon", label: "BBQ assembly service" },
+    ],
+  },
+  {
+    title: "Drywall, painting, trim, and interior fixes",
+    description:
+      "These pages help homeowners find help for walls, ceilings, trim, paint touch-ups, and finish work.",
+    links: [
+      { href: "/drywall-repair-and-patching-saskatoon", label: "Drywall repair and patching" },
+      {
+        href: "/ceiling-drywall-water-damage-repair-saskatoon",
+        label: "Ceiling drywall water damage repair",
+      },
+      { href: "/interior-painting-handyman-saskatoon", label: "Interior painting handyman" },
+      { href: "/baseboard-and-trim-installation-saskatoon", label: "Baseboard and trim installation" },
+      { href: "/interior-door-hanging-service-saskatoon", label: "Interior door hanging" },
+    ],
+  },
+  {
+    title: "Minor plumbing and bathroom help",
+    description:
+      "For small fixture jobs and practical bathroom repairs where homeowners need clear quotes and local help.",
+    links: [
+      { href: "/faucet-repair-and-installation-saskatoon", label: "Faucet repair and installation" },
+      { href: "/leaky-toilet-repair-service-saskatoon", label: "Leaky toilet repair service" },
+      { href: "/minor-plumbing-handyman-saskatoon", label: "Minor plumbing handyman" },
+      {
+        href: "/caulking-repair-bathtub-shower-saskatoon",
+        label: "Bathtub and shower caulking repair",
+      },
+    ],
+  },
+  {
+    title: "Assembly, mounting, and installation",
+    description:
+      "High-intent Saskatoon pages for homeowners who need items assembled, mounted, installed, or adjusted.",
+    links: [
+      { href: "/tv-mounting-saskatoon", label: "TV mounting in Saskatoon" },
+      { href: "/ring-doorbell-installation-saskatoon", label: "Ring doorbell installation" },
+      { href: "/ikea-furniture-assembly-saskatoon", label: "IKEA furniture assembly" },
+      { href: "/wayfair-furniture-assembler-saskatoon", label: "Wayfair furniture assembler" },
+      {
+        href: "/wall-hanging-mirror-and-art-installation-saskatoon",
+        label: "Mirror and art installation",
+      },
+      {
+        href: "/blinds-and-curtain-rod-installation-saskatoon",
+        label: "Blinds and curtain rod installation",
+      },
+      {
+        href: "/deadbolt-and-door-lock-replacement-saskatoon",
+        label: "Deadbolt and door lock replacement",
+      },
+    ],
+  },
+];
+
+const coreServiceLinks = [
+  {
+    href: "/local-handyman-services-saskatoon",
+    label: "Local handyman services in Saskatoon",
+  },
+  {
+    href: "/saskatoon-handyman-services",
+    label: "Saskatoon handyman services",
+  },
   {
     href: "/saskatchewan-handyman-services",
     label: "Handyman services in Saskatchewan",
   },
   {
-    href: "/saskatoon-handyman-services",
-    label: "Handyman services in Saskatoon",
+    href: "/tv-mounting-saskatoon",
+    label: "TV mounting in Saskatoon",
   },
   {
-    href: "/regina-handyman-services",
-    label: "Handyman services in Regina",
+    href: "/ring-doorbell-installation-saskatoon",
+    label: "Ring doorbell installation in Saskatoon",
   },
   {
-    href: "/furniture-assembly-saskatchewan",
-    label: "Furniture assembly in Saskatchewan",
+    href: "/deck-repair-saskatoon",
+    label: "Deck repair in Saskatoon",
   },
   {
-    href: "/tv-mounting-saskatchewan",
-    label: "TV mounting in Saskatchewan",
+    href: "/fence-repair-and-gate-fix-saskatoon",
+    label: "Fence repair in Saskatoon",
   },
   {
-    href: "/plumbing-repairs-saskatchewan",
-    label: "Plumbing repairs in Saskatchewan",
+    href: "/drywall-repair-and-patching-saskatoon",
+    label: "Drywall repair in Saskatoon",
   },
   {
-    href: "/electrical-help-saskatchewan",
-    label: "Electrical help in Saskatchewan",
-  },
-  {
-    href: "/yard-work-saskatchewan",
-    label: "Yard work in Saskatchewan",
-  },
-  {
-    href: "/drywall-painting-saskatchewan",
-    label: "Drywall and painting in Saskatchewan",
+    href: "/ikea-furniture-assembly-saskatoon",
+    label: "IKEA furniture assembly in Saskatoon",
   },
 ];
 
 export default function BlogPage() {
+  useEffect(() => {
+    document.title = "SaskHandy Blog | Saskatoon Home Repair and Handyman Tips";
+
+    const description =
+      "Read SaskHandy homeowner guides for Saskatoon handyman services, TV mounting, doorbell installation, deck repair, fence repair, drywall patching, furniture assembly, and small home jobs.";
+
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      document.head.appendChild(meta);
+    }
+
+    meta.content = description;
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+
+    canonical.href = "https://saskhandy.com/blog";
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <header className="border-b border-slate-200 bg-white">
@@ -99,18 +194,18 @@ export default function BlogPage() {
             <div className="grid items-center gap-10 lg:grid-cols-2">
               <div className="max-w-3xl">
                 <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-                  Saskatchewan Home Repair Blog
+                  Saskatoon Home Repair Blog
                 </p>
 
                 <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                  Home Repair Tips and Handyman Hiring Advice for Saskatchewan Homeowners
+                  Home Repair Tips and Handyman Hiring Advice for Saskatoon Homeowners
                 </h1>
 
                 <p className="mt-5 text-lg leading-8 text-slate-600">
-                  The SaskHandy Blog helps homeowners find practical answers about home repairs,
-                  handyman services, small maintenance jobs, furniture assembly, TV mounting, yard
-                  work, drywall repairs, painting, plumbing help, electrical help, and hiring local
-                  handymen in Saskatchewan.
+                  The SaskHandy Blog helps homeowners find practical answers about local handyman
+                  services, small repairs, furniture assembly, TV mounting, doorbell installation,
+                  deck repair, fence repair, drywall patching, painting, minor plumbing help, and
+                  hiring local handymen in Saskatoon.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -119,8 +214,8 @@ export default function BlogPage() {
                   </Button>
 
                   <Button asChild variant="outline" className="rounded-full">
-                    <Link href="/saskatchewan-handyman-services">
-                      Explore Handyman Services
+                    <Link href="/local-handyman-services-saskatoon">
+                      Explore Saskatoon Services
                     </Link>
                   </Button>
                 </div>
@@ -130,8 +225,12 @@ export default function BlogPage() {
                 <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
                   <img
                     src="/images/hero-handyman.jpg"
-                    alt="Handyman working on a home repair project"
+                    alt="Saskatoon handyman working on a home repair project"
                     className="block h-[420px] w-full object-cover"
+                    width="1200"
+                    height="800"
+                    loading="eager"
+                    decoding="async"
                   />
                 </div>
               </div>
@@ -144,24 +243,23 @@ export default function BlogPage() {
             <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
               <div>
                 <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                  Guides for Finding Reliable Handyman Services in Saskatchewan
+                  Guides for Finding Reliable Handyman Services in Saskatoon
                 </h2>
 
                 <p className="mt-4 leading-8 text-slate-600">
-                  Whether you live in Saskatoon, Regina, Prince Albert, Moose Jaw, Warman,
-                  Martensville, or another Saskatchewan community, finding the right person for a
-                  home repair job can feel overwhelming. SaskHandy creates homeowner-friendly guides
-                  to help you understand what to ask, how to compare quotes, which small repairs
-                  should be handled early, and how to describe your job clearly when posting it
-                  online.
+                  Finding the right person for a home repair job can feel overwhelming, especially
+                  when the job is too small for a full contractor but still important enough to need
+                  someone careful. SaskHandy creates homeowner-friendly guides to help you understand
+                  what to ask, how to compare bids, which repairs should be handled early, and how to
+                  describe your job clearly when posting it online.
                 </p>
 
                 <p className="mt-4 leading-8 text-slate-600">
-                  Our goal is to make local handyman hiring easier for everyday home projects. That
-                  includes simple jobs like assembling furniture, mounting a TV, fixing drywall,
-                  painting a room, cleaning up a yard, repairing a fence, replacing fixtures, or
-                  getting help with basic plumbing and electrical tasks. These articles are written
-                  for homeowners who want practical advice before choosing a handyman.
+                  The goal is to make local handyman hiring easier for everyday projects in
+                  Saskatoon. That includes tasks like mounting a TV, installing a doorbell, fixing
+                  drywall, repairing a fence, staining a deck, assembling furniture, replacing a
+                  faucet, hanging a mirror, installing blinds, replacing a deadbolt, or getting help
+                  with basic home maintenance.
                 </p>
               </div>
 
@@ -171,62 +269,46 @@ export default function BlogPage() {
                 </h3>
 
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Explore practical guides and common handyman services homeowners search for across
-                  Saskatchewan.
+                  Start with a guide, then explore the related Saskatoon service page when you are
+                  ready to post a job.
                 </p>
 
                 <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-700">
+                  {posts.map((post) => (
+                    <li key={post.slug}>
+                      <Link
+                        href={`/blog/${post.slug}`}
+                        className="font-medium text-emerald-700 hover:underline"
+                      >
+                        {post.title}
+                      </Link>
+                    </li>
+                  ))}
+
                   <li>
                     <Link
-                      href="/blog/how-to-hire-a-handyman-in-saskatchewan"
+                      href="/local-handyman-services-saskatoon"
                       className="font-medium text-emerald-700 hover:underline"
                     >
-                      How to Hire a Handyman in Saskatchewan
+                      Local Handyman Services Saskatoon
                     </Link>
                   </li>
 
                   <li>
                     <Link
-                      href="/blog/small-home-jobs-you-should-not-put-off"
+                      href="/tv-mounting-saskatoon"
                       className="font-medium text-emerald-700 hover:underline"
                     >
-                      Small Home Jobs You Should Not Put Off
+                      TV Mounting Saskatoon
                     </Link>
                   </li>
 
                   <li>
                     <Link
-                      href="/blog/what-homeowners-should-ask-before-accepting-a-bid"
+                      href="/deck-repair-saskatoon"
                       className="font-medium text-emerald-700 hover:underline"
                     >
-                      What Homeowners Should Ask Before Accepting a Bid
-                    </Link>
-                  </li>
-
-                  <li>
-                    <Link
-                      href="/saskatchewan-handyman-services"
-                      className="font-medium text-emerald-700 hover:underline"
-                    >
-                      Saskatchewan Handyman Services
-                    </Link>
-                  </li>
-
-                  <li>
-                    <Link
-                      href="/saskatoon-handyman-services"
-                      className="font-medium text-emerald-700 hover:underline"
-                    >
-                      Saskatoon Handyman Services
-                    </Link>
-                  </li>
-
-                  <li>
-                    <Link
-                      href="/regina-handyman-services"
-                      className="font-medium text-emerald-700 hover:underline"
-                    >
-                      Regina Handyman Services
+                      Deck Repair Saskatoon
                     </Link>
                   </li>
                 </ul>
@@ -262,7 +344,56 @@ export default function BlogPage() {
           </div>
         </section>
 
-        <section className="bg-[#f7faf8]">
+        <section className="border-t border-b border-slate-200 bg-[#f7faf8]">
+          <div className="container py-16">
+            <div className="max-w-3xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
+                <Search className="h-4 w-4" />
+                Saskatoon service guides
+              </div>
+
+              <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+                High-intent handyman services homeowners search for
+              </h2>
+
+              <p className="mt-4 leading-8 text-slate-600">
+                These Saskatoon service pages help homeowners find specific help instead of landing
+                on one generic handyman page. Each page explains what to include in the job post,
+                what can affect the quote, and how SaskHandy helps homeowners compare local bids.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-6 lg:grid-cols-2">
+              {saskatoonServiceGroups.map((group) => (
+                <div
+                  key={group.title}
+                  className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
+                    <Wrench className="h-5 w-5" />
+                  </div>
+
+                  <h3 className="text-xl font-semibold text-slate-950">{group.title}</h3>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">{group.description}</p>
+
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {group.links.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white">
           <div className="container py-16">
             <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
               <div>
@@ -280,11 +411,11 @@ export default function BlogPage() {
                   </p>
 
                   <p>
-                    This is especially helpful for small home jobs that do not always require a full
-                    contractor. Many homeowners need help with practical tasks such as furniture
-                    assembly, TV mounting, drywall patching, painting, yard cleanup, basic plumbing
-                    repairs, fixture replacement, fence repairs, deck maintenance, and general
-                    handyman work around the house.
+                    This is especially helpful for jobs that do not always require a full contractor.
+                    Many homeowners need help with practical tasks such as furniture assembly, TV
+                    mounting, drywall patching, interior painting, minor plumbing repairs, faucet
+                    replacement, fence repairs, deck maintenance, wall hanging, blinds installation,
+                    deadbolt replacement, and general handyman work around the house.
                   </p>
 
                   <p>
@@ -296,13 +427,13 @@ export default function BlogPage() {
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-[28px] border border-slate-200 bg-[#f7faf8] p-6 shadow-sm">
                 <h3 className="text-xl font-semibold text-slate-950">
-                  Popular Handyman Services
+                  Core SaskHandy service pages
                 </h3>
 
                 <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-600">
-                  {serviceLinks.map((item) => (
+                  {coreServiceLinks.map((item) => (
                     <li key={item.href}>
                       <Link
                         href={item.href}
@@ -326,8 +457,9 @@ export default function BlogPage() {
               </h2>
 
               <p className="mx-auto mt-4 max-w-2xl leading-8 text-emerald-50">
-                Post your job on SaskHandy and connect with local handymen in Saskatchewan for
-                repairs, assembly, mounting, yard work, painting, drywall, and other home projects.
+                Post your job on SaskHandy and connect with local handymen in Saskatoon for
+                repairs, assembly, mounting, yard work, painting, drywall, deck repair, fence
+                repair, and other home projects.
               </p>
 
               <div className="mt-8">
