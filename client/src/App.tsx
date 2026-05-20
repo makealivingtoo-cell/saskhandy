@@ -109,6 +109,28 @@ function MetaPixelPageViewTracker() {
   return null;
 }
 
+function GoogleAnalyticsPageViewTracker() {
+  const [location] = useLocation();
+  const hasMounted = useRef(false);
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+
+    const gtag = (window as any).gtag;
+
+    if (typeof gtag === "function") {
+      gtag("config", "G-04W23ZEZM6", {
+        page_path: location,
+      });
+    }
+  }, [location]);
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
@@ -209,6 +231,7 @@ function App() {
         <TooltipProvider>
           <Toaster richColors position="top-right" />
           <MetaPixelPageViewTracker />
+          <GoogleAnalyticsPageViewTracker />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
