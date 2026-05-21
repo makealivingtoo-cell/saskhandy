@@ -513,6 +513,20 @@ export default function HomePage() {
             <div>
               <div className="text-sm font-semibold text-slate-900">SaskHandy</div>
               <div className="text-sm text-slate-500">Local help for home jobs</div>
+              <div className="mt-3 space-y-1 text-sm text-slate-500">
+                <div>
+                  Support:{" "}
+                  <a href="mailto:support@saskhandy.com" className="hover:text-slate-900">
+                    support@saskhandy.com
+                  </a>
+                </div>
+                <div>
+                  General:{" "}
+                  <a href="mailto:info@saskhandy.com" className="hover:text-slate-900">
+                    info@saskhandy.com
+                  </a>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">

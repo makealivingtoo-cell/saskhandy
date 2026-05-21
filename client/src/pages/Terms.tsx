@@ -118,7 +118,7 @@ export default function TermsPage() {
                   <p className="font-semibold">SaskHandy</p>
                   <p className="text-muted-foreground">Legal/business name: [add legal business name]</p>
                   <p className="text-muted-foreground">Mailing address: [add mailing address]</p>
-                  <p className="text-muted-foreground">Business email: [add business email]</p>
+                  <p className="text-muted-foreground">Business email: info@saskhandy.com</p>
                   <p className="text-muted-foreground">Phone: [add business phone, if available]</p>
                   <p className="text-muted-foreground">Jurisdiction: Saskatchewan, Canada</p>
                 </div>
@@ -602,10 +602,10 @@ export default function TermsPage() {
 
                 <div className="bg-muted p-6 rounded-lg space-y-2">
                   <p className="font-semibold">SaskHandy</p>
-                  <p className="text-muted-foreground">Legal/business name: [add legal business name]</p>
+                  <p className="text-muted-foreground">Legal/business name: SaskHandy</p>
                   <p className="text-muted-foreground">Saskatchewan, Canada</p>
-                  <p className="text-muted-foreground">Business email: [add business email]</p>
-                  <p className="text-muted-foreground">Mailing address: [add mailing address]</p>
+                  <p className="text-muted-foreground">Business email: info@saskhandy.com</p>
+                  <p className="text-muted-foreground">Mailing address: Saskatoon, SK</p>
                   <p className="text-muted-foreground">Support available through the platform support center</p>
                 </div>
               </div>
