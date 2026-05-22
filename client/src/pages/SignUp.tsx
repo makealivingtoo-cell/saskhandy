@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { trackCompleteRegistration } from "@/lib/metaPixel";
-import { CheckCircle, Eye, EyeOff, Hammer, Loader2, Shield, UserCheck, X } from "lucide-react";
+import { Eye, EyeOff, Hammer, Loader2, UserCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -26,21 +26,6 @@ const HANDYMAN_SKILLS = [
   "Roofing",
 ];
 
-const HANDYMAN_PROFILE_REQUIREMENTS = [
-  "Full name",
-  "Profile photo",
-  "Short bio",
-  "Skills/services",
-  "ID Name Matched approval",
-];
-
-const HANDYMAN_TRUST_BOOSTERS = [
-  "Service area",
-  "External review links",
-  "Insurance review",
-  "Criminal record check review",
-  "Trade licence verification, if applicable",
-];
 
 export default function SignUp() {
   const { isAuthenticated, loading } = useAuth();
@@ -186,7 +171,7 @@ export default function SignUp() {
             <div className="mb-6 text-center">
               <h1 className="text-2xl font-serif text-foreground mb-2">Join SaskHandy</h1>
               <p className="text-sm text-muted-foreground">
-                Create your account to post jobs or offer trusted local handyman services.
+                Create an account to post jobs or bid on local home projects.
               </p>
             </div>
 
@@ -273,60 +258,13 @@ export default function SignUp() {
 
                     <div>
                       <p className="text-sm font-semibold text-foreground">
-                        Complete your Safety First profile before bidding
+                        Before you can bid
                       </p>
                       <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        Homeowners review your profile before choosing a bid. After signup, you’ll
-                        need a profile photo, short bio, listed skills, and ID Name Matched approval
-                        before you can send bids.
+                        To help homeowners feel safer, handymen must complete a profile and get ID
+                        Name Matched before sending bids. After signup, you’ll add a profile photo,
+                        short bio, skills/services, and submit ID for review.
                       </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-border/60 bg-white p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        <p className="text-xs font-semibold text-foreground">Required to bid</p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        {HANDYMAN_PROFILE_REQUIREMENTS.map((item) => (
-                          <p key={item} className="text-xs text-muted-foreground">
-                            • {item}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-border/60 bg-white p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Shield className="w-3.5 h-3.5 text-primary" />
-                        <p className="text-xs font-semibold text-foreground">Trust boosters</p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        {HANDYMAN_TRUST_BOOSTERS.map((item) => (
-                          <p key={item} className="text-xs text-muted-foreground">
-                            • {item}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                    <div className="flex items-start gap-2">
-                      <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs font-semibold text-amber-950">
-                          Safety First requirement
-                        </p>
-                        <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                          Your profile name should match your government ID. SaskHandy must approve
-                          ID Name Matched before you can send bids to homeowners.
-                        </p>
-                      </div>
                     </div>
                   </div>
 
@@ -336,7 +274,7 @@ export default function SignUp() {
                         Add your skills
                       </label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Choose at least one skill so we can match you with relevant local jobs.
+                        Choose at least one skill so we can show you relevant local jobs.
                       </p>
                     </div>
 
@@ -453,13 +391,13 @@ export default function SignUp() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
-                <label className="flex items-start gap-3 text-sm">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2.5">
+                <label className="flex items-start gap-2.5 text-xs sm:text-sm">
                   <input
                     type="checkbox"
                     checked={agreeTerms}
                     onChange={(e) => setAgreeTerms(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-border"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
                   />
                   <span className="text-muted-foreground">
                     I agree to the{" "}
@@ -472,12 +410,12 @@ export default function SignUp() {
                   </span>
                 </label>
 
-                <label className="flex items-start gap-3 text-sm">
+                <label className="flex items-start gap-2.5 text-xs sm:text-sm">
                   <input
                     type="checkbox"
                     checked={agreePrivacy}
                     onChange={(e) => setAgreePrivacy(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-border"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
                   />
                   <span className="text-muted-foreground">
                     I have read and agree to the{" "}
@@ -490,12 +428,12 @@ export default function SignUp() {
                   </span>
                 </label>
 
-                <label className="flex items-start gap-3 text-sm">
+                <label className="flex items-start gap-2.5 text-xs sm:text-sm">
                   <input
                     type="checkbox"
                     checked={confirmAge}
                     onChange={(e) => setConfirmAge(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-border"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
                   />
                   <span className="text-muted-foreground">
                     I confirm that I am at least 18 years old and legally able to enter into this
@@ -503,12 +441,12 @@ export default function SignUp() {
                   </span>
                 </label>
 
-                <label className="flex items-start gap-3 text-sm">
+                <label className="flex items-start gap-2.5 text-xs sm:text-sm">
                   <input
                     type="checkbox"
                     checked={marketingOptIn}
                     onChange={(e) => setMarketingOptIn(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-border"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
                   />
                   <span className="text-muted-foreground">
                     I would like to receive occasional product updates and service emails.
@@ -528,9 +466,9 @@ export default function SignUp() {
                     Creating Account...
                   </>
                 ) : userType === "handyman" ? (
-                  "Create Account & Continue to Safety Profile"
+                  "Create Handyman Account"
                 ) : (
-                  "Create Account"
+                  "Create Homeowner Account"
                 )}
               </Button>
             </form>
