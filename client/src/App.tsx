@@ -56,6 +56,17 @@ import {
   WallHangingMirrorAndArtInstallationSaskatoonPage,
   WayfairFurnitureAssemblerSaskatoonPage,
 } from "./pages/SaskatoonSeoPages";
+import {
+  DeckRepairReginaPage,
+  DrywallRepairReginaPage,
+  FenceRepairReginaPage,
+  FurnitureAssemblyReginaPage,
+  InteriorPaintingHandymanReginaPage,
+  LocalHandymanServicesReginaPage,
+  MinorPlumbingHandymanReginaPage,
+  RingDoorbellInstallationReginaPage,
+  TvMountingReginaPage,
+} from "./pages/ReginaSeoPages";
 import RoleSelect from "./pages/RoleSelect";
 import HandymanOnboarding from "./pages/HandymanOnboarding";
 import SignIn from "./pages/SignIn";
@@ -144,6 +155,17 @@ function Router() {
       <Route path="/saskatchewan-handyman-services" component={SaskatchewanHandymanServicesPage} />
       <Route path="/saskatoon-handyman-services" component={SaskatoonHandymanServicesPage} />
       <Route path="/regina-handyman-services" component={ReginaHandymanServicesPage} />
+      {/* Regina SEO pages */}
+      <Route path="/local-handyman-services-regina" component={LocalHandymanServicesReginaPage} />
+      <Route path="/tv-mounting-regina" component={TvMountingReginaPage} />
+      <Route path="/furniture-assembly-regina" component={FurnitureAssemblyReginaPage} />
+      <Route path="/drywall-repair-regina" component={DrywallRepairReginaPage} />
+      <Route path="/fence-repair-regina" component={FenceRepairReginaPage} />
+      <Route path="/deck-repair-regina" component={DeckRepairReginaPage} />
+      <Route path="/minor-plumbing-handyman-regina" component={MinorPlumbingHandymanReginaPage} />
+      <Route path="/interior-painting-handyman-regina" component={InteriorPaintingHandymanReginaPage} />
+      <Route path="/ring-doorbell-installation-regina" component={RingDoorbellInstallationReginaPage} />
+
 
       <Route path="/furniture-assembly-saskatchewan" component={FurnitureAssemblySaskatchewanPage} />
       <Route path="/tv-mounting-saskatchewan" component={TvMountingSaskatchewanPage} />
