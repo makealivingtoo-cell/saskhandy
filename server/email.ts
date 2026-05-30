@@ -209,6 +209,29 @@ export async function sendPasswordResetEmail(params: {
   });
 }
 
+
+export async function sendTwoFactorCodeEmail(params: {
+  to: string;
+  name?: string | null;
+  code: string;
+}) {
+  await sendEmail({
+    to: params.to,
+    subject: "Your SaskHandy admin sign-in code",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827; max-width: 640px; margin: 0 auto;">
+        <h2>Admin sign-in code</h2>
+        <p>Hello ${params.name ? escapeHtml(params.name) : ""},</p>
+        <p>Use this code to finish signing in to your SaskHandy admin account:</p>
+        <p style="font-size: 32px; letter-spacing: 8px; font-weight: 700; margin: 24px 0;">${escapeHtml(params.code)}</p>
+        <p>This code expires in 10 minutes.</p>
+        <p>If you did not try to sign in, reset your password and review admin access immediately.</p>
+      </div>
+    `,
+    text: `Your SaskHandy admin sign-in code is: ${params.code}\n\nThis code expires in 10 minutes. If you did not try to sign in, reset your password and review admin access immediately.`,
+  });
+}
+
 export async function sendNewBidEmail(params: {
   to: string;
   homeownerName?: string | null;

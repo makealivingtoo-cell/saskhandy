@@ -57,6 +57,17 @@ export const passwordResetTokens = mysqlTable("password_reset_tokens", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const twoFactorCodes = mysqlTable("two_factor_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  challengeId: varchar("challengeId", { length: 128 }).notNull().unique(),
+  codeHash: varchar("codeHash", { length: 255 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
@@ -65,6 +76,9 @@ export type InsertEmailVerificationToken = typeof emailVerificationTokens.$infer
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
+export type TwoFactorCode = typeof twoFactorCodes.$inferSelect;
+export type InsertTwoFactorCode = typeof twoFactorCodes.$inferInsert;
 
 // ─── Handyman Profiles ────────────────────────────────────────────────────────
 export const handymanProfiles = mysqlTable("handyman_profiles", {

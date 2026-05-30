@@ -22,10 +22,11 @@ import {
   sendDisputeOpenedEmail,
   sendDisputeResolvedEmail,
   sendNewJobPostedEmail,
+  sendTwoFactorCodeEmail,
 } from "./email";
 import { syncUserToBrevo } from "./brevo";
 import { z } from "zod";
-import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "crypto";
 import {
   adminDeleteJobById,
   cancelJobWithReason,
@@ -41,10 +42,12 @@ import {
   createPayment,
   createPayoutRequest,
   createReview,
+  createTwoFactorCode,
   deleteEmailVerificationTokenById,
   deleteEmailVerificationTokensForUser,
   deleteJobById,
   deletePasswordResetTokensForUser,
+  deleteTwoFactorCodesForUser,
   deleteUserById,
   getAccountDeletionBlockers,
   anonymizeUserAccount,
@@ -76,9 +79,11 @@ import {
   getUserById,
   getValidEmailVerificationToken,
   getValidPasswordResetToken,
+  getValidTwoFactorCode,
   markAllNotificationsRead,
   markNotificationRead,
   markPasswordResetTokenUsed,
+  markTwoFactorCodeUsed,
   markUserEmailVerified,
   recalculateHandymanRating,
   rejectOtherBids,
@@ -390,6 +395,80 @@ async function createAndSendPasswordReset(user: {
   }
 }
 
+
+function generateTwoFactorCode() {
+  return randomInt(100000, 1000000).toString();
+}
+
+async function createSessionForUser(ctx: any, user: any) {
+  if (!user.email) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Account email is missing.",
+    });
+  }
+
+  await upsertUser({
+    openId: user.openId,
+    lastSignedIn: new Date(),
+  } as any);
+
+  const latestUser = await safeGetUserByEmail(user.email);
+
+  if (!latestUser) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to refresh signed-in user",
+    });
+  }
+
+  const sessionToken = await sdk.createSessionToken(latestUser.openId, {
+    name: latestUser.name ?? "",
+    expiresInMs: ONE_YEAR_MS,
+  });
+
+  const cookieOptions = getSessionCookieOptions(ctx.req);
+  ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+  return latestUser;
+}
+
+async function createAndSendAdminTwoFactorCode(user: {
+  id: number;
+  email: string | null;
+  name: string | null;
+}) {
+  if (!user.email) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Admin account email is missing.",
+    });
+  }
+
+  const code = generateTwoFactorCode();
+  const challengeId = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await deleteTwoFactorCodesForUser(user.id);
+
+  await createTwoFactorCode({
+    userId: user.id,
+    email: user.email,
+    challengeId,
+    codeHash: hashPassword(code),
+    expiresAt,
+    usedAt: null,
+  });
+
+  await sendTwoFactorCodeEmail({
+    to: user.email,
+    name: user.name,
+    code,
+  });
+
+  return { challengeId };
+}
+
 async function notifyUser(params: {
   userId: number;
   type:
@@ -687,27 +766,72 @@ const authRouter = router({
         });
       }
 
-      await upsertUser({
-        openId: refreshedUser.openId,
-        lastSignedIn: new Date(),
-      } as any);
+      const isAdmin = refreshedUser.role === "admin";
 
-      const latestUser = await safeGetUserByEmail(email);
+      if (isAdmin) {
+        const twoFactor = await createAndSendAdminTwoFactorCode(refreshedUser);
 
-      if (!latestUser) {
+        return {
+          success: true,
+          twoFactorRequired: true,
+          challengeId: twoFactor.challengeId,
+          email: refreshedUser.email,
+        };
+      }
+
+      const latestUser = await createSessionForUser(ctx, refreshedUser);
+
+      return {
+        success: true,
+        twoFactorRequired: false,
+        user: latestUser,
+      };
+    }),
+
+  verifyTwoFactorCode: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        challengeId: z.string().min(20),
+        code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code."),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const email = normalizeEmail(input.email);
+      const user = await safeGetUserByEmail(email);
+
+      if (!user || user.role !== "admin") {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to refresh signed-in user",
+          code: "UNAUTHORIZED",
+          message: "Invalid verification code.",
         });
       }
 
-      const sessionToken = await sdk.createSessionToken(latestUser.openId, {
-        name: latestUser.name ?? "",
-        expiresInMs: ONE_YEAR_MS,
+      const twoFactorCode = await getValidTwoFactorCode({
+        email,
+        challengeId: input.challengeId,
       });
 
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      if (!twoFactorCode || twoFactorCode.userId !== user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "This code is invalid or expired.",
+        });
+      }
+
+      const validCode = verifyPassword(input.code, twoFactorCode.codeHash);
+
+      if (!validCode) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "This code is invalid or expired.",
+        });
+      }
+
+      await markTwoFactorCodeUsed(twoFactorCode.id);
+      await deleteTwoFactorCodesForUser(user.id);
+
+      const latestUser = await createSessionForUser(ctx, user);
 
       return {
         success: true,
@@ -717,7 +841,7 @@ const authRouter = router({
 
   logout: publicProcedure.mutation(({ ctx }) => {
     const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
     return { success: true } as const;
   }),
 
@@ -753,7 +877,7 @@ const authRouter = router({
       await anonymizeUserAccount(ctx.user.id);
 
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
 
       return { success: true };
     }),
