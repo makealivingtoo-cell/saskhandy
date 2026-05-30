@@ -17,6 +17,7 @@ import {
   reports,
   supportTicketMessages,
   supportTickets,
+  twoFactorCodes,
   users,
   type InsertBid,
   type InsertDispute,
@@ -29,6 +30,7 @@ import {
   type InsertPayoutRequest,
   type InsertReport,
   type InsertReview,
+  type InsertTwoFactorCode,
   type InsertUser,
 } from "../drizzle/schema";
 
@@ -452,6 +454,7 @@ export async function anonymizeUserAccount(userId: number) {
 
   await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
   await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+  await db.delete(twoFactorCodes).where(eq(twoFactorCodes.userId, userId));
 
   await db
     .update(users)
@@ -543,6 +546,49 @@ export async function markPasswordResetTokenUsed(id: number) {
       usedAt: new Date(),
     })
     .where(eq(passwordResetTokens.id, id));
+}
+
+// ─── Two-Factor Codes ─────────────────────────────────────────────────────────
+export async function createTwoFactorCode(data: InsertTwoFactorCode) {
+  const db = await getDb();
+  const result = await db.insert(twoFactorCodes).values(data);
+  return Number((result as any).insertId);
+}
+
+export async function deleteTwoFactorCodesForUser(userId: number) {
+  const db = await getDb();
+  await db.delete(twoFactorCodes).where(eq(twoFactorCodes.userId, userId));
+}
+
+export async function getValidTwoFactorCode(params: {
+  email: string;
+  challengeId: string;
+}) {
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(twoFactorCodes)
+    .where(
+      and(
+        eq(twoFactorCodes.email, params.email),
+        eq(twoFactorCodes.challengeId, params.challengeId),
+        gt(twoFactorCodes.expiresAt, new Date()),
+        isNull(twoFactorCodes.usedAt)
+      )
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export async function markTwoFactorCodeUsed(id: number) {
+  const db = await getDb();
+  await db
+    .update(twoFactorCodes)
+    .set({
+      usedAt: new Date(),
+    })
+    .where(eq(twoFactorCodes.id, id));
 }
 
 // ─── Handyman Profiles ────────────────────────────────────────────────────────
