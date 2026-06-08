@@ -29,7 +29,7 @@ export default function SignIn() {
     }
 
     if (user.userType === "handyman") {
-      navigate("/handyman/dashboard");
+      navigate("/handyman/browse");
       return;
     }
 
@@ -136,6 +136,7 @@ export default function SignIn() {
                     Forgot password?
                   </Link>
                 </div>
+
                 <input
                   type="password"
                   value={password}
@@ -151,6 +152,7 @@ export default function SignIn() {
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 6-digit code
               </label>
+
               <input
                 type="text"
                 inputMode="numeric"
