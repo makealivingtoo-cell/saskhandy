@@ -415,7 +415,8 @@ export async function getAccountDeletionBlockers(userId: number) {
 
 export async function anonymizeUserAccount(userId: number) {
   const db = await getDb();
-  const deletedEmail = `deleted-user-${userId}-${Date.now()}@saskhandy.local`;
+  const now = Date.now();
+  const deletedEmail = `deleted-user-${userId}-${now}@saskhandy.local`;
 
   await db
     .update(handymanProfiles)
@@ -459,11 +460,11 @@ export async function anonymizeUserAccount(userId: number) {
   await db
     .update(users)
     .set({
+      openId: `deleted_${userId}_${now}`,
       name: "Deleted User",
       email: deletedEmail,
       passwordHash: null,
-      openId: `deleted_${userId}_${Date.now()}`,
-      userType: null,
+      userType: "unset",
       emailVerified: false,
       emailVerifiedAt: null,
       marketingOptIn: false,

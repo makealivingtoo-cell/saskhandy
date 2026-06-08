@@ -752,7 +752,7 @@ export default function HandymanProfile() {
             </div>
 
             <div className="text-left sm:text-right">
-              <p className="text-xs text-muted-foreground">Bid-ready profile</p>
+              <p className="text-xs text-muted-foreground">Profile progress</p>
               <p className="text-2xl font-bold text-foreground">{bidReadyCompletion}%</p>
               <p
                 className={cn(
@@ -760,7 +760,7 @@ export default function HandymanProfile() {
                   isBidReady ? "text-emerald-700" : "text-amber-700"
                 )}
               >
-                {isBidReady ? "Ready to send bids" : "Required before bidding"}
+                {isBidReady ? "Ready to bid" : "A few steps left"}
               </p>
             </div>
           </div>
@@ -819,11 +819,11 @@ export default function HandymanProfile() {
                 <Info className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-amber-900">
-                    Complete your bid-ready profile
+                    Almost ready to start bidding
                   </p>
                   <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                    To protect homeowner trust, you need a complete profile before sending bids.
-                    Missing: {missingBidReadyItems.map((item) => item.label.toLowerCase()).join(", ")}.
+                    Add a few more profile details so homeowners know who they’re reviewing before choosing.
+                    Still needed: {missingBidReadyItems.map((item) => item.label.toLowerCase()).join(", ")}.
                   </p>
                 </div>
               </div>
@@ -835,12 +835,12 @@ export default function HandymanProfile() {
               <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  How homeowners use your profile
+                  What homeowners see when you bid
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  When you bid on a job, homeowners can look at your photo, full name, short bio,
-                  skills, service area, verification badges, external review links, rating, job
-                  history, and message. ID Name Matched is required before bidding.
+                  When you bid, homeowners can review your photo, name, bio, skills, service area,
+                  badges, review links, rating, job history, and message. A stronger profile can
+                  help your bid feel more credible.
                 </p>
               </div>
             </div>
@@ -955,7 +955,7 @@ export default function HandymanProfile() {
                   <p className="text-sm font-medium text-foreground">ID Name Match</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                     Upload government ID so SaskHandy can confirm your profile name matches your ID.
-                    ID Name Matched is required before bidding and can show homeowners a trust badge.
+                    This unlocks bidding and shows homeowners an ID Name Matched badge.
                   </p>
 
                   {profile?.identityDocumentUrl && (
@@ -1171,8 +1171,8 @@ export default function HandymanProfile() {
           <div>
             <h3 className="font-semibold text-foreground">Edit Profile</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              These details help homeowners understand who they are hiring before accepting a bid.
-              Full name, profile photo, short bio, skills, and ID Name Matched approval are required before you can bid.
+              These details help homeowners understand your skills, work style, and local experience before choosing a bid.
+              Full name, profile photo, short bio, skills, and ID Name Matched approval unlock bidding.
             </p>
           </div>
 
@@ -1189,7 +1189,7 @@ export default function HandymanProfile() {
             <p className="text-xs text-muted-foreground">
               {nameLocked
                 ? "Your name is locked because ID Name Matched has been approved. Contact SaskHandy support if your legal name needs to be corrected."
-                : "Use your legal name. This must match your government ID for ID Name Matched approval."}
+                : "Use the same name shown on your government ID so your ID Name Matched review is easier."}
             </p>
           </div>
 
@@ -1207,7 +1207,7 @@ export default function HandymanProfile() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              This local signal helps homeowners feel like they are hiring someone nearby, not a stranger from the internet.
+              This helps homeowners quickly see where you work and whether you’re close enough for their job.
             </p>
           </div>
 
@@ -1273,8 +1273,8 @@ export default function HandymanProfile() {
             <div className="flex items-center justify-between gap-3 text-xs">
               <p className={cn(bio.trim().length >= 25 ? "text-emerald-700" : "text-amber-700")}>
                 {bio.trim().length >= 25
-                  ? "Bio is long enough for bidding."
-                  : "Write at least 25 characters before bidding."}
+                  ? "Bio looks good."
+                  : "Write at least 25 characters so homeowners know what you do."}
               </p>
               <p className="text-muted-foreground">{bio.trim().length}/25 minimum</p>
             </div>

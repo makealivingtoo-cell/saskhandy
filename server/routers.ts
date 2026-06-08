@@ -1378,9 +1378,9 @@ const bidsRouter = router({
       if (!handymanProfile || !profileStatus.isComplete) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Complete your bid-ready profile before sending bids. Missing: ${profileStatus.missingFields.join(
+          message: `You’re almost ready to bid. Please finish these profile items first: ${profileStatus.missingFields.join(
             ", "
-          )}. To protect homeowner trust, handymen need a clear photo, short bio, listed skills, and approved ID name match before bidding.`,
+          )}. A complete profile helps homeowners know who they’re reviewing before choosing.`,
         });
       }
 
