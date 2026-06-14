@@ -107,10 +107,104 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.userType === "homeowner") navigate("/dashboard");
-      else if (user.userType === "handyman") navigate("/handyman/dashboard");
-      else navigate("/role-select");
+      if (user.userType === "homeowner") {
+        navigate("/dashboard");
+        return;
+      }
+
+      if (user.userType === "handyman") {
+        navigate("/handyman/browse");
+        return;
+      }
+
+      navigate("/role-select");
+      return;
     }
+
+    const siteUrl = "https://saskhandy.com";
+    const siteName = "SaskHandy";
+    const pageTitle = "SaskHandy | Saskatchewan Home Jobs & Handyman Services";
+    const description =
+      "SaskHandy helps Saskatchewan homeowners post small home jobs, compare bids from local handymen, review profiles, message before choosing, and keep the job organized in one place.";
+
+    document.title = pageTitle;
+
+    const setMeta = (
+      selector: string,
+      attrName: "name" | "property",
+      attrValue: string,
+      content: string
+    ) => {
+      let element = document.querySelector(selector) as HTMLMetaElement | null;
+
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attrName, attrValue);
+        document.head.appendChild(element);
+      }
+
+      element.content = content;
+    };
+
+    const setLink = (selector: string, rel: string, href: string) => {
+      let element = document.querySelector(selector) as HTMLLinkElement | null;
+
+      if (!element) {
+        element = document.createElement("link");
+        element.rel = rel;
+        document.head.appendChild(element);
+      }
+
+      element.href = href;
+    };
+
+    const setJsonLd = (id: string, data: Record<string, unknown>) => {
+      let element = document.getElementById(id) as HTMLScriptElement | null;
+
+      if (!element) {
+        element = document.createElement("script");
+        element.id = id;
+        element.type = "application/ld+json";
+        document.head.appendChild(element);
+      }
+
+      element.textContent = JSON.stringify(data);
+    };
+
+    setMeta('meta[name="description"]', "name", "description", description);
+    setMeta('meta[property="og:site_name"]', "property", "og:site_name", siteName);
+    setMeta('meta[property="og:title"]', "property", "og:title", pageTitle);
+    setMeta('meta[property="og:description"]', "property", "og:description", description);
+    setMeta('meta[property="og:type"]', "property", "og:type", "website");
+    setMeta('meta[property="og:url"]', "property", "og:url", `${siteUrl}/`);
+    setMeta('meta[name="application-name"]', "name", "application-name", siteName);
+    setMeta(
+      'meta[name="apple-mobile-web-app-title"]',
+      "name",
+      "apple-mobile-web-app-title",
+      siteName
+    );
+
+    setLink('link[rel="canonical"]', "canonical", `${siteUrl}/`);
+
+    setJsonLd("saskhandy-website-schema", {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
+      name: "SaskHandy",
+      alternateName: ["SaskHandy Saskatchewan", "saskhandy.com"],
+      url: `${siteUrl}/`,
+    });
+
+    setJsonLd("saskhandy-organization-schema", {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": `${siteUrl}/#organization`,
+      name: "SaskHandy",
+      url: `${siteUrl}/`,
+      logo: `${siteUrl}/images/favicon.png`,
+      sameAs: [facebookPageUrl],
+    });
   }, [isAuthenticated, user, navigate]);
 
   return (
@@ -181,7 +275,8 @@ export default function HomePage() {
                 </h1>
 
                 <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
-                  Post a job, compare bids, review handyman profiles, message before choosing, and pay securely in one place.
+                  Post a job, compare bids, review handyman profiles, message before choosing, and
+                  pay securely in one place.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -308,7 +403,8 @@ export default function HomePage() {
 
             <p className="mt-6 max-w-3xl text-xs leading-6 text-slate-500">
               Verification badges help you review trust signals, but they do not guarantee safety or
-              replace your own judgment. Message before choosing and only move forward when you feel comfortable.
+              replace your own judgment. Message before choosing and only move forward when you feel
+              comfortable.
             </p>
           </div>
         </section>
@@ -351,7 +447,8 @@ export default function HomePage() {
                       2. Compare bids
                     </div>
                     <p className="mt-2 text-slate-600">
-                      Review pricing, availability, service areas, reviews, and trust badges before choosing someone.
+                      Review pricing, availability, service areas, reviews, and trust badges before
+                      choosing someone.
                     </p>
                   </div>
 
@@ -360,7 +457,8 @@ export default function HomePage() {
                       3. Chat and pay
                     </div>
                     <p className="mt-2 text-slate-600">
-                      Message before choosing and keep payment protected through SaskHandy from start to finish.
+                      Message before choosing and keep payment protected through SaskHandy from
+                      start to finish.
                     </p>
                   </div>
                 </div>
@@ -389,7 +487,8 @@ export default function HomePage() {
                 Why use SaskHandy
               </h2>
               <p className="mt-4 text-lg text-slate-600">
-                A safer, cleaner way to hire for small home jobs without relying on random names from Facebook groups.
+                A safer, cleaner way to hire for small home jobs without relying on random names
+                from Facebook groups.
               </p>
             </div>
 
@@ -477,7 +576,8 @@ export default function HomePage() {
                   Ready to post your first job?
                 </h2>
                 <p className="mt-4 text-lg text-emerald-50/90">
-                  Post once, review bids carefully, message before choosing, and pay securely through SaskHandy.
+                  Post once, review bids carefully, message before choosing, and pay securely through
+                  SaskHandy.
                 </p>
               </div>
 
