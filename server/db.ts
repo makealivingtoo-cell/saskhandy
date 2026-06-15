@@ -941,9 +941,38 @@ export async function getAllJobsForAdmin() {
     .leftJoin(users, eq(jobs.homeownerId, users.id))
     .orderBy(desc(jobs.updatedAt));
 
+  const jobIds = rows.map((row) => row.id);
+
+  const bidRows =
+    jobIds.length > 0
+      ? await db
+          .select({
+            id: bids.id,
+            jobId: bids.jobId,
+            status: bids.status,
+          })
+          .from(bids)
+          .where(inArray(bids.jobId, jobIds))
+      : [];
+
+  const bidCountByJobId = bidRows.reduce<Record<number, number>>((acc, bid) => {
+    acc[bid.jobId] = (acc[bid.jobId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const pendingBidCountByJobId = bidRows.reduce<Record<number, number>>((acc, bid) => {
+    if (bid.status === "pending") {
+      acc[bid.jobId] = (acc[bid.jobId] ?? 0) + 1;
+    }
+
+    return acc;
+  }, {});
+
   return rows.map((row) => ({
     ...row,
     photos: parsePhotos(row.photos),
+    bidCount: bidCountByJobId[row.id] ?? 0,
+    pendingBidCount: pendingBidCountByJobId[row.id] ?? 0,
   }));
 }
 

@@ -1727,6 +1727,9 @@ Insurance Reviewed
                         Created
                       </th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                        Bids
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
                         Actions
                       </th>
                     </tr>
@@ -1754,6 +1757,26 @@ Insurance Reviewed
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">
                           {format(new Date(job.createdAt), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={`w-fit rounded-full px-2 py-0.5 text-xs font-medium border ${
+                                ((job as any).bidCount ?? 0) > 0
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-red-50 text-red-700 border-red-200"
+                              }`}
+                            >
+                              {(job as any).bidCount ?? 0} bid
+                              {((job as any).bidCount ?? 0) === 1 ? "" : "s"}
+                            </span>
+
+                            {((job as any).pendingBidCount ?? 0) > 0 && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {(job as any).pendingBidCount} pending
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2 flex-wrap">
