@@ -2142,6 +2142,7 @@ const messagesRouter = router({
       z.object({
         jobId: z.number(),
         bidId: z.number().optional(),
+        includeJobThread: z.boolean().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -2168,7 +2169,22 @@ const messagesRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
-        jobMessages = await getMessagesForBid(input.jobId, input.bidId);
+        const bidMessages = await getMessagesForBid(input.jobId, input.bidId);
+
+        if (input.includeJobThread) {
+          const generalJobMessages = await getMessagesForJob(input.jobId);
+          const messageMap = new Map<number, any>();
+
+          [...bidMessages, ...generalJobMessages].forEach((msg) => {
+            messageMap.set(msg.id, msg);
+          });
+
+          jobMessages = Array.from(messageMap.values()).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        } else {
+          jobMessages = bidMessages;
+        }
       } else {
         const isHomeowner = job.homeownerId === ctx.user.id;
         const isSelectedHandyman = job.selectedHandymanId === ctx.user.id;

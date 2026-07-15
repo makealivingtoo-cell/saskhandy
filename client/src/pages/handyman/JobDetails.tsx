@@ -629,8 +629,19 @@ export default function HandymanJobDetails() {
           </div>
         )}
 
-        {isAssignedHandyman && (
-          <JobChat jobId={jobId} otherPartyLabel={job.homeownerName ?? "the homeowner"} />
+        {isAssignedHandyman && job.status !== "cancelled" && (
+          <JobChat
+            jobId={jobId}
+            bidId={job.selectedBidId ?? undefined}
+            includeJobThread
+            paymentPending={job.status === "awaiting_payment"}
+            otherPartyLabel={job.homeownerName ?? "the homeowner"}
+            description={
+              job.status === "awaiting_payment"
+                ? "Message the homeowner while payment is being completed."
+                : undefined
+            }
+          />
         )}
 
         {isAssignedHandyman && job.status === "in_progress" && (

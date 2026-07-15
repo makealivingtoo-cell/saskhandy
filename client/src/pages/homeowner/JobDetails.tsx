@@ -1192,10 +1192,18 @@ export default function JobDetails() {
           </div>
         )}
 
-        {job.selectedHandymanId && job.status !== "awaiting_payment" && (
+        {job.selectedHandymanId && job.status !== "cancelled" && (
           <JobChat
             jobId={jobId}
+            bidId={job.selectedBidId ?? acceptedBid?.id}
+            includeJobThread
+            paymentPending={job.status === "awaiting_payment"}
             otherPartyLabel={acceptedBid?.handymanName ?? "your handyman"}
+            description={
+              job.status === "awaiting_payment"
+                ? `Message ${acceptedBid?.handymanName ?? "your handyman"} while payment is being completed.`
+                : undefined
+            }
           />
         )}
 

@@ -12,6 +12,8 @@ interface JobChatProps {
   jobId: number;
   otherPartyLabel: string;
   bidId?: number;
+  includeJobThread?: boolean;
+  paymentPending?: boolean;
   title?: string;
   description?: string;
   compact?: boolean;
@@ -28,6 +30,8 @@ function containsRestrictedContactInfo(value: string) {
 export function JobChat({
   jobId,
   bidId,
+  includeJobThread = false,
+  paymentPending = false,
   otherPartyLabel,
   title = "Chat",
   description,
@@ -39,7 +43,9 @@ export function JobChat({
   const [message, setMessage] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const queryInput = bidId ? { jobId, bidId } : { jobId };
+  const queryInput = bidId
+    ? { jobId, bidId, includeJobThread }
+    : { jobId, includeJobThread };
 
   const messagesQuery = trpc.messages.getForJob.useQuery(queryInput, {
     refetchInterval: 4000,
@@ -51,7 +57,9 @@ export function JobChat({
       setMessage("");
 
       await utils.messages.getForJob.invalidate(queryInput);
-      await utils.messages.getUnreadCount.invalidate(queryInput);
+      await utils.messages.getUnreadCount.invalidate(
+        bidId ? { jobId, bidId } : { jobId }
+      );
     },
     onError: (err) => toast.error(err.message),
   });
@@ -90,20 +98,56 @@ export function JobChat({
         className
       )}
     >
-      <div className={cn("border-b border-border/40 shrink-0", compact ? "px-4 py-2.5" : "px-5 py-4")}>
-        <h3 className={cn("font-semibold text-foreground", compact ? "text-sm" : "text-base")}>{title}</h3>
-        <p className={cn("text-muted-foreground mt-0.5", compact ? "text-[11px] line-clamp-1" : "text-xs")}>
+      <div
+        className={cn(
+          "border-b border-border/40 shrink-0",
+          compact ? "px-4 py-2.5" : "px-5 py-4"
+        )}
+      >
+        <h3 className={cn("font-semibold text-foreground", compact ? "text-sm" : "text-base")}>
+          {title}
+        </h3>
+        <p
+          className={cn(
+            "text-muted-foreground mt-0.5",
+            compact ? "text-[11px] line-clamp-1" : "text-xs"
+          )}
+        >
           {description ?? `Message ${otherPartyLabel} about this job.`}
         </p>
       </div>
 
+      {paymentPending && !compact && (
+        <div className="border-b border-amber-200 bg-amber-50 px-5 py-3">
+          <div className="flex items-start gap-2">
+            <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+            <p className="text-xs leading-relaxed text-amber-800">
+              Payment is pending. Payment is held securely through SaskHandy and is not released
+              to the handyman until the homeowner marks the job complete.
+            </p>
+          </div>
+        </div>
+      )}
+
       {messagesQuery.isLoading ? (
-        <div className={cn("flex items-center justify-center flex-1 min-h-0", compact ? "py-4" : "py-8")}>
+        <div
+          className={cn(
+            "flex items-center justify-center flex-1 min-h-0",
+            compact ? "py-4" : "py-8"
+          )}
+        >
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : groupedMessages.length === 0 ? (
-        <div className={cn("text-center flex-1 min-h-0 flex flex-col items-center justify-center", compact ? "px-4 py-4" : "px-6 py-6")}>
-          <MessageSquare className={cn("text-muted-foreground mx-auto mb-2", compact ? "w-6 h-6" : "w-8 h-8")} />
+        <div
+          className={cn(
+            "text-center flex-1 min-h-0 flex flex-col items-center justify-center",
+            compact ? "px-4 py-4" : "px-6 py-6"
+          )}
+        >
+          <MessageSquare
+            className={cn("text-muted-foreground mx-auto mb-2", compact ? "w-6 h-6" : "w-8 h-8")}
+          />
           <p className="text-sm font-medium text-foreground">No messages yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Start the conversation with {otherPartyLabel}.
@@ -120,10 +164,7 @@ export function JobChat({
             const isMine = msg.senderId === user?.id;
 
             return (
-              <div
-                key={msg.id}
-                className={cn("flex", isMine ? "justify-end" : "justify-start")}
-              >
+              <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
                 <div
                   className={cn(
                     "max-w-[82%] rounded-2xl px-4 py-3 shadow-sm",
@@ -189,7 +230,11 @@ export function JobChat({
               {compact ? "Stay on SaskHandy for safety" : "Press Ctrl + Enter to send"}
             </p>
 
-            <Button size={compact ? "sm" : "default"} onClick={handleSend} disabled={sendMessage.isPending || !message.trim()}>
+            <Button
+              size={compact ? "sm" : "default"}
+              onClick={handleSend}
+              disabled={sendMessage.isPending || !message.trim()}
+            >
               {sendMessage.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
