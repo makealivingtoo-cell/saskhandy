@@ -185,8 +185,16 @@ export const jobs = mysqlTable("jobs", {
   cancelDetails: text("cancelDetails"),
   cancelledAt: timestamp("cancelledAt"),
 
+  // Legacy first bid reminder field kept for compatibility with existing production data.
   bidReminderSentAt: timestamp("bidReminderSentAt"),
   lastBidReminderCheckedAt: timestamp("lastBidReminderCheckedAt"),
+
+  bidReminder1SentAt: timestamp("bidReminder1SentAt"),
+  bidReminder2SentAt: timestamp("bidReminder2SentAt"),
+  bidReminder3SentAt: timestamp("bidReminder3SentAt"),
+
+  paymentReminderSentAt: timestamp("paymentReminderSentAt"),
+  lastPaymentReminderCheckedAt: timestamp("lastPaymentReminderCheckedAt"),
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

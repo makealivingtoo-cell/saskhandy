@@ -1033,17 +1033,36 @@ export async function cancelJobWithReason(
     .where(eq(jobs.id, jobId));
 }
 
-export async function markBidReminderSent(jobId: number) {
-  const db = await getDb();
+type BidReminderNumber = 1 | 2 | 3;
 
-  await db
-    .update(jobs)
-    .set({
-      bidReminderSentAt: new Date(),
-      lastBidReminderCheckedAt: new Date(),
-      updatedAt: new Date(),
-    } as any)
-    .where(eq(jobs.id, jobId));
+function getBidReminderSentField(reminderNumber: BidReminderNumber) {
+  switch (reminderNumber) {
+    case 1:
+      return "bidReminder1SentAt";
+    case 2:
+      return "bidReminder2SentAt";
+    case 3:
+      return "bidReminder3SentAt";
+  }
+}
+
+export async function markBidReminderSent(jobId: number, reminderNumber: BidReminderNumber = 1) {
+  const db = await getDb();
+  const now = new Date();
+  const sentField = getBidReminderSentField(reminderNumber);
+
+  const updateData: any = {
+    [sentField]: now,
+    lastBidReminderCheckedAt: now,
+    updatedAt: now,
+  };
+
+  // Keep the old single-reminder column populated for compatibility with older admin/data views.
+  if (reminderNumber === 1) {
+    updateData.bidReminderSentAt = now;
+  }
+
+  await db.update(jobs).set(updateData).where(eq(jobs.id, jobId));
 }
 
 export async function markBidReminderChecked(jobId: number) {
@@ -1064,7 +1083,7 @@ export async function getOpenJobsWithPendingBidsForReminder() {
   const openJobs = await db
     .select()
     .from(jobs)
-    .where(and(eq(jobs.status, "open"), isNull(jobs.selectedBidId), isNull(jobs.bidReminderSentAt)))
+    .where(and(eq(jobs.status, "open"), isNull(jobs.selectedBidId), isNull(jobs.selectedHandymanId)))
     .orderBy(desc(jobs.updatedAt));
 
   const jobsWithBids = [];
@@ -1077,15 +1096,83 @@ export async function getOpenJobsWithPendingBidsForReminder() {
       .orderBy(desc(bids.createdAt));
 
     if (pendingBids.length > 0) {
+      const latestBid = pendingBids[0] ?? null;
+      const firstBid = pendingBids[pendingBids.length - 1] ?? null;
+
       jobsWithBids.push({
         ...normalizeJob(job),
         pendingBids,
-        latestBidAt: pendingBids[0]?.createdAt ?? null,
+        pendingBidCount: pendingBids.length,
+        firstBidAt: firstBid?.createdAt ?? null,
+        latestBidAt: latestBid?.createdAt ?? null,
       });
     }
   }
 
   return jobsWithBids;
+}
+
+export async function markPaymentReminderSent(jobId: number) {
+  const db = await getDb();
+  const now = new Date();
+
+  await db
+    .update(jobs)
+    .set({
+      paymentReminderSentAt: now,
+      lastPaymentReminderCheckedAt: now,
+      updatedAt: now,
+    } as any)
+    .where(eq(jobs.id, jobId));
+}
+
+export async function markPaymentReminderChecked(jobId: number) {
+  const db = await getDb();
+
+  await db
+    .update(jobs)
+    .set({
+      lastPaymentReminderCheckedAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+    .where(eq(jobs.id, jobId));
+}
+
+export async function getAwaitingPaymentJobsForReminder() {
+  const db = await getDb();
+
+  const awaitingPaymentJobs = await db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.status, "awaiting_payment"), isNull(jobs.paymentReminderSentAt)))
+    .orderBy(desc(jobs.updatedAt));
+
+  const jobsToRemind = [];
+
+  for (const job of awaitingPaymentJobs) {
+    const paymentRows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.jobId, job.id))
+      .limit(1);
+
+    const payment = paymentRows[0] ?? null;
+
+    if (!payment || payment.status === "completed" || payment.status === "refunded") {
+      continue;
+    }
+
+    const acceptedBid = job.selectedBidId ? await getBidById(job.selectedBidId) : null;
+
+    jobsToRemind.push({
+      ...normalizeJob(job),
+      payment,
+      acceptedBid,
+      acceptedAt: payment.createdAt ?? acceptedBid?.updatedAt ?? job.updatedAt,
+    });
+  }
+
+  return jobsToRemind;
 }
 
 export async function deleteJobById(jobId: number) {

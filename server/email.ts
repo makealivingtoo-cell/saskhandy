@@ -408,6 +408,85 @@ export async function sendDisputeResolvedEmail(params: {
   });
 }
 
+
+export async function sendOpenJobBidReminderEmail(params: {
+  to: string;
+  homeownerName?: string | null;
+  jobTitle: string;
+  jobId: number;
+  pendingBidCount: number;
+  reminderNumber: 1 | 2 | 3;
+}) {
+  const ctaUrl = `${APP_URL}/jobs/${params.jobId}`;
+  const bidText = `${params.pendingBidCount} bid${params.pendingBidCount === 1 ? "" : "s"}`;
+
+  const subjectByReminder = {
+    1: `You have ${bidText} waiting for "${params.jobTitle}"`,
+    2: `Reminder: your SaskHandy bids are still waiting`,
+    3: `Final reminder: review your bids for "${params.jobTitle}"`,
+  } as const;
+
+  const headingByReminder = {
+    1: "You have bids waiting",
+    2: "Your bids are still waiting",
+    3: "Final reminder to review your bids",
+  } as const;
+
+  const bodyByReminder = {
+    1: `Your job "${params.jobTitle}" has ${bidText} waiting. You can review each bid, message handymen before choosing, and move forward only when you feel comfortable.`,
+    2: `Your job "${params.jobTitle}" still has ${bidText} waiting. If one looks like a good fit, you can review the handyman profile, ask any questions, and choose a bid when ready.`,
+    3: `Your job "${params.jobTitle}" still has ${bidText} waiting. Open the job to review the bids before they get stale, or update the job details if you need something different.`,
+  } as const;
+
+  await sendActionEmail({
+    to: params.to,
+    subject: subjectByReminder[params.reminderNumber],
+    heading: headingByReminder[params.reminderNumber],
+    intro: params.homeownerName ? `Hi ${params.homeownerName},` : undefined,
+    body: bodyByReminder[params.reminderNumber],
+    ctaLabel: "Review Bids",
+    ctaUrl,
+    footerNote:
+      "Keep messages and payment on SaskHandy so job details, payment protection, and dispute support stay connected.",
+  });
+}
+
+function formatReminderMoney(value?: string | number | null) {
+  if (value === undefined || value === null) return null;
+
+  const amount = typeof value === "number" ? value : Number.parseFloat(value);
+
+  if (!Number.isFinite(amount)) return null;
+
+  return `$${amount.toFixed(2)}`;
+}
+
+export async function sendPaymentReminderEmail(params: {
+  to: string;
+  homeownerName?: string | null;
+  jobTitle: string;
+  handymanName?: string | null;
+  bidAmount?: string | number | null;
+  jobId: number;
+}) {
+  const ctaUrl = `${APP_URL}/jobs/${params.jobId}`;
+  const amountText = formatReminderMoney(params.bidAmount);
+  const handymanText = params.handymanName ? ` from ${params.handymanName}` : "";
+  const amountSentence = amountText ? ` The accepted bid is ${amountText}.` : "";
+
+  await sendActionEmail({
+    to: params.to,
+    subject: `Complete payment for "${params.jobTitle}"`,
+    heading: "Payment is needed to start the job",
+    intro: params.homeownerName ? `Hi ${params.homeownerName},` : undefined,
+    body: `You accepted a bid${handymanText} for "${params.jobTitle}".${amountSentence}\n\nThe next step is completing secure payment through SaskHandy. Payment is held securely and is not released to the handyman until you mark the job complete.`,
+    ctaLabel: "Complete Secure Payment",
+    ctaUrl,
+    footerNote:
+      "If your earlier payment attempt failed or was closed, you can reopen the job and try again.",
+  });
+}
+
 export async function sendNewJobPostedEmail(params: {
   to: string;
   handymanName?: string | null;
