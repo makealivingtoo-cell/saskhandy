@@ -7,13 +7,17 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { constructWebhookEvent } from "../stripe";
+import { sendOpenJobBidReminderEmail, sendPaymentReminderEmail } from "../email";
 import {
   createNotification,
+  getAwaitingPaymentJobsForReminder,
   getDb,
   getOpenJobsWithPendingBidsForReminder,
   getUserById,
   markBidReminderChecked,
   markBidReminderSent,
+  markPaymentReminderChecked,
+  markPaymentReminderSent,
 } from "../db";
 import { payments, jobs } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -148,8 +152,11 @@ async function markPaymentCanceled(intent: any) {
   console.warn("[Webhook] Payment canceled:", intent.id);
 }
 
-const BID_REMINDER_ACTIVE_HOURS = 5;
 const BID_REMINDER_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+const BID_REMINDER_1_ACTIVE_HOURS = 6;
+const BID_REMINDER_2_AFTER_PREVIOUS_ACTIVE_HOURS = 24;
+const BID_REMINDER_3_AFTER_PREVIOUS_ACTIVE_HOURS = 48;
+const PAYMENT_REMINDER_ACTIVE_HOURS = 3;
 const QUIET_HOUR_START = 23;
 const QUIET_HOUR_END = 6;
 
@@ -206,70 +213,180 @@ function calculateActiveHoursBetween(startDate: Date, endDate: Date) {
   return activeMs / (1000 * 60 * 60);
 }
 
-let bidReminderInterval: NodeJS.Timeout | null = null;
-let bidReminderCheckRunning = false;
+type BidReminderNumber = 1 | 2 | 3;
 
-async function checkUnansweredBidReminders() {
-  if (bidReminderCheckRunning) return;
+function getDueBidReminderNumber(job: any, now: Date): BidReminderNumber | null {
+  if (!job.firstBidAt) return null;
 
-  bidReminderCheckRunning = true;
+  const firstReminderAt = job.bidReminder1SentAt ?? job.bidReminderSentAt ?? null;
+  const secondReminderAt = job.bidReminder2SentAt ?? null;
+  const thirdReminderAt = job.bidReminder3SentAt ?? null;
 
+  if (!firstReminderAt) {
+    const activeHoursSinceFirstBid = calculateActiveHoursBetween(new Date(job.firstBidAt), now);
+    return activeHoursSinceFirstBid >= BID_REMINDER_1_ACTIVE_HOURS ? 1 : null;
+  }
+
+  if (!secondReminderAt) {
+    const activeHoursSinceReminder1 = calculateActiveHoursBetween(new Date(firstReminderAt), now);
+    return activeHoursSinceReminder1 >= BID_REMINDER_2_AFTER_PREVIOUS_ACTIVE_HOURS ? 2 : null;
+  }
+
+  if (!thirdReminderAt) {
+    const activeHoursSinceReminder2 = calculateActiveHoursBetween(new Date(secondReminderAt), now);
+    return activeHoursSinceReminder2 >= BID_REMINDER_3_AFTER_PREVIOUS_ACTIVE_HOURS ? 3 : null;
+  }
+
+  return null;
+}
+
+async function safeSendReminderEmail(label: string, fn: () => Promise<void>) {
   try {
-    const jobsWithPendingBids = await getOpenJobsWithPendingBidsForReminder();
-    const now = new Date();
-
-    for (const job of jobsWithPendingBids) {
-      if (!job.latestBidAt) continue;
-
-      await markBidReminderChecked(job.id);
-
-      const activeHours = calculateActiveHoursBetween(new Date(job.latestBidAt), now);
-
-      if (activeHours < BID_REMINDER_ACTIVE_HOURS) {
-        continue;
-      }
-
-      const homeowner = await getUserById(job.homeownerId);
-
-      await createNotification({
-        userId: job.homeownerId,
-        type: "system",
-        title: "You have bids waiting",
-        message: `Your job "${job.title}" has ${job.pendingBids.length} bid${
-          job.pendingBids.length === 1 ? "" : "s"
-        } waiting. You can review bids, message handymen before choosing, and only move forward when you feel comfortable.`,
-        link: `/jobs/${job.id}`,
-        read: false,
-      });
-
-      await markBidReminderSent(job.id);
-
-      console.log(
-        `[BidReminder] Sent reminder for job ${job.id} to homeowner ${
-          homeowner?.email ?? job.homeownerId
-        } after ${activeHours.toFixed(1)} active hours.`
-      );
-    }
-  } catch (err: any) {
-    console.error("[BidReminder] Check failed:", err?.message ?? err);
-  } finally {
-    bidReminderCheckRunning = false;
+    await fn();
+  } catch (error: any) {
+    console.error(`[ReminderEmail] ${label} failed:`, error?.message ?? error);
   }
 }
 
-function startBidReminderLoop() {
-  if (bidReminderInterval) return;
+let reminderInterval: NodeJS.Timeout | null = null;
+let reminderCheckRunning = false;
+
+async function checkOpenJobBidReminders(now: Date) {
+  const jobsWithPendingBids = await getOpenJobsWithPendingBidsForReminder();
+
+  for (const job of jobsWithPendingBids) {
+    await markBidReminderChecked(job.id);
+
+    const reminderNumber = getDueBidReminderNumber(job, now);
+    if (!reminderNumber) continue;
+
+    const homeowner = await getUserById(job.homeownerId);
+    const pendingBidCount = job.pendingBidCount ?? job.pendingBids?.length ?? 0;
+
+    await createNotification({
+      userId: job.homeownerId,
+      type: "system",
+      title:
+        reminderNumber === 1
+          ? "You have bids waiting"
+          : reminderNumber === 2
+          ? "Your bids are still waiting"
+          : "Final reminder to review your bids",
+      message: `Your job "${job.title}" has ${pendingBidCount} bid${
+        pendingBidCount === 1 ? "" : "s"
+      } waiting. You can review bids, message handymen before choosing, and only move forward when you feel comfortable.`,
+      link: `/jobs/${job.id}`,
+      read: false,
+    });
+
+    if (homeowner?.email) {
+      await safeSendReminderEmail(`open-job-bid-reminder-${reminderNumber}`, () =>
+        sendOpenJobBidReminderEmail({
+          to: homeowner.email!,
+          homeownerName: homeowner.name,
+          jobTitle: job.title,
+          jobId: job.id,
+          pendingBidCount,
+          reminderNumber,
+        })
+      );
+    }
+
+    await markBidReminderSent(job.id, reminderNumber);
+
+    console.log(
+      `[BidReminder] Sent reminder ${reminderNumber} for job ${job.id} to homeowner ${
+        homeowner?.email ?? job.homeownerId
+      }.`
+    );
+  }
+}
+
+async function checkPaymentReminders(now: Date) {
+  const awaitingPaymentJobs = await getAwaitingPaymentJobsForReminder();
+
+  for (const job of awaitingPaymentJobs) {
+    await markPaymentReminderChecked(job.id);
+
+    if (!job.acceptedAt) continue;
+
+    const activeHoursSinceAcceptance = calculateActiveHoursBetween(new Date(job.acceptedAt), now);
+
+    if (activeHoursSinceAcceptance < PAYMENT_REMINDER_ACTIVE_HOURS) {
+      continue;
+    }
+
+    const homeowner = await getUserById(job.homeownerId);
+    const handyman = job.selectedHandymanId ? await getUserById(job.selectedHandymanId) : null;
+    const bidAmount = job.acceptedBid?.bidAmount ?? job.payment?.amount ?? null;
+
+    await createNotification({
+      userId: job.homeownerId,
+      type: "system",
+      title: "Complete payment to start your job",
+      message: `You accepted a bid for "${job.title}". Complete secure payment through SaskHandy so the job can move forward. Payment is held securely until you mark the job complete.`,
+      link: `/jobs/${job.id}`,
+      read: false,
+    });
+
+    if (homeowner?.email) {
+      await safeSendReminderEmail("payment-reminder", () =>
+        sendPaymentReminderEmail({
+          to: homeowner.email!,
+          homeownerName: homeowner.name,
+          jobTitle: job.title,
+          handymanName: handyman?.name,
+          bidAmount,
+          jobId: job.id,
+        })
+      );
+    }
+
+    await markPaymentReminderSent(job.id);
+
+    console.log(
+      `[PaymentReminder] Sent payment reminder for job ${job.id} to homeowner ${
+        homeowner?.email ?? job.homeownerId
+      } after ${activeHoursSinceAcceptance.toFixed(1)} active hours.`
+    );
+  }
+}
+
+async function checkJobReminders() {
+  if (reminderCheckRunning) return;
+
+  reminderCheckRunning = true;
+
+  try {
+    const now = new Date();
+
+    if (isQuietHour(now)) {
+      console.log("[Reminder] Skipping check during quiet hours.");
+      return;
+    }
+
+    await checkOpenJobBidReminders(now);
+    await checkPaymentReminders(now);
+  } catch (err: any) {
+    console.error("[Reminder] Check failed:", err?.message ?? err);
+  } finally {
+    reminderCheckRunning = false;
+  }
+}
+
+function startReminderLoop() {
+  if (reminderInterval) return;
 
   // Run once shortly after startup, then every 15 minutes.
   setTimeout(() => {
-    void checkUnansweredBidReminders();
+    void checkJobReminders();
   }, 60 * 1000);
 
-  bidReminderInterval = setInterval(() => {
-    void checkUnansweredBidReminders();
+  reminderInterval = setInterval(() => {
+    void checkJobReminders();
   }, BID_REMINDER_CHECK_INTERVAL_MS);
 
-  console.log("[BidReminder] Reminder loop started.");
+  console.log("[Reminder] Reminder loop started.");
 }
 
 async function startServer() {
@@ -385,7 +502,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    startBidReminderLoop();
+    startReminderLoop();
   });
 }
 
