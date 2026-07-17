@@ -222,6 +222,15 @@ export default function AdminPanel() {
     [insuranceQueue]
   );
 
+
+  const jobsByCreatedDate = useMemo(
+    () =>
+      [...(jobs ?? [])].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+    [jobs]
+  );
+
   if (!user || user.role !== "admin") {
     return (
       <AppLayout>
@@ -1735,7 +1744,7 @@ Insurance Reviewed
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40">
-                    {jobs.map((job) => (
+                    {jobsByCreatedDate.map((job) => (
                       <tr key={job.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3">
                           <div>
