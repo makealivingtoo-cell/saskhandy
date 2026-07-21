@@ -629,6 +629,30 @@ export default function HandymanJobDetails() {
           </div>
         )}
 
+        {isAssignedHandyman && job.status === "in_progress" && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-emerald-950">
+                  Confirm the job time with the homeowner
+                </p>
+                <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                  Payment has been completed. Message {job.homeownerName ?? "the homeowner"} to
+                  confirm your arrival time, next availability, and any details you need before
+                  starting the job.
+                </p>
+                <p className="text-xs text-emerald-800 mt-2 leading-relaxed">
+                  Clear updates help avoid cancellations, refunds, and account review.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isAssignedHandyman && job.status !== "cancelled" && (
           <JobChat
             jobId={jobId}

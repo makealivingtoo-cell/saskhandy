@@ -284,12 +284,18 @@ export async function sendPaymentReceivedEmail(params: {
 }) {
   await sendActionEmail({
     to: params.to,
-    subject: `Homeowner payment received for "${params.jobTitle}"`,
-    heading: "Payment received",
+    subject: `Payment received — confirm the job time for "${params.jobTitle}"`,
+    heading: "Payment received — confirm the job time",
     intro: params.handymanName ? `Hi ${params.handymanName},` : undefined,
-    body: `The homeowner payment for "${params.jobTitle}" has been received. You can begin the job.`,
+    body: `The homeowner payment for "${params.jobTitle}" has been received.
+
+Please message the homeowner as soon as possible to confirm your next availability, arrival time, and any details you need before starting the job.
+
+Keeping the homeowner updated helps avoid cancellations, refunds, and account review.`,
     ctaLabel: "Open Dashboard",
     ctaUrl: `${APP_URL}/handyman/dashboard`,
+    footerNote:
+      "Keep scheduling updates and job communication on SaskHandy so the job record stays clear.",
   });
 }
 

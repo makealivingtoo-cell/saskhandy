@@ -1714,7 +1714,7 @@ const paymentsRouter = router({
           userId: job.selectedHandymanId,
           type: "payment_received",
           title: "Homeowner payment received",
-          message: `The homeowner payment for "${job.title}" has been received. You can begin the job.`,
+          message: `The homeowner payment for "${job.title}" has been received. Please message the homeowner to confirm your arrival time or next availability before starting the job.`,
           link: "/handyman/dashboard",
         });
 
