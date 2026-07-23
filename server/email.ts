@@ -76,6 +76,8 @@ async function sendEmail(params: {
     12000,
     "Email send timed out"
   );
+
+  console.log(`[Email] Sent "${params.subject}" to ${params.to}`);
 }
 
 async function sendActionEmail(params: {
