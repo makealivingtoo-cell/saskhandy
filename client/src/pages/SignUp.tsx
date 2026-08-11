@@ -33,6 +33,7 @@ export default function SignUp() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [userType, setUserType] = useState<UserType>("homeowner");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [password, setPassword] = useState("");
@@ -42,6 +43,7 @@ export default function SignUp() {
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [confirmAge, setConfirmAge] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -103,6 +105,7 @@ export default function SignUp() {
   const isFormValid =
     name.trim().length >= 2 &&
     email.trim().length > 0 &&
+    phoneNumber.trim().replace(/\D/g, "").length >= 10 &&
     password.length >= 6 &&
     confirmPassword.length >= 6 &&
     password === confirmPassword &&
@@ -119,6 +122,11 @@ export default function SignUp() {
       return;
     }
 
+    if (phoneNumber.trim().replace(/\D/g, "").length < 10) {
+      toast.error("Please enter a valid phone number for important SaskHandy job updates.");
+      return;
+    }
+
     if (userType === "handyman" && selectedSkills.length < 1) {
       toast.error("Please select at least one skill so we can match you with jobs.");
       return;
@@ -132,6 +140,7 @@ export default function SignUp() {
     signUp.mutate({
       name: name.trim(),
       email: email.trim(),
+      phoneNumber: phoneNumber.trim(),
       password,
       userType,
       skills: userType === "handyman" ? selectedSkills : [],
@@ -139,6 +148,7 @@ export default function SignUp() {
       agreePrivacy: true,
       confirmAge: true,
       marketingOptIn,
+      smsConsent,
       termsVersion: TERMS_VERSION,
       privacyVersion: PRIVACY_VERSION,
     });
@@ -208,6 +218,26 @@ export default function SignUp() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="phoneNumber" className="text-sm font-medium text-foreground">
+                  Phone Number
+                </label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="306-555-1234"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used for important SaskHandy job updates, payment updates, and support. Your
+                  number is not shown publicly.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -438,6 +468,19 @@ export default function SignUp() {
                   <span className="text-muted-foreground">
                     I confirm that I am at least 18 years old and legally able to enter into this
                     agreement.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2.5 text-xs sm:text-sm">
+                  <input
+                    type="checkbox"
+                    checked={smsConsent}
+                    onChange={(e) => setSmsConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
+                  />
+                  <span className="text-muted-foreground">
+                    I agree to receive important SaskHandy text messages about my account, jobs, bids,
+                    payments, disputes, and support. Message and data rates may apply.
                   </span>
                 </label>
 

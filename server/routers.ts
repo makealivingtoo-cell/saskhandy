@@ -25,6 +25,13 @@ import {
   sendTwoFactorCodeEmail,
 } from "./email";
 import { syncUserToBrevo } from "./brevo";
+import {
+  normalizePhoneNumber,
+  sendNewBidSms,
+  sendNewMessageSms,
+  sendPaymentNeededSms,
+  sendPaymentReceivedSms,
+} from "./sms";
 import { z } from "zod";
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "crypto";
 import {
@@ -246,6 +253,19 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function normalizeRequiredPhoneNumber(phoneNumber: string) {
+  const normalized = normalizePhoneNumber(phoneNumber);
+
+  if (!normalized) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Please enter a valid phone number so SaskHandy can send important job updates.",
+    });
+  }
+
+  return normalized;
+}
+
 function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(password, salt, 64).toString("hex");
@@ -269,6 +289,14 @@ async function safeSendEmail(label: string, fn: () => Promise<void>) {
     await fn();
   } catch (error: any) {
     console.error(`[Email] ${label} failed:`, error?.message ?? error);
+  }
+}
+
+async function safeSendSms(label: string, fn: () => Promise<void>) {
+  try {
+    await fn();
+  } catch (error: any) {
+    console.error(`[SMS] ${label} failed:`, error?.message ?? error);
   }
 }
 
@@ -544,6 +572,8 @@ const authRouter = router({
         name: z.string().min(2).max(120),
         email: z.string().email(),
         password: z.string().min(6).max(100),
+        phoneNumber: z.string().min(10).max(30),
+        smsConsent: z.boolean().default(false),
         userType: z.enum(["homeowner", "handyman"]),
         skills: z.array(z.enum(JOB_CATEGORIES)).default([]),
         agreeTerms: z.literal(true),
@@ -556,6 +586,7 @@ const authRouter = router({
     )
     .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
+      const phoneNumber = normalizeRequiredPhoneNumber(input.phoneNumber);
       const existing = await safeGetUserByEmail(email);
 
       if (existing) {
@@ -586,6 +617,10 @@ const authRouter = router({
         ageConfirmedAt: now,
         marketingOptIn: input.marketingOptIn,
         marketingOptInAt: input.marketingOptIn ? now : null,
+        phoneNumber,
+        smsConsent: input.smsConsent,
+        smsConsentAt: input.smsConsent ? now : null,
+        smsOptedOutAt: null,
       });
 
       if (input.userType === "handyman") {
@@ -1433,6 +1468,14 @@ const bidsRouter = router({
         );
       }
 
+      void safeSendSms("sendNewBidSms", () =>
+        sendNewBidSms({
+          user: homeowner,
+          jobTitle: job.title,
+          jobId: job.id,
+        })
+      );
+
       return { bidId };
     }),
 
@@ -1587,6 +1630,14 @@ const bidsRouter = router({
       );
     }
 
+    void safeSendSms("sendPaymentNeededSms", () =>
+      sendPaymentNeededSms({
+        user: ctx.user,
+        jobTitle: job.title,
+        jobId: job.id,
+      })
+    );
+
     return { success: true, amount, platformFee, handymanPayout };
   }),
 
@@ -1728,6 +1779,14 @@ const paymentsRouter = router({
             })
           );
         }
+
+        void safeSendSms("sendPaymentReceivedSms", () =>
+          sendPaymentReceivedSms({
+            user: handyman,
+            jobTitle: job.title,
+            jobId: job.id,
+          })
+        );
       }
 
       return { success: true };
@@ -2132,6 +2191,13 @@ const messagesRouter = router({
             })
           );
         }
+
+        void safeSendSms("sendNewMessageSms", () =>
+          sendNewMessageSms({
+            user: recipient,
+            jobTitle: job.title,
+          })
+        );
       }
 
       return { messageId: msg?.id };

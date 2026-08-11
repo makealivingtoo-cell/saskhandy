@@ -135,6 +135,10 @@ const authUserSelect = {
   userType: users.userType,
   emailVerified: users.emailVerified,
   emailVerifiedAt: users.emailVerifiedAt,
+  phoneNumber: users.phoneNumber,
+  smsConsent: users.smsConsent,
+  smsConsentAt: users.smsConsentAt,
+  smsOptedOutAt: users.smsOptedOutAt,
   createdAt: users.createdAt,
   updatedAt: users.updatedAt,
   lastSignedIn: users.lastSignedIn,
@@ -218,6 +222,10 @@ export async function createLocalUser(data: {
   ageConfirmedAt: Date;
   marketingOptIn: boolean;
   marketingOptInAt?: Date | null;
+  phoneNumber?: string | null;
+  smsConsent?: boolean;
+  smsConsentAt?: Date | null;
+  smsOptedOutAt?: Date | null;
 }) {
   const db = await getDb();
   const openId = `local_${crypto.randomUUID()}`;
@@ -239,6 +247,10 @@ export async function createLocalUser(data: {
     ageConfirmedAt: data.ageConfirmedAt,
     marketingOptIn: data.marketingOptIn,
     marketingOptInAt: data.marketingOptInAt ?? null,
+    phoneNumber: data.phoneNumber ?? null,
+    smsConsent: data.smsConsent ?? false,
+    smsConsentAt: data.smsConsentAt ?? null,
+    smsOptedOutAt: data.smsOptedOutAt ?? null,
     lastSignedIn: new Date(),
   });
 

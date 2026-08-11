@@ -33,6 +33,11 @@ export const users = mysqlTable("users", {
   marketingOptIn: boolean("marketingOptIn").default(false).notNull(),
   marketingOptInAt: timestamp("marketingOptInAt"),
 
+  phoneNumber: varchar("phoneNumber", { length: 30 }),
+  smsConsent: boolean("smsConsent").default(false).notNull(),
+  smsConsentAt: timestamp("smsConsentAt"),
+  smsOptedOutAt: timestamp("smsOptedOutAt"),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn"),
