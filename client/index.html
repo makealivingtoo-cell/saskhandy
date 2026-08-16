@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover"
     />
 
     <title>SaskHandy | Saskatoon Handyman Services</title>
@@ -13,8 +13,18 @@
       content="SaskHandy helps Saskatoon homeowners post small home jobs, compare bids from local handymen, review profiles, message before choosing, and pay securely through the platform."
     />
 
+    <!-- PWA / mobile app support -->
+    <meta name="theme-color" content="#047857" />
+    <meta name="application-name" content="SaskHandy" />
+    <meta name="apple-mobile-web-app-title" content="SaskHandy" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
     <link rel="shortcut icon" href="/images/favicon.png" />
+    <link rel="apple-touch-icon" href="/images/favicon.png" />
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-04W23ZEZM6"></script>
@@ -32,10 +42,5 @@
 
     <script type="module" src="/src/main.tsx"></script>
 
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"
-    ></script>
   </body>
 </html>
