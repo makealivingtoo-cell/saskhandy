@@ -1,0 +1,26 @@
+{
+  "name": "SaskHandy",
+  "short_name": "SaskHandy",
+  "description": "Post small home jobs, compare local bids, and pay securely through SaskHandy.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#047857",
+  "orientation": "portrait",
+  "categories": ["business", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/images/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
