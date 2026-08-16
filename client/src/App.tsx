@@ -5,6 +5,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AddToHomeScreen } from "./components/AddToHomeScreen";
 
 // Pages
 import Home from "./pages/Home";
@@ -257,6 +258,7 @@ function App() {
           <MetaPixelPageViewTracker />
           <GoogleAnalyticsPageViewTracker />
           <Router />
+          <AddToHomeScreen />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
