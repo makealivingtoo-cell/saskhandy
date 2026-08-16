@@ -1,24 +1,6 @@
-const CACHE_NAME = "saskhandy-pwa-v1";
-
-const APP_SHELL = [
-  "/",
-  "/sign-in",
-  "/sign-up",
-  "/open-jobs-saskatoon",
-  "/images/favicon.png",
-  "/manifest.webmanifest"
-];
+const CACHE_NAME = "saskhandy-pwa-v2";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .catch((error) => {
-        console.error("[PWA] Cache install failed:", error);
-      })
-  );
-
   self.skipWaiting();
 });
 
@@ -26,9 +8,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) =>
       Promise.all(
-        cacheNames
-          .filter((cacheName) => cacheName !== CACHE_NAME)
-          .map((cacheName) => caches.delete(cacheName))
+        cacheNames.map((cacheName) => caches.delete(cacheName))
       )
     )
   );
@@ -49,21 +29,5 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const responseClone = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseClone).catch(() => {});
-        });
-
-        return response;
-      })
-      .catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          return cachedResponse || caches.match("/");
-        });
-      })
-  );
+  event.respondWith(fetch(request));
 });
