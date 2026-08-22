@@ -1,6 +1,15 @@
 import { AppLayout } from "@/components/AppLayout";
 import { StarRatingDisplay } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
 import {
@@ -15,7 +24,7 @@ import {
   Star,
   User,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -98,6 +107,15 @@ function parseCategories(value?: string | null): string[] {
 export default function PublicProfile() {
   const { userId } = useParams();
   const uid = Number.parseInt(userId ?? "0", 10);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<
+    | "unsafe"
+    | "suspicious_profile"
+    | "off_platform_payment"
+    | "false_information"
+    | "other"
+  >("unsafe");
+  const [reportDetails, setReportDetails] = useState("");
 
   const { data: profile, isLoading: profileLoading } = trpc.handymanProfiles.getById.useQuery(
     { userId: uid },
@@ -108,6 +126,22 @@ export default function PublicProfile() {
     { userId: uid },
     { enabled: uid > 0 }
   );
+
+  const createReport = trpc.reports.create.useMutation({
+    onSuccess: () => {
+      toast.success("Report received. The SaskHandy team will review it.");
+      setReportOpen(false);
+      setReportReason("unsafe");
+      setReportDetails("");
+    },
+    onError: (error) => {
+      toast.error(
+        error.data?.code === "UNAUTHORIZED"
+          ? "Please sign in before reporting a profile."
+          : error.message || "We couldn't submit your report. Please try again."
+      );
+    },
+  });
 
   const categories = useMemo<string[]>(
     () => parseCategories(profile?.categories),
@@ -479,15 +513,87 @@ export default function PublicProfile() {
               type="button"
               variant="outline"
               className="w-full border-destructive/30 text-destructive hover:bg-destructive/5"
-              onClick={() =>
-                toast.info(
-                  "Report feature coming soon. For now, contact SaskHandy support with any safety concerns."
-                )
-              }
+              onClick={() => setReportOpen(true)}
             >
               <Flag className="w-4 h-4 mr-2" />
               Report a concern about this profile
             </Button>
+
+            <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Report this profile</DialogTitle>
+                  <DialogDescription>
+                    Tell us what concerns you. Reports are reviewed by the SaskHandy team.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <label htmlFor="report-reason" className="text-sm font-medium">
+                      Reason
+                    </label>
+                    <select
+                      id="report-reason"
+                      value={reportReason}
+                      onChange={(event) =>
+                        setReportReason(event.target.value as typeof reportReason)
+                      }
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="unsafe">Unsafe behaviour</option>
+                      <option value="suspicious_profile">Suspicious profile</option>
+                      <option value="false_information">False information</option>
+                      <option value="off_platform_payment">Off-platform payment request</option>
+                      <option value="other">Other concern</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="report-details" className="text-sm font-medium">
+                      Details <span className="font-normal text-muted-foreground">(optional)</span>
+                    </label>
+                    <Textarea
+                      id="report-details"
+                      value={reportDetails}
+                      onChange={(event) => setReportDetails(event.target.value)}
+                      maxLength={1000}
+                      rows={5}
+                      placeholder="Describe what happened or what looks concerning..."
+                    />
+                    <p className="text-right text-xs text-muted-foreground">
+                      {reportDetails.length}/1000
+                    </p>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setReportOpen(false)}
+                    disabled={createReport.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() =>
+                      createReport.mutate({
+                        reportedUserId: uid,
+                        reason: reportReason,
+                        details: reportDetails.trim() || undefined,
+                      })
+                    }
+                    disabled={createReport.isPending || uid <= 0}
+                  >
+                    {createReport.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Submit report
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
