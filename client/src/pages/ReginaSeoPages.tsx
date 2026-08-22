@@ -16,6 +16,8 @@ const reginaCoreLinks = [
 ];
 
 type ReginaPageProps = {
+  canonicalPath: string;
+  serviceName: string;
   title: string;
   pageTitle: string;
   metaDescription: string;
@@ -84,6 +86,10 @@ function ReginaSeoPage(props: ReginaPageProps) {
       title={props.title}
       pageTitle={props.pageTitle}
       metaDescription={props.metaDescription}
+      canonicalPath={props.canonicalPath}
+      serviceName={props.serviceName}
+      locationName="Regina"
+      primaryCategory="Handyman Services"
       badge={props.badge}
       intro={props.intro}
       secondaryIntro={props.secondaryIntro}
@@ -105,6 +111,8 @@ function ReginaSeoPage(props: ReginaPageProps) {
 export function LocalHandymanServicesReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/local-handyman-services-regina"
+      serviceName="Local handyman services"
       title="Local Handyman Services in Regina"
       pageTitle="Local Handyman Services Regina | Post a Job & Compare Bids | SaskHandy"
       metaDescription="Need local handyman services in Regina? Post small home jobs on SaskHandy, compare available bids, review profiles, and message before choosing."
@@ -130,6 +138,8 @@ export function LocalHandymanServicesReginaPage() {
 export function TvMountingReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/tv-mounting-regina"
+      serviceName="TV mounting"
       title="TV Mounting in Regina"
       pageTitle="TV Mounting Regina | Wall Mounting & Local Handyman Help | SaskHandy"
       metaDescription="Need TV mounting in Regina? Post your job on SaskHandy and compare available bids for wall mounting, setup, and cable cleanup."
@@ -151,6 +161,8 @@ export function TvMountingReginaPage() {
 export function FurnitureAssemblyReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/furniture-assembly-regina"
+      serviceName="Furniture assembly"
       title="Furniture Assembly in Regina"
       pageTitle="Furniture Assembly Regina | IKEA, Wayfair & Home Furniture Help | SaskHandy"
       metaDescription="Need furniture assembly in Regina? Post your furniture assembly job on SaskHandy and compare available local handyman bids."
@@ -172,6 +184,8 @@ export function FurnitureAssemblyReginaPage() {
 export function DrywallRepairReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/drywall-repair-regina"
+      serviceName="Drywall repair"
       title="Drywall Repair in Regina"
       pageTitle="Drywall Repair Regina | Patching, Holes & Wall Repair | SaskHandy"
       metaDescription="Need drywall repair in Regina? Post your drywall patching or wall repair job on SaskHandy and compare available local bids."
@@ -193,6 +207,8 @@ export function DrywallRepairReginaPage() {
 export function FenceRepairReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/fence-repair-regina"
+      serviceName="Fence repair"
       title="Fence Repair in Regina"
       pageTitle="Fence Repair Regina | Gate Fixes, Panels & Posts | SaskHandy"
       metaDescription="Need fence repair in Regina? Post your fence or gate repair job on SaskHandy and compare available bids from local handymen."
@@ -214,6 +230,8 @@ export function FenceRepairReginaPage() {
 export function DeckRepairReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/deck-repair-regina"
+      serviceName="Deck repair"
       title="Deck Repair in Regina"
       pageTitle="Deck Repair Regina | Boards, Railings, Stairs & Seasonal Repairs | SaskHandy"
       metaDescription="Need deck repair in Regina? Post your deck repair job on SaskHandy and compare available local bids for boards, stairs, railings, and small fixes."
@@ -235,6 +253,8 @@ export function DeckRepairReginaPage() {
 export function MinorPlumbingHandymanReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/minor-plumbing-handyman-regina"
+      serviceName="Minor plumbing handyman"
       title="Minor Plumbing Handyman in Regina"
       pageTitle="Minor Plumbing Handyman Regina | Faucets, Toilets & Small Fixture Help | SaskHandy"
       metaDescription="Need minor plumbing help in Regina? Post small plumbing and fixture jobs on SaskHandy and compare available local handyman bids."
@@ -256,6 +276,8 @@ export function MinorPlumbingHandymanReginaPage() {
 export function InteriorPaintingHandymanReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/interior-painting-handyman-regina"
+      serviceName="Interior painting handyman"
       title="Interior Painting Handyman in Regina"
       pageTitle="Interior Painting Handyman Regina | Small Room Painting & Touch-Ups | SaskHandy"
       metaDescription="Need interior painting help in Regina? Post small painting, touch-up, trim, and wall repair jobs on SaskHandy and compare available bids."
@@ -277,6 +299,8 @@ export function InteriorPaintingHandymanReginaPage() {
 export function RingDoorbellInstallationReginaPage() {
   return (
     <ReginaSeoPage
+      canonicalPath="/ring-doorbell-installation-regina"
+      serviceName="Ring doorbell installation"
       title="Ring Doorbell Installation in Regina"
       pageTitle="Ring Doorbell Installation Regina | Smart Doorbell Setup | SaskHandy"
       metaDescription="Need Ring doorbell installation in Regina? Post your smart doorbell job on SaskHandy and compare local bids for setup and installation."

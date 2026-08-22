@@ -99,6 +99,16 @@ export default function SeoLandingPage({
         : typeof window !== "undefined"
         ? window.location.href
         : siteUrl;
+    const locationHubPath: Record<string, string> = {
+      Saskatoon: "/saskatoon-handyman-services",
+      Regina: "/regina-handyman-services",
+      Saskatchewan: "/saskatchewan-handyman-services",
+      "Moose Jaw": "/moose-jaw-handyman-services",
+      "Prince Albert": "/prince-albert-handyman-services",
+      Warman: "/warman-handyman-services",
+      Martensville: "/martensville-handyman-services",
+    };
+    const locationHubUrl = `${siteUrl}${locationHubPath[locationName] ?? "/saskatchewan-handyman-services"}`;
 
     const setMeta = (
       selector: string,
@@ -142,9 +152,7 @@ export default function SeoLandingPage({
     setMeta('meta[name="twitter:description"]', "name", "twitter:description", metaDescription);
     setMeta('meta[name="twitter:image"]', "name", "twitter:image", `${siteUrl}${heroImage}`);
 
-    if (seoKeywords.length > 0) {
-      setMeta('meta[name="keywords"]', "name", "keywords", seoKeywords.join(", "));
-    }
+    setMeta('meta[name="robots"]', "name", "robots", "index, follow, max-image-preview:large");
 
     let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
 
@@ -159,6 +167,7 @@ export default function SeoLandingPage({
     setJsonLd("saskhandy-service-schema", {
       "@context": "https://schema.org",
       "@type": "Service",
+      "@id": `${canonicalUrl}#service`,
       name: serviceName ?? title,
       serviceType: serviceName ?? primaryCategory,
       category: primaryCategory,
@@ -171,10 +180,36 @@ export default function SeoLandingPage({
       },
       provider: {
         "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
         name: "SaskHandy",
         url: siteUrl,
       },
       url: canonicalUrl,
+    });
+
+    setJsonLd("saskhandy-breadcrumb-schema", {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: `${siteUrl}/`,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: locationName === "Saskatchewan" ? "Saskatchewan handyman services" : `${locationName} handyman services`,
+          item: locationHubUrl,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: serviceName ?? title,
+          item: canonicalUrl,
+        },
+      ],
     });
 
     if (faqItems.length > 0) {
@@ -190,7 +225,15 @@ export default function SeoLandingPage({
           },
         })),
       });
+    } else {
+      document.getElementById("saskhandy-faq-schema")?.remove();
     }
+
+    return () => {
+      document.getElementById("saskhandy-service-schema")?.remove();
+      document.getElementById("saskhandy-breadcrumb-schema")?.remove();
+      document.getElementById("saskhandy-faq-schema")?.remove();
+    };
   }, [
     pageTitle,
     metaDescription,
@@ -229,6 +272,13 @@ export default function SeoLandingPage({
       </header>
 
       <main>
+        <nav aria-label="Breadcrumb" className="border-b border-slate-200 bg-white">
+          <div className="container py-3 text-sm text-slate-600">
+            <Link href="/" className="hover:text-emerald-800">Home</Link>
+            <span aria-hidden="true" className="mx-2">/</span>
+            <span aria-current="page">{serviceName ?? title} in {locationName}</span>
+          </div>
+        </nav>
         <section className="bg-[#f7faf8]">
           <div className="container py-16 md:py-20">
             <div className="grid items-center gap-10 lg:grid-cols-2">
@@ -268,7 +318,7 @@ export default function SeoLandingPage({
                 <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
                   <img
                     src={heroImage}
-                    alt="Saskatchewan handyman services"
+                    alt={`${serviceName ?? primaryCategory} in ${locationName}`}
                     className="block h-[420px] w-full object-cover"
                   />
                 </div>
@@ -410,7 +460,7 @@ export default function SeoLandingPage({
                 </h2>
                 <p className="mt-3 text-slate-600 leading-7">
                   SaskHandy helps homeowners looking for local help post a job, compare bids from
-                  Saskatoon-area handymen, review profiles, message before choosing, and pay
+                  {locationName}-area handymen, review profiles, message before choosing, and pay
                   securely through the platform.
                 </p>
 
