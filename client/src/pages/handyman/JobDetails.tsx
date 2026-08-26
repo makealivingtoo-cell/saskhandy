@@ -13,26 +13,17 @@ import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   ArrowLeft,
-  CheckCircle,
   Clock,
   DollarSign,
   Loader2,
   MapPin,
   Shield,
   Star,
-  TrendingUp,
   UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
-
-const bidTips = [
-  "Give a clear price based on the job details.",
-  "Mention when you are available.",
-  "Write a short note showing you understand the work.",
-  "Invite the homeowner to message you before choosing if they have questions.",
-];
 
 function parseProfileCategories(value?: string | string[] | null): string[] {
   if (!value) return [];
@@ -219,6 +210,13 @@ export default function HandymanJobDetails() {
   const estimatedPayout =
     bidAmount && !Number.isNaN(parsedBidAmount) ? (parsedBidAmount * 0.8).toFixed(2) : null;
 
+  const budgetMin = parseFloat(job.budgetMin);
+  const budgetMax = parseFloat(job.budgetMax);
+  const budgetMidpoint = Math.round((budgetMin + budgetMax) / 2);
+  const suggestedBidAmounts = Array.from(
+    new Set([Math.round(budgetMin), budgetMidpoint, Math.round(budgetMax)])
+  ).filter((amount) => Number.isFinite(amount) && amount > 0);
+
   const profileStatus = getProfileCompletionStatus(user, handymanProfile);
   const canPlaceBid = user?.role === "admin" || profileStatus.isComplete;
   const identityApproved = getProfileIdentityChecked(handymanProfile);
@@ -279,142 +277,210 @@ export default function HandymanJobDetails() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
-          <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
-        </div>
-
-        {job.status === "open" && !myBid && !profileLoading && !canPlaceBid && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                <UserCheck className="w-5 h-5" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-amber-900">
-                  Complete your profile before sending bids
-                </p>
-                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                  To protect homeowner trust, SaskHandy now requires a clear photo, short bio,
-                  listed skills, and approved ID Name Matched status before bidding. Complete these
-                  items first:
-                </p>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {profileStatus.missingFields.map((field) => (
-                    <span
-                      key={field}
-                      className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-800"
-                    >
-                      {field}
-                    </span>
-                  ))}
+        {job.status === "open" && !myBid && (
+          <div id="bid-panel" className="bg-white rounded-2xl border border-primary/20 shadow-sm p-5 mb-4">
+            {!canPlaceBid && !profileLoading ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">Finish your profile to bid</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      You still need {profileStatus.missingFields.join(", ")}.
+                    </p>
+                  </div>
                 </div>
 
-                <Button asChild size="sm" className="mt-4 bg-amber-700 hover:bg-amber-800">
+                <Button asChild className="sm:shrink-0">
                   <Link href="/handyman/profile">Complete Profile</Link>
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
+            ) : !showBidForm ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-foreground">Want this job?</p>
+                    {canPlaceBid && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                        <Shield className="w-3 h-3" />
+                        {goldShieldVerified ? "Gold Shield" : "ID Name Matched"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Send your price and availability. You can message the homeowner after bidding.
+                  </p>
+                </div>
 
-        {job.status === "open" && !myBid && canPlaceBid && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <Shield className="w-5 h-5" />
+                <Button
+                  size="lg"
+                  className="sm:min-w-36"
+                  onClick={() => setShowBidForm(true)}
+                  disabled={profileLoading || !canPlaceBid}
+                >
+                  Place Bid
+                </Button>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-foreground">Send your bid</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Keep it simple: price, when you can do it, and one useful note.
+                  </p>
+                </div>
 
-              <div>
-                <p className="text-sm font-semibold text-emerald-950">
-                  {goldShieldVerified ? "Gold Shield profile" : "ID Name Matched"}
-                </p>
-                <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                  Your profile meets SaskHandy’s bid-ready requirements. Homeowners will be able to
-                  review your photo, bio, skills, ID badge, and message before choosing.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+                <div className="space-y-2">
+                  <Label htmlFor="bidAmount">Your price</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      $
+                    </span>
+                    <Input
+                      id="bidAmount"
+                      inputMode="decimal"
+                      type="number"
+                      min="1"
+                      step="10"
+                      placeholder="Enter your bid"
+                      value={bidAmount}
+                      onChange={(e) => setBidAmount(e.target.value)}
+                      className="pl-7 h-11 text-base"
+                      autoFocus
+                    />
+                  </div>
 
-        {job.status === "open" && !myBid && canPlaceBid && (
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <TrendingUp className="w-5 h-5" />
-              </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {suggestedBidAmounts.map((amount) => (
+                      <button
+                        key={amount}
+                        type="button"
+                        onClick={() => setBidAmount(String(amount))}
+                        className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          bidAmount === String(amount)
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                        }`}
+                      >
+                        ${amount}
+                      </button>
+                    ))}
+                  </div>
 
-              <div>
-                <p className="text-sm font-semibold text-foreground">Submit a strong bid</p>
-                <div className="mt-2 space-y-2">
-                  {bidTips.map((tip) => (
-                    <div key={tip} className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                      <p className="text-sm text-muted-foreground leading-relaxed">{tip}</p>
+                  {estimatedPayout && (
+                    <div className="flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                      <DollarSign className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <p>
+                        You keep <strong>${estimatedPayout}</strong> after SaskHandy’s 20% fee.
+                      </p>
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="availability">When can you do it?</Label>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {["Today", "This week", "This weekend"].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setAvailability(option)}
+                        className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          availability === option
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    id="availability"
+                    placeholder="Or type a specific time"
+                    value={availability}
+                    onChange={(e) => setAvailability(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="message">
+                    Note to homeowner <span className="font-normal text-muted-foreground">(optional)</span>
+                  </Label>
+                  <Textarea
+                    id="message"
+                    placeholder="e.g. I’ve done this type of repair before and can bring the tools needed."
+                    value={bidMessage}
+                    onChange={(e) => setBidMessage(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      if (!canPlaceBid) {
+                        toast.error("Complete your bid-ready profile before sending bids.");
+                        return;
+                      }
+
+                      createBid.mutate({
+                        jobId,
+                        bidAmount: parseFloat(bidAmount),
+                        message: bidMessage || undefined,
+                        availability: availability || undefined,
+                      });
+                    }}
+                    disabled={
+                      !canPlaceBid || !bidAmount || parseFloat(bidAmount) <= 0 || createBid.isPending
+                    }
+                    className="flex-1"
+                  >
+                    {createBid.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Send Bid
+                  </Button>
+
+                  <Button variant="outline" onClick={() => setShowBidForm(false)}>
+                    Cancel
+                  </Button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
         {job.status === "open" && totalBidCount > 0 && (
-          <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <p className="font-semibold text-foreground text-sm">Bid Activity</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {totalBidCount} bid{totalBidCount === 1 ? "" : "s"} submitted for this job.
-                </p>
-              </div>
-
-              <div className="text-xs bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full font-medium">
-                Bidding active
-              </div>
-            </div>
-
-            {hiddenBidCount > 0 ? (
-              <div className="space-y-2">
-                {Array.from({ length: Math.min(hiddenBidCount, 3) }).map((_, index) => (
-                  <div
-                    key={`hidden-bid-${index}`}
-                    className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="h-3 w-24 rounded-full bg-muted-foreground/20 blur-[1px]" />
-                        <div className="h-2.5 w-40 rounded-full bg-muted-foreground/10 blur-[1px] mt-2" />
-                      </div>
-
-                      <div className="h-4 w-16 rounded-full bg-muted-foreground/20 blur-[1px]" />
-                    </div>
-                  </div>
-                ))}
-
-                {hiddenBidCount > 3 && (
-                  <p className="text-xs text-muted-foreground">
-                    +{hiddenBidCount - 3} more hidden bid{hiddenBidCount - 3 === 1 ? "" : "s"}
-                  </p>
-                )}
-
-                <div className="pt-2 flex items-start gap-2 text-xs text-muted-foreground">
-                  <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                  <p>
-                    Other bid details are hidden to keep pricing fair. Submit your best price based
-                    on the job details, not other handymen’s bids.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                You can see the bid details relevant to your account.
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-white px-4 py-3 mb-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {totalBidCount} bid{totalBidCount === 1 ? "" : "s"} already submitted
               </p>
-            )}
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Other prices stay hidden so everyone bids independently.
+              </p>
+            </div>
+            <Shield className="w-4 h-4 text-primary shrink-0" />
           </div>
         )}
+
+        <details className="bg-white rounded-xl border border-border/60 mb-6 overflow-hidden group">
+          <summary className="cursor-pointer list-none px-4 py-3.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin className="w-4 h-4 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Job location</p>
+                <p className="text-xs text-muted-foreground truncate">{job.location}</p>
+              </div>
+            </div>
+            <span className="text-xs font-medium text-primary">View map</span>
+          </summary>
+          <div className="px-4 pb-4">
+            <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[240px]" />
+          </div>
+        </details>
 
         {myBid && (
           <div
@@ -490,143 +556,6 @@ export default function HandymanJobDetails() {
             title="Bid Chat"
             description="Message the homeowner about your bid before they decide whether to accept."
           />
-        )}
-
-        {job.status === "open" && !myBid && (
-          <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
-            {!showBidForm ? (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-foreground text-sm">Interested in this job?</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {canPlaceBid
-                      ? "Send a clear bid with your price, availability, and short message."
-                      : "Complete your bid-ready profile first, including ID Name Matched approval, so homeowners can review who they are hiring."}
-                  </p>
-                </div>
-
-                {canPlaceBid ? (
-                  <Button onClick={() => setShowBidForm(true)}>Place a Bid</Button>
-                ) : (
-                  <Button asChild variant="outline">
-                    <Link href="/handyman/profile">Complete Profile</Link>
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-5">
-                <div>
-                  <h3 className="font-semibold text-foreground">Place Your Bid</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The homeowner will see your price, message, availability, and profile details.
-                  </p>
-
-                  <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                    <div className="flex items-start gap-2">
-                      <Shield className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
-                      <p className="text-xs leading-relaxed text-emerald-800">
-                        Keep your bid professional and keep communication on SaskHandy. Homeowners
-                        can review your ID Name Matched status and message you before choosing, so
-                        use your note to build confidence.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="bidAmount">Bid Amount</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      $
-                    </span>
-                    <Input
-                      id="bidAmount"
-                      type="number"
-                      min="1"
-                      step="10"
-                      placeholder="Enter your bid"
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      className="pl-7"
-                    />
-                  </div>
-
-                  {estimatedPayout && (
-                    <div className="flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-                      <DollarSign className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                      <p>
-                        You&apos;ll receive <strong>${estimatedPayout}</strong> after SaskHandy’s
-                        20% platform fee.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="availability">Availability</Label>
-                  <Input
-                    id="availability"
-                    placeholder="e.g., Available this weekend or weekday evenings"
-                    value={availability}
-                    onChange={(e) => setAvailability(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="message">Message to Homeowner</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Briefly explain how you can help, when you can do it, and why you're a good fit."
-                    value={bidMessage}
-                    onChange={(e) => setBidMessage(e.target.value)}
-                    rows={4}
-                    className="resize-none"
-                  />
-                </div>
-
-                <div className="bg-muted/40 border border-border/50 rounded-xl p-4">
-                  <p className="text-xs font-medium text-foreground mb-2">Before submitting:</p>
-                  <div className="space-y-1.5">
-                    {bidTips.map((tip) => (
-                      <div key={`check-${tip}`} className="flex items-start gap-2">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                        <p className="text-xs text-muted-foreground">{tip}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      if (!canPlaceBid) {
-                        toast.error("Complete your bid-ready profile, including ID Name Matched approval, before sending bids.");
-                        return;
-                      }
-
-                      createBid.mutate({
-                        jobId,
-                        bidAmount: parseFloat(bidAmount),
-                        message: bidMessage || undefined,
-                        availability: availability || undefined,
-                      });
-                    }}
-                    disabled={
-                      !canPlaceBid || !bidAmount || parseFloat(bidAmount) <= 0 || createBid.isPending
-                    }
-                    className="flex-1"
-                  >
-                    {createBid.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    Submit Bid
-                  </Button>
-
-                  <Button variant="outline" onClick={() => setShowBidForm(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
         )}
 
         {isAssignedHandyman && job.status === "in_progress" && (
