@@ -97,7 +97,7 @@ export default function SeoLandingPage({
       canonicalPath && canonicalPath.startsWith("/")
         ? `${siteUrl}${canonicalPath}`
         : typeof window !== "undefined"
-        ? window.location.href
+        ? `${siteUrl}${window.location.pathname}`
         : siteUrl;
     const locationHubPath: Record<string, string> = {
       Saskatoon: "/saskatoon-handyman-services",
