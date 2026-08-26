@@ -258,11 +258,15 @@ export default function PostJob() {
       setTitle(data.title);
       setDescription(data.description);
       setCategory(data.category);
-      setBudgetMin(String(data.budgetMin));
-      setBudgetMax(String(data.budgetMax));
+      setBudgetMin(data.budgetMin == null ? "" : String(data.budgetMin));
+      setBudgetMax(data.budgetMax == null ? "" : String(data.budgetMax));
       setFollowUpQuestions(data.followUpQuestions ?? []);
       setStep(2);
-      toast.success("Draft ready. Give it a quick review.");
+      toast.success(
+        data.budgetMin == null
+          ? "Draft ready. We left anything you didn't provide blank."
+          : "Draft ready. We only used the budget you provided."
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "AI assistant failed. Please try again.");
     }
@@ -522,6 +526,9 @@ export default function PostJob() {
                 <h2 className="font-semibold text-foreground">What do you need help with?</h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   Write it naturally. SaskHandy can turn your note into a clean job post.
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  AI only cleans up what you provide. It won&apos;t guess your budget, timing, materials, or other missing details.
                 </p>
               </div>
             </div>

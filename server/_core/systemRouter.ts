@@ -20,8 +20,6 @@ type ImproveJobPostResult = {
   title: string;
   description: string;
   category: string;
-  budgetMin: number;
-  budgetMax: number;
   followUpQuestions: string[];
 };
 
@@ -57,16 +55,45 @@ function normalizeCategory(category: string): string {
   return matched ?? "General Helper";
 }
 
-function normalizeBudget(value: unknown, fallback: number): number {
-  const num =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-      ? parseFloat(value)
-      : NaN;
+function extractExplicitBudget(roughIdea: string): { budgetMin: number | null; budgetMax: number | null } {
+  const text = roughIdea.replace(/,/g, "");
 
-  if (!Number.isFinite(num) || num <= 0) return fallback;
-  return Math.round(num);
+  const rangePatterns = [
+    /\$\s*(\d+(?:\.\d+)?)\s*(?:-|–|—|to)\s*\$?\s*(\d+(?:\.\d+)?)/i,
+    /(?:budget|spend|pay)\D{0,18}(\d+(?:\.\d+)?)\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?)/i,
+  ];
+
+  for (const pattern of rangePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const first = Math.round(Number(match[1]));
+      const second = Math.round(Number(match[2]));
+      if (first > 0 && second > 0) {
+        return {
+          budgetMin: Math.min(first, second),
+          budgetMax: Math.max(first, second),
+        };
+      }
+    }
+  }
+
+  const singlePatterns = [
+    /\$\s*(\d+(?:\.\d+)?)/i,
+    /(?:budget(?:\s+is)?|can\s+spend|willing\s+to\s+pay|pay(?:\s+up\s+to)?)\D{0,12}(\d+(?:\.\d+)?)/i,
+    /(\d+(?:\.\d+)?)\s*(?:cad|dollars?)/i,
+  ];
+
+  for (const pattern of singlePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const amount = Math.round(Number(match[1]));
+      if (amount > 0) {
+        return { budgetMin: amount, budgetMax: amount };
+      }
+    }
+  }
+
+  return { budgetMin: null, budgetMax: null };
 }
 
 export const systemRouter = router({
@@ -172,11 +199,15 @@ Choose exactly one category from this list:
 ${categoryList}
 
 Rules:
-- Title should be short and clear.
-- Description should be specific and useful for a handyman preparing a bid.
-- Budget should be realistic for the described work.
+- Use ONLY facts explicitly stated by the homeowner or supplied in the Location line.
+- You may rewrite, organize, and clarify those facts, but you must not add new factual details.
+- Never invent or infer a budget, price, materials, measurements, urgency, availability, timing, damage cause, access conditions, tools, technical requirements, diagnoses, or work that the homeowner did not state.
+- If useful information is missing, put it in followUpQuestions instead of filling it in.
+- Title should be short and clear and only describe the stated task.
+- Description should be concise and useful for a handyman preparing a bid, while preserving uncertainty from the homeowner's wording.
+- Choose the closest category from the allowed list; category selection is classification, not a claim about the exact repair required.
 - Do not invent dangerous repair instructions.
-- Follow-up questions should help the homeowner improve the post.`,
+- Follow-up questions should be short, practical, and limited to facts that would materially help someone bid.`,
           },
           {
             role: "user",
@@ -199,8 +230,6 @@ ${input.roughIdea}`,
                 type: "string",
                 enum: [...JOB_CATEGORIES],
               },
-              budgetMin: { type: "number" },
-              budgetMax: { type: "number" },
               followUpQuestions: {
                 type: "array",
                 items: { type: "string" },
@@ -210,8 +239,6 @@ ${input.roughIdea}`,
               "title",
               "description",
               "category",
-              "budgetMin",
-              "budgetMax",
               "followUpQuestions",
             ],
           },
@@ -230,15 +257,14 @@ ${input.roughIdea}`,
         throw new Error("AI returned invalid structured output");
       }
 
-      const budgetMin = normalizeBudget(parsed.budgetMin, 100);
-      const budgetMax = normalizeBudget(parsed.budgetMax, Math.max(budgetMin + 50, 200));
+      const explicitBudget = extractExplicitBudget(input.roughIdea);
 
       return {
         title: (parsed.title ?? "").trim(),
         description: (parsed.description ?? "").trim(),
         category: normalizeCategory(parsed.category ?? "General Helper"),
-        budgetMin,
-        budgetMax: budgetMax < budgetMin ? budgetMin + 50 : budgetMax,
+        budgetMin: explicitBudget.budgetMin,
+        budgetMax: explicitBudget.budgetMax,
         followUpQuestions: Array.isArray(parsed.followUpQuestions)
           ? parsed.followUpQuestions
               .map((item) => String(item).trim())
