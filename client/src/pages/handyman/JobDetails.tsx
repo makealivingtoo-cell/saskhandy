@@ -13,6 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle,
   Clock,
   DollarSign,
   Loader2,
@@ -101,7 +102,7 @@ export default function HandymanJobDetails() {
 
   const { data: job, isLoading } = trpc.jobs.getById.useQuery(
     { jobId },
-    { enabled: !!jobId }
+    { enabled: !!jobId },
   );
 
   const { data: bidSummary } = trpc.bids.getForJobSummary.useQuery(
@@ -112,18 +113,16 @@ export default function HandymanJobDetails() {
         !!isAuthenticated &&
         !!user &&
         (user.userType === "handyman" || user.role === "admin"),
-    }
+    },
   );
 
-  const { data: handymanProfile, isLoading: profileLoading } = trpc.handymanProfiles.get.useQuery(
-    undefined,
-    {
+  const { data: handymanProfile, isLoading: profileLoading } =
+    trpc.handymanProfiles.get.useQuery(undefined, {
       enabled:
         !!isAuthenticated &&
         !!user &&
         (user.userType === "handyman" || user.role === "admin"),
-    }
-  );
+    });
 
   const bids = bidSummary?.visibleBids ?? [];
   const hiddenBidCount = bidSummary?.hiddenBidCount ?? 0;
@@ -133,12 +132,18 @@ export default function HandymanJobDetails() {
 
   const { data: dispute } = trpc.disputes.getByJob.useQuery(
     { jobId },
-    { enabled: !!jobId && !!job && job.status === "disputed" && !!isAssignedHandyman }
+    {
+      enabled:
+        !!jobId && !!job && job.status === "disputed" && !!isAssignedHandyman,
+    },
   );
 
   const { data: myReview } = trpc.reviews.getMyReview.useQuery(
     { jobId },
-    { enabled: !!jobId && !!job && job.status === "completed" && !!isAssignedHandyman }
+    {
+      enabled:
+        !!jobId && !!job && job.status === "completed" && !!isAssignedHandyman,
+    },
   );
 
   useEffect(() => {
@@ -147,7 +152,12 @@ export default function HandymanJobDetails() {
       return;
     }
 
-    if (!loading && isAuthenticated && user?.userType !== "handyman" && user?.role !== "admin") {
+    if (
+      !loading &&
+      isAuthenticated &&
+      user?.userType !== "handyman" &&
+      user?.role !== "admin"
+    ) {
       navigate("/role-select");
     }
   }, [loading, isAuthenticated, user, navigate]);
@@ -156,7 +166,9 @@ export default function HandymanJobDetails() {
 
   const createBid = trpc.bids.create.useMutation({
     onSuccess: async () => {
-      toast.success("Bid placed. The homeowner can now review it and message you.");
+      toast.success(
+        "Bid placed. The homeowner can now review it and message you.",
+      );
       setShowBidForm(false);
       setBidAmount("");
       setBidMessage("");
@@ -208,20 +220,23 @@ export default function HandymanJobDetails() {
 
   const parsedBidAmount = parseFloat(bidAmount);
   const estimatedPayout =
-    bidAmount && !Number.isNaN(parsedBidAmount) ? (parsedBidAmount * 0.8).toFixed(2) : null;
+    bidAmount && !Number.isNaN(parsedBidAmount)
+      ? (parsedBidAmount * 0.8).toFixed(2)
+      : null;
 
   const budgetMin = parseFloat(job.budgetMin);
   const budgetMax = parseFloat(job.budgetMax);
   const budgetMidpoint = Math.round((budgetMin + budgetMax) / 2);
   const suggestedBidAmounts = Array.from(
-    new Set([Math.round(budgetMin), budgetMidpoint, Math.round(budgetMax)])
+    new Set([Math.round(budgetMin), budgetMidpoint, Math.round(budgetMax)]),
   ).filter((amount) => Number.isFinite(amount) && amount > 0);
 
   const profileStatus = getProfileCompletionStatus(user, handymanProfile);
   const canPlaceBid = user?.role === "admin" || profileStatus.isComplete;
   const identityApproved = getProfileIdentityChecked(handymanProfile);
   const goldShieldVerified =
-    identityApproved && handymanProfile?.criminalRecordCheckStatus === "reviewed";
+    identityApproved &&
+    handymanProfile?.criminalRecordCheckStatus === "reviewed";
 
   return (
     <AppLayout>
@@ -237,17 +252,23 @@ export default function HandymanJobDetails() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-xl font-serif text-foreground">{job.title}</h1>
+                <h1 className="text-xl font-serif text-foreground">
+                  {job.title}
+                </h1>
                 <StatusBadge status={job.status} />
               </div>
 
               {job.homeownerName && (
-                <p className="text-xs text-muted-foreground">Posted by {job.homeownerName}</p>
+                <p className="text-xs text-muted-foreground">
+                  Posted by {job.homeownerName}
+                </p>
               )}
             </div>
           </div>
 
-          <p className="text-sm text-muted-foreground leading-relaxed mb-5">{job.description}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+            {job.description}
+          </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border/40">
             <div>
@@ -265,20 +286,94 @@ export default function HandymanJobDetails() {
 
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
-              <p className="text-sm font-medium">${job.budgetMin}–${job.budgetMax}</p>
+              <p className="text-sm font-medium">
+                ${job.budgetMin}–${job.budgetMax}
+              </p>
             </div>
 
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Posted</p>
               <p className="text-sm font-medium">
-                {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
+                {formatDistanceToNow(new Date(job.createdAt), {
+                  addSuffix: true,
+                })}
               </p>
             </div>
           </div>
         </div>
 
+        {isAssignedHandyman && job.status === "awaiting_payment" && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-amber-950">
+                  You’re hired — payment is pending
+                </p>
+                <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                  The homeowner accepted your bid. Don’t start work yet. The job
+                  will switch to In Progress once their payment is secured.
+                </p>
+                <p className="text-xs text-amber-800 mt-2">
+                  You can message {job.homeownerName ?? "the homeowner"} below
+                  to confirm availability while you wait.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isAssignedHandyman && job.status === "in_progress" && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-emerald-950">
+                  Payment secured — you can proceed
+                </p>
+                <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                  Confirm the arrival time, access, materials, and any final
+                  scope details with {job.homeownerName ?? "the homeowner"} in
+                  the job chat.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isAssignedHandyman && job.status === "completed" && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold text-emerald-950">Job complete</p>
+                  <p className="text-sm text-emerald-800 mt-1">
+                    The homeowner confirmed completion. Your earnings are now
+                    available in Earnings.
+                  </p>
+                </div>
+              </div>
+              <Button
+                asChild
+                variant="outline"
+                className="sm:shrink-0 bg-white"
+              >
+                <Link href="/handyman/earnings">View Earnings</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
         {job.status === "open" && !myBid && (
-          <div id="bid-panel" className="bg-white rounded-2xl border border-primary/20 shadow-sm p-5 mb-4">
+          <div
+            id="bid-panel"
+            className="bg-white rounded-2xl border border-primary/20 shadow-sm p-5 mb-4"
+          >
             {!canPlaceBid && !profileLoading ? (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
@@ -286,7 +381,9 @@ export default function HandymanJobDetails() {
                     <UserCheck className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-foreground">Finish your profile to bid</p>
+                    <p className="font-semibold text-foreground">
+                      Finish your profile to bid
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       You still need {profileStatus.missingFields.join(", ")}.
                     </p>
@@ -301,7 +398,9 @@ export default function HandymanJobDetails() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-foreground">Want this job?</p>
+                    <p className="font-semibold text-foreground">
+                      Want this job?
+                    </p>
                     {canPlaceBid && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                         <Shield className="w-3 h-3" />
@@ -310,7 +409,8 @@ export default function HandymanJobDetails() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Send your price and availability. You can message the homeowner after bidding.
+                    Send your price and availability. You can message the
+                    homeowner after bidding.
                   </p>
                 </div>
 
@@ -326,9 +426,12 @@ export default function HandymanJobDetails() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-foreground">Send your bid</h3>
+                  <h3 className="font-semibold text-foreground">
+                    Send your bid
+                  </h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Keep it simple: price, when you can do it, and one useful note.
+                    Keep it simple: price, when you can do it, and one useful
+                    note.
                   </p>
                 </div>
 
@@ -373,7 +476,8 @@ export default function HandymanJobDetails() {
                     <div className="flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                       <DollarSign className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                       <p>
-                        You keep <strong>${estimatedPayout}</strong> after SaskHandy’s 20% fee.
+                        You keep <strong>${estimatedPayout}</strong> after
+                        SaskHandy’s 20% fee.
                       </p>
                     </div>
                   )}
@@ -407,7 +511,10 @@ export default function HandymanJobDetails() {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="message">
-                    Note to homeowner <span className="font-normal text-muted-foreground">(optional)</span>
+                    Note to homeowner{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional)
+                    </span>
                   </Label>
                   <Textarea
                     id="message"
@@ -423,7 +530,9 @@ export default function HandymanJobDetails() {
                   <Button
                     onClick={() => {
                       if (!canPlaceBid) {
-                        toast.error("Complete your bid-ready profile before sending bids.");
+                        toast.error(
+                          "Complete your bid-ready profile before sending bids.",
+                        );
                         return;
                       }
 
@@ -435,15 +544,23 @@ export default function HandymanJobDetails() {
                       });
                     }}
                     disabled={
-                      !canPlaceBid || !bidAmount || parseFloat(bidAmount) <= 0 || createBid.isPending
+                      !canPlaceBid ||
+                      !bidAmount ||
+                      parseFloat(bidAmount) <= 0 ||
+                      createBid.isPending
                     }
                     className="flex-1"
                   >
-                    {createBid.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    {createBid.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
                     Send Bid
                   </Button>
 
-                  <Button variant="outline" onClick={() => setShowBidForm(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowBidForm(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -456,7 +573,8 @@ export default function HandymanJobDetails() {
           <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-white px-4 py-3 mb-4">
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">
-                {totalBidCount} bid{totalBidCount === 1 ? "" : "s"} already submitted
+                {totalBidCount} bid{totalBidCount === 1 ? "" : "s"} already
+                submitted
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Other prices stay hidden so everyone bids independently.
@@ -471,14 +589,22 @@ export default function HandymanJobDetails() {
             <div className="flex items-center gap-2 min-w-0">
               <MapPin className="w-4 h-4 text-primary shrink-0" />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">Job location</p>
-                <p className="text-xs text-muted-foreground truncate">{job.location}</p>
+                <p className="text-sm font-medium text-foreground">
+                  Job location
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {job.location}
+                </p>
               </div>
             </div>
             <span className="text-xs font-medium text-primary">View map</span>
           </summary>
           <div className="px-4 pb-4">
-            <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[240px]" />
+            <MapView
+              locationQuery={job.location}
+              title="Job Location"
+              heightClassName="h-[240px]"
+            />
           </div>
         </details>
 
@@ -488,8 +614,8 @@ export default function HandymanJobDetails() {
               myBid.status === "accepted"
                 ? "bg-emerald-50 border-emerald-200"
                 : myBid.status === "rejected"
-                ? "bg-red-50 border-red-200"
-                : "bg-amber-50 border-amber-200"
+                  ? "bg-red-50 border-red-200"
+                  : "bg-amber-50 border-amber-200"
             }`}
           >
             <div className="flex items-start justify-between gap-4">
@@ -500,7 +626,9 @@ export default function HandymanJobDetails() {
                 </div>
 
                 {myBid.message && (
-                  <p className="text-xs text-muted-foreground leading-relaxed">{myBid.message}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {myBid.message}
+                  </p>
                 )}
 
                 {myBid.availability && (
@@ -521,8 +649,8 @@ export default function HandymanJobDetails() {
             <div className="mt-4 pt-3 border-t border-black/5 flex items-start gap-2 text-xs text-muted-foreground">
               <DollarSign className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               <p>
-                SaskHandy keeps a 20% platform fee. Your payout is 80% of the accepted bid after the
-                job is completed and released.
+                SaskHandy keeps a 20% platform fee. Your payout is 80% of the
+                accepted bid after the job is completed and released.
               </p>
             </div>
 
@@ -536,9 +664,9 @@ export default function HandymanJobDetails() {
                         Waiting for homeowner response
                       </p>
                       <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        The homeowner can message you here before accepting your bid. Keep the
-                        conversation on SaskHandy so the job details and payment process stay
-                        protected.
+                        The homeowner can message you here before accepting your
+                        bid. Keep the conversation on SaskHandy so the job
+                        details and payment process stay protected.
                       </p>
                     </div>
                   </div>
@@ -556,30 +684,6 @@ export default function HandymanJobDetails() {
             title="Bid Chat"
             description="Message the homeowner about your bid before they decide whether to accept."
           />
-        )}
-
-        {isAssignedHandyman && job.status === "in_progress" && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-emerald-950">
-                  Confirm the job time with the homeowner
-                </p>
-                <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                  Payment has been completed. Message {job.homeownerName ?? "the homeowner"} to
-                  confirm your arrival time, next availability, and any details you need before
-                  starting the job.
-                </p>
-                <p className="text-xs text-emerald-800 mt-2 leading-relaxed">
-                  Clear updates help avoid cancellations, refunds, and account review.
-                </p>
-              </div>
-            </div>
-          </div>
         )}
 
         {isAssignedHandyman && job.status !== "cancelled" && (
@@ -602,10 +706,12 @@ export default function HandymanJobDetails() {
             {!showDisputeForm ? (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-foreground text-sm">Issue with this job?</p>
+                  <p className="font-semibold text-foreground text-sm">
+                    Issue with this job?
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Open a dispute only if there is a serious issue that cannot be resolved with the
-                    homeowner.
+                    Open a dispute only if there is a serious issue that cannot
+                    be resolved with the homeowner.
                   </p>
                 </div>
 
@@ -635,8 +741,12 @@ export default function HandymanJobDetails() {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => createDispute.mutate({ jobId, reason: disputeReason })}
-                    disabled={disputeReason.length < 10 || createDispute.isPending}
+                    onClick={() =>
+                      createDispute.mutate({ jobId, reason: disputeReason })
+                    }
+                    disabled={
+                      disputeReason.length < 10 || createDispute.isPending
+                    }
                   >
                     {createDispute.isPending ? (
                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -644,7 +754,11 @@ export default function HandymanJobDetails() {
                     Submit Dispute
                   </Button>
 
-                  <Button size="sm" variant="outline" onClick={() => setShowDisputeForm(false)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowDisputeForm(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -665,8 +779,12 @@ export default function HandymanJobDetails() {
 
             {dispute.adminNotes && (
               <div className="mt-3 pt-3 border-t border-red-200">
-                <p className="text-xs font-medium text-red-800">Admin Resolution:</p>
-                <p className="text-sm text-red-700 mt-1">{dispute.adminNotes}</p>
+                <p className="text-xs font-medium text-red-800">
+                  Admin Resolution:
+                </p>
+                <p className="text-sm text-red-700 mt-1">
+                  {dispute.adminNotes}
+                </p>
               </div>
             )}
           </div>
@@ -676,17 +794,24 @@ export default function HandymanJobDetails() {
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Star className="w-4 h-4 text-amber-500" />
-              <h3 className="font-semibold text-foreground">Rate the Homeowner</h3>
+              <h3 className="font-semibold text-foreground">
+                Rate the Homeowner
+              </h3>
             </div>
 
             {myReview ? (
               <div className="flex items-center gap-3">
                 <StarRatingDisplay rating={myReview.rating} showValue />
-                <p className="text-sm text-muted-foreground">{myReview.comment}</p>
+                <p className="text-sm text-muted-foreground">
+                  {myReview.comment}
+                </p>
               </div>
             ) : showReviewForm ? (
               <div className="space-y-3">
-                <StarRatingInput value={reviewRating} onChange={setReviewRating} />
+                <StarRatingInput
+                  value={reviewRating}
+                  onChange={setReviewRating}
+                />
 
                 <Textarea
                   placeholder="Share your experience..."
@@ -715,7 +840,11 @@ export default function HandymanJobDetails() {
                     Submit Review
                   </Button>
 
-                  <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowReviewForm(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -726,7 +855,11 @@ export default function HandymanJobDetails() {
                   Leave a review to help build trust on SaskHandy.
                 </p>
 
-                <Button size="sm" variant="outline" onClick={() => setShowReviewForm(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowReviewForm(true)}
+                >
                   <Star className="w-3.5 h-3.5 mr-1.5" />
                   Leave a Review
                 </Button>

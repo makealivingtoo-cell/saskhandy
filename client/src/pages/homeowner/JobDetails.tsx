@@ -71,13 +71,16 @@ function getBidInsuranceVerified(bid: any) {
 
 function getBidCompletedJobs(bid: any) {
   if (typeof bid?.handymanTotalJobs === "number") return bid.handymanTotalJobs;
-  if (typeof bid?.handymanCompletedJobs === "number") return bid.handymanCompletedJobs;
+  if (typeof bid?.handymanCompletedJobs === "number")
+    return bid.handymanCompletedJobs;
   return 0;
 }
 
 function getBidReviewCount(bid: any) {
-  if (typeof bid?.handymanReviewCount === "number") return bid.handymanReviewCount;
-  if (typeof bid?.handymanTotalReviews === "number") return bid.handymanTotalReviews;
+  if (typeof bid?.handymanReviewCount === "number")
+    return bid.handymanReviewCount;
+  if (typeof bid?.handymanTotalReviews === "number")
+    return bid.handymanTotalReviews;
   return 0;
 }
 
@@ -86,7 +89,8 @@ function getBidBio(bid: any) {
 }
 
 function getBidSkills(bid: any): string[] {
-  const rawSkills = bid?.handymanSkills ?? bid?.skills ?? bid?.handymanServices ?? [];
+  const rawSkills =
+    bid?.handymanSkills ?? bid?.skills ?? bid?.handymanServices ?? [];
 
   if (Array.isArray(rawSkills)) {
     return rawSkills.filter(Boolean).map(String);
@@ -108,7 +112,9 @@ function getBidSkills(bid: any): string[] {
 }
 
 function getBidIdentityChecked(bid: any) {
-  return bid?.handymanIdentityChecked === true || bid?.handymanIdNameMatched === true;
+  return (
+    bid?.handymanIdentityChecked === true || bid?.handymanIdNameMatched === true
+  );
 }
 
 function getBidCriminalRecordCheckReviewed(bid: any) {
@@ -147,7 +153,13 @@ function getBidExternalReviewLinks(bid: any) {
   ].filter((item) => Boolean(item.url));
 }
 
-function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: boolean }) {
+function HandymanTrustSummary({
+  bid,
+  compact = false,
+}: {
+  bid: any;
+  compact?: boolean;
+}) {
   const completedJobs = getBidCompletedJobs(bid);
   const reviewCount = getBidReviewCount(bid);
   const bio = getBidBio(bid);
@@ -171,7 +183,7 @@ function HandymanTrustSummary({ bid, compact = false }: { bid: any; compact?: bo
         {getBidIdentityChecked(bid) && (
           <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
             <Shield className="h-3 w-3" />
-ID Name Matched
+            ID Name Matched
           </span>
         )}
 
@@ -185,14 +197,16 @@ ID Name Matched
         {getBidTradeLicenseVerified(bid) && (
           <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700">
             <Shield className="h-3 w-3" />
-            {bid?.handymanTradeLicenseType ? `${bid.handymanTradeLicenseType} verified` : "Licence verified"}
+            {bid?.handymanTradeLicenseType
+              ? `${bid.handymanTradeLicenseType} verified`
+              : "Licence verified"}
           </span>
         )}
 
         {getBidInsuranceVerified(bid) && (
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
             <Shield className="h-3 w-3" />
-Insurance reviewed
+            Insurance reviewed
           </span>
         )}
 
@@ -235,7 +249,9 @@ Insurance reviewed
       )}
 
       {bio && (
-        <p className={`text-muted-foreground leading-relaxed ${compact ? "text-xs line-clamp-1" : "text-sm"}`}>
+        <p
+          className={`text-muted-foreground leading-relaxed ${compact ? "text-xs line-clamp-1" : "text-sm"}`}
+        >
           {bio}
         </p>
       )}
@@ -255,8 +271,9 @@ Insurance reviewed
 
       {hasNoReviews && (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          This handyman has not completed a reviewed job on SaskHandy yet. You can message them
-          before choosing and review any external links they have added for past work or reviews.
+          This handyman has not completed a reviewed job on SaskHandy yet. You
+          can message them before choosing and review any external links they
+          have added for past work or reviews.
         </p>
       )}
     </div>
@@ -332,153 +349,158 @@ function BidChatDrawer({
       <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto">
           <div className="border-b border-border/60 px-4 py-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0">
-              <HandymanAvatar
-                imageUrl={(bid as any).handymanProfileImageUrl}
-                name={bid.handymanName}
-                size="md"
-              />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <HandymanAvatar
+                  imageUrl={(bid as any).handymanProfileImageUrl}
+                  name={bid.handymanName}
+                  size="md"
+                />
 
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-foreground truncate">
-                    {bid.handymanName ?? "Handyman"}
-                  </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-foreground truncate">
+                      {bid.handymanName ?? "Handyman"}
+                    </p>
 
-                  {getBidGoldShieldVerified(bid) && (
-                    <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      Gold Shield
+                    {getBidGoldShieldVerified(bid) && (
+                      <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <Shield className="w-3 h-3" />
+                        Gold Shield
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                    {bid.handymanRating ? (
+                      <StarRatingDisplay
+                        rating={parseFloat(bid.handymanRating)}
+                        size="sm"
+                        showValue
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        No rating yet
+                      </span>
+                    )}
+
+                    <span className="text-xs text-muted-foreground">
+                      {getBidCompletedJobs(bid)} jobs completed
                     </span>
-                  )}
+                  </div>
+
+                  <HandymanTrustSummary bid={bid} compact />
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                  {bid.handymanRating ? (
-                    <StarRatingDisplay
-                      rating={parseFloat(bid.handymanRating)}
-                      size="sm"
-                      showValue
-                    />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">No rating yet</span>
-                  )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center hover:bg-muted shrink-0"
+                aria-label="Close chat"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
 
-                  <span className="text-xs text-muted-foreground">
-                    {getBidCompletedJobs(bid)} jobs completed
-                  </span>
+          <div className="px-4 py-3 border-b border-border/60 bg-muted/20">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Bid amount</p>
+                <p className="text-2xl font-bold text-foreground">
+                  ${bid.bidAmount}
+                </p>
+              </div>
+
+              <Link href={`/profile/${bid.handymanId}`}>
+                <span className="text-sm text-primary hover:underline cursor-pointer shrink-0">
+                  View Profile
+                </span>
+              </Link>
+            </div>
+
+            {bid.message && (
+              <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                {bid.message}
+              </p>
+            )}
+
+            {bid.availability && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  Availability: {bid.availability}
+                </span>
+              </div>
+            )}
+
+            <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    SaskHandy Safety & Payment Protection
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Review this handyman’s profile, service area, badges,
+                    reviews, and messages before choosing. Payment is held
+                    securely through SaskHandy and only released after you mark
+                    the job complete.
+                  </p>
                 </div>
-
-                <HandymanTrustSummary bid={bid} compact />
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center hover:bg-muted shrink-0"
-              aria-label="Close chat"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="px-4 py-3 border-b border-border/60 bg-muted/20">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Bid amount</p>
-              <p className="text-2xl font-bold text-foreground">${bid.bidAmount}</p>
+            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="text-xs leading-relaxed text-amber-800">
+                Not sure yet? Message the handyman first.
+              </p>
             </div>
 
-            <Link href={`/profile/${bid.handymanId}`}>
-              <span className="text-sm text-primary hover:underline cursor-pointer shrink-0">
-                View Profile
-              </span>
-            </Link>
-          </div>
+            <div className="flex flex-col gap-1.5 mt-3">
+              <Button onClick={() => onAccept(bid)} disabled={acceptPending}>
+                {acceptPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Shield className="w-4 h-4 mr-2" />
+                )}
+                Choose This Handyman
+              </Button>
 
-          {bid.message && (
-            <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-              {bid.message}
-            </p>
-          )}
+              <p className="text-center text-[11px] text-muted-foreground">
+                You’ll review secure payment on the next step.
+              </p>
 
-          {bid.availability && (
-            <div className="flex items-center gap-1.5 mt-2">
-              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
-                Availability: {bid.availability}
-              </span>
+              <Button
+                variant="outline"
+                className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                onClick={() => onReject(bid.id)}
+                disabled={rejectPending}
+              >
+                {rejectPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4 mr-2" />
+                )}
+                Reject Bid
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => onReport(bid)}
+              >
+                <Flag className="w-4 h-4 mr-2" />
+                Report a concern
+              </Button>
             </div>
-          )}
 
-          <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-            <div className="flex items-start gap-2">
-              <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  SaskHandy Safety & Payment Protection
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Review this handyman’s profile, service area, badges, reviews, and messages before
-                  choosing. Payment is held securely through SaskHandy and only released after you
-                  mark the job complete.
-                </p>
-              </div>
+            <div className="mt-2 flex items-start gap-2 text-[11px] text-muted-foreground">
+              <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+              <p>Payment is held securely until you mark the job complete.</p>
             </div>
-          </div>
-
-          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-            <p className="text-xs leading-relaxed text-amber-800">
-              Not sure yet? Message the handyman first.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-1.5 mt-3">
-            <Button onClick={() => onAccept(bid)} disabled={acceptPending}>
-              {acceptPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Shield className="w-4 h-4 mr-2" />
-              )}
-              Choose This Handyman
-            </Button>
-
-            <p className="text-center text-[11px] text-muted-foreground">
-              You’ll review secure payment on the next step.
-            </p>
-
-            <Button
-              variant="outline"
-              className="border-destructive/30 text-destructive hover:bg-destructive/5"
-              onClick={() => onReject(bid.id)}
-              disabled={rejectPending}
-            >
-              {rejectPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <XCircle className="w-4 h-4 mr-2" />
-              )}
-              Reject Bid
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              className="text-muted-foreground hover:text-destructive"
-              onClick={() => onReport(bid)}
-            >
-              <Flag className="w-4 h-4 mr-2" />
-              Report a concern
-            </Button>
-          </div>
-
-          <div className="mt-2 flex items-start gap-2 text-[11px] text-muted-foreground">
-            <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-            <p>Payment is held securely until you mark the job complete.</p>
-          </div>
           </div>
         </div>
 
@@ -511,6 +533,7 @@ export default function JobDetails() {
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [selectedBidId, setSelectedBidId] = useState<number | null>(null);
   const [paymentBid, setPaymentBid] = useState<any | null>(null);
   const [showCancelReasonForm, setShowCancelReasonForm] = useState(false);
@@ -520,27 +543,27 @@ export default function JobDetails() {
 
   const { data: job, isLoading: jobLoading } = trpc.jobs.getById.useQuery(
     { jobId },
-    { enabled: !!jobId }
+    { enabled: !!jobId },
   );
 
   const { data: bids, isLoading: bidsLoading } = trpc.bids.getForJob.useQuery(
     { jobId },
-    { enabled: !!jobId }
+    { enabled: !!jobId },
   );
 
   const { data: payment } = trpc.payments.getByJob.useQuery(
     { jobId },
-    { enabled: !!jobId && !!job?.selectedBidId }
+    { enabled: !!jobId && !!job?.selectedBidId },
   );
 
   const { data: dispute } = trpc.disputes.getByJob.useQuery(
     { jobId },
-    { enabled: !!jobId && job?.status === "disputed" }
+    { enabled: !!jobId && job?.status === "disputed" },
   );
 
   const { data: myReview } = trpc.reviews.getMyReview.useQuery(
     { jobId },
-    { enabled: !!jobId && job?.status === "completed" }
+    { enabled: !!jobId && job?.status === "completed" },
   );
 
   const acceptBid = trpc.bids.accept.useMutation({
@@ -565,7 +588,8 @@ export default function JobDetails() {
 
   const markComplete = trpc.jobs.updateStatus.useMutation({
     onSuccess: async () => {
-      toast.success("Job marked complete. Payment released to handyman.");
+      toast.success("Job complete. Payment released to your handyman.");
+      setShowCompleteConfirm(false);
       await utils.jobs.getById.invalidate({ jobId });
       await utils.payments.getByJob.invalidate({ jobId });
     },
@@ -602,7 +626,9 @@ export default function JobDetails() {
 
   const cancelJob = trpc.jobs.cancel.useMutation({
     onSuccess: async () => {
-      toast.success("Job cancelled. Thanks for sharing why — this helps improve SaskHandy.");
+      toast.success(
+        "Job cancelled. Thanks for sharing why — this helps improve SaskHandy.",
+      );
       setShowCancelReasonForm(false);
       setCancelReason("");
       setCancelDetails("");
@@ -648,14 +674,28 @@ export default function JobDetails() {
   const isOwner = job.homeownerId === user?.id;
   const pendingBids = bids?.filter((b) => b.status === "pending") ?? [];
   const acceptedBid = bids?.find((b) => b.status === "accepted");
-  const selectedBid = pendingBids.find((bid) => bid.id === selectedBidId) ?? null;
+  const selectedBid =
+    pendingBids.find((bid) => bid.id === selectedBidId) ?? null;
   const modalBid = paymentBid ?? acceptedBid;
 
-  const canEdit = isOwner && job.status === "open" && !job.selectedBidId && !job.selectedHandymanId;
+  const canEdit =
+    isOwner &&
+    job.status === "open" &&
+    !job.selectedBidId &&
+    !job.selectedHandymanId;
   const canDelete = canEdit && pendingBids.length === 0 && !payment;
   const canCancel = canEdit && pendingBids.length > 0;
   const isAwaitingPayment = job.status === "awaiting_payment";
+  const isInProgress = job.status === "in_progress";
+  const isCompleted = job.status === "completed";
   const canRetryPayment = isAwaitingPayment && !!acceptedBid;
+
+  const workflowSteps = [
+    { label: "Handyman selected", done: !!job.selectedHandymanId },
+    { label: "Payment secured", done: isInProgress || isCompleted },
+    { label: "Work underway", done: isCompleted },
+    { label: "Complete", done: isCompleted },
+  ];
 
   const handleAcceptBid = (bid: any) => {
     setPaymentBid(bid);
@@ -702,10 +742,14 @@ export default function JobDetails() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-xl font-serif text-foreground">{job.title}</h1>
+                <h1 className="text-xl font-serif text-foreground">
+                  {job.title}
+                </h1>
                 <StatusBadge status={job.status} />
               </div>
-              <p className="text-muted-foreground text-sm leading-relaxed">{job.description}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {job.description}
+              </p>
             </div>
           </div>
 
@@ -725,23 +769,138 @@ export default function JobDetails() {
 
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
-              <p className="text-sm font-medium">${job.budgetMin}–${job.budgetMax}</p>
+              <p className="text-sm font-medium">
+                ${job.budgetMin}–${job.budgetMax}
+              </p>
             </div>
 
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Posted</p>
               <p className="text-sm font-medium">
-                {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
+                {formatDistanceToNow(new Date(job.createdAt), {
+                  addSuffix: true,
+                })}
               </p>
             </div>
           </div>
         </div>
 
+        {acceptedBid && job.status !== "cancelled" && (
+          <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Job progress
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isAwaitingPayment
+                    ? "One step left before the job can start."
+                    : isInProgress
+                      ? "Payment is secured. Coordinate the work with your handyman."
+                      : isCompleted
+                        ? "This job is complete."
+                        : "Keep everything for this job in one place."}
+                </p>
+              </div>
+              <StatusBadge status={job.status} />
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {workflowSteps.map((step, index) => {
+                const active =
+                  (!step.done && isAwaitingPayment && index === 1) ||
+                  (!step.done && isInProgress && index === 2);
+
+                return (
+                  <div key={step.label} className="min-w-0">
+                    <div
+                      className={`h-1.5 rounded-full ${
+                        step.done
+                          ? "bg-emerald-500"
+                          : active
+                            ? "bg-primary"
+                            : "bg-muted"
+                      }`}
+                    />
+                    <p
+                      className={`mt-2 text-[10px] sm:text-[11px] leading-tight ${
+                        step.done || active
+                          ? "font-medium text-foreground"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {step.label}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {isAwaitingPayment && acceptedBid && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4 text-amber-700" />
+                  <h3 className="font-semibold text-amber-950">
+                    Secure payment to start
+                  </h3>
+                </div>
+                <p className="text-sm text-amber-800 leading-relaxed">
+                  You chose {acceptedBid.handymanName ?? "this handyman"} for $
+                  {acceptedBid.bidAmount}. Payment must be secured before work
+                  begins.
+                </p>
+              </div>
+
+              <Button
+                size="lg"
+                className="sm:shrink-0"
+                onClick={() => {
+                  setPaymentBid(acceptedBid);
+                  setShowPaymentModal(true);
+                }}
+              >
+                Complete Payment
+              </Button>
+            </div>
+            <div className="mt-3 flex items-start gap-2 text-xs text-amber-800">
+              <Shield className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <p>
+                SaskHandy holds the payment until you confirm the job is
+                complete.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isInProgress && acceptedBid && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="font-semibold text-emerald-950">
+                  You’re booked with{" "}
+                  {acceptedBid.handymanName ?? "your handyman"}
+                </p>
+                <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                  Payment is secured. Use the job chat below to confirm timing,
+                  access, materials, and any final details.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {jobPhotos.length > 0 && (
           <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <ImageIcon className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">Job Photos</h2>
+              <h2 className="text-sm font-semibold text-foreground">
+                Job Photos
+              </h2>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -764,39 +923,29 @@ export default function JobDetails() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
-          <MapView locationQuery={job.location} title="Job Location" heightClassName="h-[280px]" />
-        </div>
-
-        {isAwaitingPayment && acceptedBid && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-amber-700" />
-              <h3 className="font-semibold text-amber-800">Payment needed to start the job</h3>
+        <details className="bg-white rounded-xl border border-border/60 mb-6 overflow-hidden group">
+          <summary className="cursor-pointer list-none px-4 py-3.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin className="w-4 h-4 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  Job location
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {job.location}
+                </p>
+              </div>
             </div>
-
-            <p className="text-sm text-amber-700 mb-4 leading-relaxed">
-              You accepted a bid from {acceptedBid.handymanName ?? "this handyman"}. Complete the
-              secure payment to officially start the job. The payment is held until you mark the
-              work as complete.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={() => {
-                  setPaymentBid(acceptedBid);
-                  setShowPaymentModal(true);
-                }}
-              >
-                Complete Secure Payment
-              </Button>
-
-              <p className="text-xs text-amber-700 self-center">
-                If your earlier payment attempt failed or was closed, you can retry here.
-              </p>
-            </div>
+            <span className="text-xs font-medium text-primary">View map</span>
+          </summary>
+          <div className="px-4 pb-4">
+            <MapView
+              locationQuery={job.location}
+              title="Job Location"
+              heightClassName="h-[240px]"
+            />
           </div>
-        )}
+        </details>
 
         {(canEdit || canDelete || canCancel) && (
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
@@ -850,10 +999,13 @@ export default function JobDetails() {
             <div className="flex items-start gap-2 mb-4">
               <AlertTriangle className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
               <div>
-                <h3 className="font-semibold text-amber-900">Why are you cancelling this job?</h3>
+                <h3 className="font-semibold text-amber-900">
+                  Why are you cancelling this job?
+                </h3>
                 <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                  This helps SaskHandy understand why homeowners don’t move forward after receiving
-                  bids, so we can improve trust and the hiring process.
+                  This helps SaskHandy understand why homeowners don’t move
+                  forward after receiving bids, so we can improve trust and the
+                  hiring process.
                 </p>
               </div>
             </div>
@@ -918,69 +1070,134 @@ export default function JobDetails() {
 
         {payment && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-4 h-4 text-primary" />
-              <h3 className="font-semibold text-primary text-sm">Secure Payment</h3>
-              <StatusBadge status={payment.status} />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <Shield className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">
+                    Payment
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    {isAwaitingPayment
+                      ? "Payment still needs to be completed before work starts."
+                      : isCompleted
+                        ? "Payment has been released after job completion."
+                        : "Payment is secured and held by SaskHandy until you confirm completion."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <p className="text-xl font-bold text-foreground">
+                  ${payment.amount}
+                </p>
+                <span
+                  className={`inline-flex mt-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                    isAwaitingPayment
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : isCompleted
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-blue-200 bg-blue-50 text-blue-700"
+                  }`}
+                >
+                  {isAwaitingPayment
+                    ? "Payment needed"
+                    : isCompleted
+                      ? "Released"
+                      : "Held"}
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-lg font-bold text-foreground">${payment.amount}</p>
-                <p className="text-xs text-muted-foreground">Total Charged</p>
-              </div>
-
-              <div>
-                <p className="text-lg font-bold text-foreground">${payment.handymanPayout}</p>
-                <p className="text-xs text-muted-foreground">Handyman Payout</p>
-              </div>
-
-              <div>
-                <p className="text-lg font-bold text-foreground">${payment.platformFee}</p>
-                <p className="text-xs text-muted-foreground">Platform Fee</p>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-primary/10 flex items-start gap-2 text-xs text-muted-foreground">
-              <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-              <p>
-                Payment is held securely and released to the handyman only after you mark the job as
-                completed.
-              </p>
+            <div className="mt-4 pt-3 border-t border-primary/10 text-xs text-muted-foreground">
+              Handyman payout:{" "}
+              <strong className="text-foreground">
+                ${payment.handymanPayout}
+              </strong>{" "}
+              · SaskHandy fee:{" "}
+              <strong className="text-foreground">
+                ${payment.platformFee}
+              </strong>
             </div>
           </div>
         )}
 
         {job.status === "in_progress" && isOwner && (
-          <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
-            <div className="mb-4">
-              <p className="text-sm font-semibold text-foreground">Job in progress</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Once the work is done and you are satisfied, mark the job complete to release
-                payment.
-              </p>
-            </div>
+          <div className="bg-white rounded-2xl border border-border/60 p-5 mb-6 shadow-sm">
+            {!showCompleteConfirm ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Is the work finished?
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Only mark the job complete after you have checked the work
+                    and are satisfied.
+                  </p>
+                </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                className="flex-1"
-                onClick={() => markComplete.mutate({ jobId, status: "completed" })}
-                disabled={markComplete.isPending}
-              >
-                {markComplete.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
+                <Button
+                  onClick={() => setShowCompleteConfirm(true)}
+                  className="sm:shrink-0"
+                >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                )}
-                Mark Job Complete
-              </Button>
+                  Finish Job
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-emerald-950">
+                      Confirm completion and release payment
+                    </p>
+                    <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                      By confirming, you’re saying the agreed work is complete
+                      and SaskHandy can release the held payment to{" "}
+                      {acceptedBid?.handymanName ?? "the handyman"}.
+                    </p>
+                  </div>
+                </div>
 
+                <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() =>
+                      markComplete.mutate({ jobId, status: "completed" })
+                    }
+                    disabled={markComplete.isPending}
+                  >
+                    {markComplete.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Confirm & Release Payment
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowCompleteConfirm(false)}
+                    disabled={markComplete.isPending}
+                  >
+                    Not Yet
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Something seriously wrong with the job?
+              </p>
               <Button
-                variant="outline"
-                className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/5"
                 onClick={() => setShowDisputeForm(true)}
               >
-                <AlertTriangle className="w-4 h-4 mr-2" />
+                <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
                 Open Dispute
               </Button>
             </div>
@@ -1006,7 +1223,9 @@ export default function JobDetails() {
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => createDispute.mutate({ jobId, reason: disputeReason })}
+                onClick={() =>
+                  createDispute.mutate({ jobId, reason: disputeReason })
+                }
                 disabled={disputeReason.length < 10 || createDispute.isPending}
               >
                 {createDispute.isPending ? (
@@ -1015,7 +1234,11 @@ export default function JobDetails() {
                 Submit Dispute
               </Button>
 
-              <Button size="sm" variant="outline" onClick={() => setShowDisputeForm(false)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowDisputeForm(false)}
+              >
                 Cancel
               </Button>
             </div>
@@ -1034,8 +1257,12 @@ export default function JobDetails() {
 
             {dispute.adminNotes && (
               <div className="mt-3 pt-3 border-t border-red-200">
-                <p className="text-xs font-medium text-red-800">Admin Resolution:</p>
-                <p className="text-sm text-red-700 mt-1">{dispute.adminNotes}</p>
+                <p className="text-xs font-medium text-red-800">
+                  Admin Resolution:
+                </p>
+                <p className="text-sm text-red-700 mt-1">
+                  {dispute.adminNotes}
+                </p>
               </div>
             )}
           </div>
@@ -1045,17 +1272,24 @@ export default function JobDetails() {
           <div className="bg-white rounded-xl border border-border/60 p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Star className="w-4 h-4 text-amber-500" />
-              <h3 className="font-semibold text-foreground">Rate the Handyman</h3>
+              <h3 className="font-semibold text-foreground">
+                Rate the Handyman
+              </h3>
             </div>
 
             {myReview ? (
               <div className="flex items-center gap-3">
                 <StarRatingDisplay rating={myReview.rating} showValue />
-                <p className="text-sm text-muted-foreground">{myReview.comment}</p>
+                <p className="text-sm text-muted-foreground">
+                  {myReview.comment}
+                </p>
               </div>
             ) : showReviewForm ? (
               <div className="space-y-3">
-                <StarRatingInput value={reviewRating} onChange={setReviewRating} />
+                <StarRatingInput
+                  value={reviewRating}
+                  onChange={setReviewRating}
+                />
                 <Textarea
                   placeholder="Share your experience with this handyman..."
                   value={reviewComment}
@@ -1083,13 +1317,21 @@ export default function JobDetails() {
                     Submit Review
                   </Button>
 
-                  <Button size="sm" variant="outline" onClick={() => setShowReviewForm(false)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowReviewForm(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setShowReviewForm(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowReviewForm(true)}
+              >
                 <Star className="w-3.5 h-3.5 mr-1.5" />
                 Leave a Review
               </Button>
@@ -1102,7 +1344,9 @@ export default function JobDetails() {
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle className="w-4 h-4 text-emerald-600" />
               <h3 className="font-semibold text-foreground">
-                {isAwaitingPayment ? "Accepted Bid — Payment Required" : "Accepted Bid"}
+                {isAwaitingPayment
+                  ? "Accepted Bid — Payment Required"
+                  : "Accepted Bid"}
               </h3>
             </div>
 
@@ -1116,7 +1360,9 @@ export default function JobDetails() {
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-foreground">{acceptedBid.handymanName}</p>
+                    <p className="font-medium text-foreground">
+                      {acceptedBid.handymanName}
+                    </p>
 
                     {getBidInsuranceVerified(acceptedBid) && (
                       <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
@@ -1154,7 +1400,9 @@ export default function JobDetails() {
               </div>
 
               <div className="text-right shrink-0">
-                <p className="text-xl font-bold text-foreground">${acceptedBid.bidAmount}</p>
+                <p className="text-xl font-bold text-foreground">
+                  ${acceptedBid.bidAmount}
+                </p>
 
                 <Link href={`/profile/${acceptedBid.handymanId}`}>
                   <span className="text-xs text-primary hover:underline cursor-pointer">
@@ -1166,7 +1414,9 @@ export default function JobDetails() {
 
             {acceptedBid.message && (
               <div className="mt-3 pt-3 border-t border-border/40">
-                <p className="text-xs text-muted-foreground">{acceptedBid.message}</p>
+                <p className="text-xs text-muted-foreground">
+                  {acceptedBid.message}
+                </p>
               </div>
             )}
 
@@ -1184,7 +1434,8 @@ export default function JobDetails() {
                 <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
                   <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                   <p>
-                    Payment is held securely and released only after you mark the job as completed.
+                    Payment is held securely and released only after you mark
+                    the job as completed.
                   </p>
                 </div>
               </div>
@@ -1217,8 +1468,8 @@ export default function JobDetails() {
 
                 {pendingBids.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Open a bid to chat with the handyman, ask questions, and decide whether to
-                    accept.
+                    Open a bid to chat with the handyman, ask questions, and
+                    decide whether to accept.
                   </p>
                 )}
               </div>
@@ -1229,12 +1480,15 @@ export default function JobDetails() {
                 <div className="flex items-start gap-2">
                   <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Choosing a bid</p>
+                    <p className="text-sm font-medium text-foreground">
+                      Choosing a bid
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      You can chat with a handyman before choosing. Review their photo, service
-                      area, ID Name Matched badge, Gold Shield status, external review links, and
-                      past work. Keep communication on SaskHandy so the job details, payment, and
-                      dispute process stay protected.
+                      You can chat with a handyman before choosing. Review their
+                      photo, service area, ID Name Matched badge, Gold Shield
+                      status, external review links, and past work. Keep
+                      communication on SaskHandy so the job details, payment,
+                      and dispute process stay protected.
                     </p>
                   </div>
                 </div>
@@ -1249,11 +1503,14 @@ export default function JobDetails() {
               <div className="bg-white rounded-xl border border-border/60 p-8 text-center">
                 <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
 
-                <h3 className="font-semibold text-foreground mb-2">No bids yet</h3>
+                <h3 className="font-semibold text-foreground mb-2">
+                  No bids yet
+                </h3>
 
                 <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                  Your job is live. Handymen can review it and send bids. Jobs with clear details,
-                  realistic budgets, and photos usually get better responses.
+                  Your job is live. Handymen can review it and send bids. Jobs
+                  with clear details, realistic budgets, and photos usually get
+                  better responses.
                 </p>
 
                 {canEdit && (
@@ -1271,7 +1528,9 @@ export default function JobDetails() {
                   <div
                     key={bid.id}
                     className={`bg-white rounded-xl border p-5 ${
-                      selectedBidId === bid.id ? "border-primary/40 shadow-sm" : "border-border/60"
+                      selectedBidId === bid.id
+                        ? "border-primary/40 shadow-sm"
+                        : "border-border/60"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -1295,12 +1554,13 @@ export default function JobDetails() {
                                 </span>
                               )}
 
-                              {getBidIdentityChecked(bid) && !getBidGoldShieldVerified(bid) && (
-                                <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                                  <Shield className="w-3 h-3" />
-                                  ID Name Matched
-                                </span>
-                              )}
+                              {getBidIdentityChecked(bid) &&
+                                !getBidGoldShieldVerified(bid) && (
+                                  <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                    <Shield className="w-3 h-3" />
+                                    ID Name Matched
+                                  </span>
+                                )}
 
                               {getBidInsuranceVerified(bid) && (
                                 <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
@@ -1318,7 +1578,9 @@ export default function JobDetails() {
                                   showValue
                                 />
                               ) : (
-                                <span className="text-xs text-muted-foreground">No rating yet</span>
+                                <span className="text-xs text-muted-foreground">
+                                  No rating yet
+                                </span>
                               )}
 
                               <span className="text-xs text-muted-foreground">
@@ -1349,16 +1611,22 @@ export default function JobDetails() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <p className="text-xl font-bold text-foreground">${bid.bidAmount}</p>
+                        <p className="text-xl font-bold text-foreground">
+                          ${bid.bidAmount}
+                        </p>
 
                         <div className="flex flex-col gap-2 mt-2 items-end">
                           <Button
                             size="sm"
                             onClick={() => setSelectedBidId(bid.id)}
-                            variant={selectedBidId === bid.id ? "outline" : "default"}
+                            variant={
+                              selectedBidId === bid.id ? "outline" : "default"
+                            }
                           >
                             <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                            {selectedBidId === bid.id ? "Bid Open" : "Review Bid"}
+                            {selectedBidId === bid.id
+                              ? "Bid Open"
+                              : "Review Bid"}
                           </Button>
 
                           <Link href={`/profile/${bid.handymanId}`}>
@@ -1386,17 +1654,25 @@ export default function JobDetails() {
         onReject={(bidId) => rejectBid.mutate({ bidId })}
         onReport={handleReportBid}
         acceptPending={acceptBid.isPending}
-        rejectPending={rejectBid.isPending || createReport.isPending || reportingBidId === selectedBid?.id}
+        rejectPending={
+          rejectBid.isPending ||
+          createReport.isPending ||
+          reportingBidId === selectedBid?.id
+        }
       />
 
       {showPaymentModal && modalBid && (
         <StripePaymentModal
           jobId={jobId}
           amount={parseFloat(modalBid.bidAmount)}
+          jobTitle={job.title}
+          handymanName={modalBid.handymanName ?? undefined}
           onSuccess={async () => {
             setShowPaymentModal(false);
             setPaymentBid(null);
-            toast.success("Payment submitted. Once confirmed, the job will move into active work.");
+            toast.success(
+              "Payment submitted. Your job will activate automatically once confirmed.",
+            );
             await utils.jobs.getById.invalidate({ jobId });
             await utils.payments.getByJob.invalidate({ jobId });
           }}
