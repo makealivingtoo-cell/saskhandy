@@ -32,29 +32,58 @@ import { MessagesCounterBadge, NotificationBell } from "@/components/Notificatio
 interface NavItem {
   href: string;
   label: string;
+  mobileLabel?: string;
   icon: React.ElementType;
 }
 
 const HOMEOWNER_NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/post-job", label: "Post a Job", icon: Plus },
+  { href: "/dashboard", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
+  { href: "/post-job", label: "Post a Job", mobileLabel: "Post", icon: Plus },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
 const HANDYMAN_NAV: NavItem[] = [
-  { href: "/handyman/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/handyman/browse", label: "Browse Jobs", icon: Search },
-  { href: "/handyman/bids", label: "My Bids", icon: Briefcase },
+  { href: "/handyman/dashboard", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
+  { href: "/handyman/browse", label: "Browse Jobs", mobileLabel: "Browse", icon: Search },
+  { href: "/handyman/bids", label: "My Bids", mobileLabel: "Bids", icon: Briefcase },
   { href: "/handyman/messages", label: "Messages", icon: MessageSquare },
   { href: "/handyman/earnings", label: "Earnings", icon: DollarSign },
   { href: "/handyman/profile", label: "Profile", icon: User },
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
+const HOMEOWNER_BOTTOM_NAV = HOMEOWNER_NAV.filter((item) =>
+  ["/dashboard", "/post-job", "/messages"].includes(item.href)
+);
+
+const HANDYMAN_BOTTOM_NAV = HANDYMAN_NAV.filter((item) =>
+  [
+    "/handyman/dashboard",
+    "/handyman/browse",
+    "/handyman/bids",
+    "/handyman/messages",
+    "/handyman/profile",
+  ].includes(item.href)
+);
+
 interface AppLayoutProps {
   children: ReactNode;
   title?: string;
+}
+
+function isActiveRoute(location: string, href: string) {
+  if (location === href) return true;
+
+  if (href === "/handyman/browse" && location.startsWith("/handyman/jobs/")) {
+    return true;
+  }
+
+  if (href === "/dashboard" && location.startsWith("/jobs/")) {
+    return true;
+  }
+
+  return false;
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
@@ -62,6 +91,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const [location] = useLocation();
 
   const navItems = user?.userType === "handyman" ? HANDYMAN_NAV : HOMEOWNER_NAV;
+  const bottomNavItems =
+    user?.userType === "handyman" ? HANDYMAN_BOTTOM_NAV : HOMEOWNER_BOTTOM_NAV;
 
   const { data: handymanProfile } = trpc.handymanProfiles.get.useQuery(undefined, {
     enabled: user?.userType === "handyman",
@@ -81,7 +112,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-border/60 shadow-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-border/60 shadow-sm">
         <div className="container flex items-center justify-between h-14">
           <Link href={user?.userType === "handyman" ? "/handyman/dashboard" : "/dashboard"}>
             <div className="flex items-center gap-2 cursor-pointer">
@@ -94,7 +125,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
-              const isActive = location === item.href;
+              const isActive = isActiveRoute(location, item.href);
 
               return (
                 <Link key={item.href} href={item.href}>
@@ -152,8 +183,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center overflow-hidden">
+                <Button variant="ghost" size="sm" className="gap-2 px-2 sm:px-3">
+                  <div className="w-7 h-7 bg-primary/20 rounded-full flex items-center justify-center overflow-hidden">
                     {profileImageUrl ? (
                       <img
                         src={profileImageUrl}
@@ -169,7 +200,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   <span className="hidden sm:block text-sm font-medium max-w-24 truncate">
                     {user?.name}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                  <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
 
@@ -229,16 +260,66 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         </div>
       </nav>
 
-      <main className="pt-14">
+      <main className="pt-14 pb-24 md:pb-0">
         {title && (
           <div className="border-b border-border/40 bg-white">
-            <div className="container py-6">
-              <h1 className="text-2xl font-serif text-foreground">{title}</h1>
+            <div className="container py-4 md:py-6">
+              <h1 className="text-xl md:text-2xl font-serif text-foreground">{title}</h1>
             </div>
           </div>
         )}
-        <div className="container py-8">{children}</div>
+        <div className="container py-5 md:py-8">{children}</div>
       </main>
+
+      <nav
+        aria-label="Primary mobile navigation"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-white/95 backdrop-blur md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div
+          className={cn(
+            "mx-auto grid h-16 max-w-lg items-stretch",
+            bottomNavItems.length === 3 ? "grid-cols-3" : "grid-cols-5"
+          )}
+        >
+          {bottomNavItems.map((item) => {
+            const isActive = isActiveRoute(location, item.href);
+            const isPrimaryAction = item.href === "/post-job";
+
+            return (
+              <Link key={`mobile-${item.href}`} href={item.href}>
+                <div
+                  className={cn(
+                    "relative flex h-full flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-all active:scale-95",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "relative flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
+                      isPrimaryAction
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground"
+                    )}
+                  >
+                    <item.icon className="h-[18px] w-[18px]" />
+                    {item.label === "Messages" && (
+                      <span className="absolute -right-2 -top-2">
+                        <MessagesCounterBadge />
+                      </span>
+                    )}
+                  </div>
+                  <span className={cn(isActive && "font-semibold")}>
+                    {item.mobileLabel ?? item.label}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

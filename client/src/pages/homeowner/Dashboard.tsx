@@ -4,9 +4,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import {
+  ArrowRight,
   Briefcase,
   CheckCircle,
   Clock,
+  Hammer,
   Lightbulb,
   Loader2,
   Plus,
@@ -31,9 +33,9 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-border/60 p-5 flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${color}`}>
-        <Icon className="w-5 h-5" />
+    <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-white p-5">
+      <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${color}`}>
+        <Icon className="h-5 w-5" />
       </div>
       <div>
         <p className="text-2xl font-bold text-foreground">{value}</p>
@@ -74,6 +76,10 @@ function getDailyNote(name?: string | null) {
   return homeownerNotes[total % homeownerNotes.length];
 }
 
+function postJobHref(idea: string) {
+  return `/post-job?idea=${encodeURIComponent(idea)}`;
+}
+
 export default function HomeownerDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
@@ -96,6 +102,7 @@ export default function HomeownerDashboard() {
   const openJobs = jobs?.filter((j) => j.status === "open") ?? [];
   const activeJobs = jobs?.filter((j) => j.status === "in_progress") ?? [];
   const completedJobs = jobs?.filter((j) => j.status === "completed") ?? [];
+  const hasJobs = (jobs?.length ?? 0) > 0;
 
   const dailyNote = useMemo(() => getDailyNote(user?.name), [user?.name]);
 
@@ -128,7 +135,7 @@ export default function HomeownerDashboard() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AppLayout>
     );
@@ -136,209 +143,165 @@ export default function HomeownerDashboard() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+      <div className="space-y-6 md:space-y-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-2xl font-serif text-foreground">
               Good{" "}
               {new Date().getHours() < 12
                 ? "morning"
                 : new Date().getHours() < 17
-                ? "afternoon"
-                : "evening"}
+                  ? "afternoon"
+                  : "evening"}
               , {user?.name?.split(" ")[0]}
             </h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Here's an overview of your jobs.</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {hasJobs ? "Here’s what’s happening with your jobs." : "What can we help you get done?"}
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={handleShare}>
-              <Share2 className="w-4 h-4 mr-2" />
-              Share SaskHandy
-            </Button>
+          {hasJobs && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button variant="outline" onClick={handleShare}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Share SaskHandy
+              </Button>
 
-            <Button asChild>
-              <Link href="/post-job">
-                <Plus className="w-4 h-4 mr-2" />
-                Post a Job
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Lightbulb className="w-5 h-5" />
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-foreground">Today’s homeowner note</p>
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{dailyNote}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Open Jobs"
-            value={openJobs.length}
-            icon={Briefcase}
-            color="bg-emerald-50 text-emerald-600"
-          />
-
-          <StatCard
-            label="In Progress"
-            value={activeJobs.length}
-            icon={Clock}
-            color="bg-blue-50 text-blue-600"
-          />
-
-          <StatCard
-            label="Completed"
-            value={completedJobs.length}
-            icon={Star}
-            color="bg-amber-50 text-amber-600"
-          />
-
-          <StatCard
-            label="Total Jobs"
-            value={jobs?.length ?? 0}
-            icon={Briefcase}
-            color="bg-purple-50 text-purple-600"
-          />
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-border/60 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <ShieldCheck className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">What happens next?</h2>
+              <Button asChild>
+                <Link href="/post-job">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Post a Job
+                </Link>
+              </Button>
             </div>
+          )}
+        </div>
 
-            <div className="space-y-3">
-              {[
-                "Post your job with clear details and location.",
-                "Local handymen review the job and send bids.",
-                "You compare price, message, profile, and availability.",
-                "Payment is held securely until you mark the job complete.",
-              ].map((step, index) => (
-                <div key={step} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
-                    {index + 1}
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{step}</p>
+        {!hasJobs ? (
+          <>
+            <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-emerald-50 shadow-sm">
+              <div className="p-6 sm:p-8">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                  <Hammer className="h-6 w-6" />
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl border border-border/60 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Briefcase className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">What can you post?</h2>
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-4">
-              Small home jobs are perfect for SaskHandy. Here are a few examples:
-            </p>
-
-            <div className="flex flex-wrap gap-2">
-              {jobIdeas.map((idea) => (
-                <span
-                  key={idea}
-                  className="text-xs bg-secondary text-secondary-foreground px-3 py-1 rounded-full"
-                >
-                  {idea}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {!jobs || jobs.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-border/60 p-8 sm:p-12 text-center">
-            <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Briefcase className="w-7 h-7 text-muted-foreground" />
-            </div>
-
-            <h3 className="font-semibold text-foreground mb-2">No jobs posted yet</h3>
-
-            <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto leading-relaxed">
-              Post your first small home job and let local handymen send you bids. Clear details and
-              photos can help you get better responses.
-            </p>
-
-            <div className="flex flex-wrap justify-center gap-2 mb-6">
-              {jobIdeas.slice(0, 5).map((idea) => (
-                <span
-                  key={`empty-${idea}`}
-                  className="text-xs bg-muted text-muted-foreground px-3 py-1 rounded-full"
-                >
-                  {idea}
-                </span>
-              ))}
-            </div>
-
-            <Button asChild>
-              <Link href="/post-job">
-                <Plus className="w-4 h-4 mr-2" />
-                Post Your First Job
-              </Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Your Jobs</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Open jobs are visible to handymen. Review bids when they come in.
+                <h2 className="max-w-lg text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  Get one home task off your list today.
+                </h2>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                  Pick a common job below or describe your own. Posting is free, and you review bids before choosing anyone.
                 </p>
+
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {jobIdeas.map((idea) => (
+                    <Link key={idea} href={postJobHref(idea)}>
+                      <div className="cursor-pointer rounded-full border border-border/70 bg-white px-3.5 py-2 text-sm font-medium text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary hover:shadow-md active:translate-y-0">
+                        {idea}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                <Button asChild size="lg" className="mt-7 w-full sm:w-auto">
+                  <Link href="/post-job">
+                    Post a job
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
             </div>
 
-            {jobs.map((job) => (
-              <Link key={job.id} href={`/jobs/${job.id}`}>
-                <div className="bg-white rounded-xl border border-border/60 p-5 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-foreground truncate">{job.title}</h3>
-                        <StatusBadge status={job.status} />
-                      </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  icon: Plus,
+                  title: "1. Describe the job",
+                  text: "Tell us what you need in plain language. SaskHandy can help clean up the post.",
+                },
+                {
+                  icon: Briefcase,
+                  title: "2. Compare bids",
+                  text: "Review price, profile, trust signals, availability and messages in one place.",
+                },
+                {
+                  icon: ShieldCheck,
+                  title: "3. Choose with confidence",
+                  text: "Payment is held securely and released after you confirm the work is complete.",
+                },
+              ].map(({ icon: Icon, title, text }) => (
+                <div key={title} className="rounded-2xl border border-border/60 bg-white p-5">
+                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">{title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Lightbulb className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Today’s homeowner note</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{dailyNote}</p>
+              </div>
+            </div>
 
-                      <p className="text-sm text-muted-foreground line-clamp-1">
-                        {job.description}
-                      </p>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatCard label="Open Jobs" value={openJobs.length} icon={Briefcase} color="bg-emerald-50 text-emerald-600" />
+              <StatCard label="In Progress" value={activeJobs.length} icon={Clock} color="bg-blue-50 text-blue-600" />
+              <StatCard label="Completed" value={completedJobs.length} icon={Star} color="bg-amber-50 text-amber-600" />
+              <StatCard label="Total Jobs" value={jobs?.length ?? 0} icon={Briefcase} color="bg-purple-50 text-purple-600" />
+            </div>
 
-                      <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
-                        <span className="bg-secondary px-2 py-0.5 rounded-full">
-                          {job.category}
-                        </span>
-                        <span>{job.location}</span>
-                        <span>
-                          {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
-                        </span>
-                      </div>
-                    </div>
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Your Jobs</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Open jobs are visible to handymen. Review bids when they come in.
+                </p>
+              </div>
 
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-semibold text-foreground">
-                        ${job.budgetMin}–${job.budgetMax}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">budget</div>
-
-                      {job.status === "open" && (
-                        <div className="mt-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          Live
+              {jobs?.map((job) => (
+                <Link key={job.id} href={`/jobs/${job.id}`}>
+                  <div className="cursor-pointer rounded-xl border border-border/60 bg-white p-5 transition-all hover:border-primary/30 hover:shadow-sm active:scale-[0.995]">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <h3 className="truncate font-semibold text-foreground">{job.title}</h3>
+                          <StatusBadge status={job.status} />
                         </div>
-                      )}
+
+                        <p className="line-clamp-1 text-sm text-muted-foreground">{job.description}</p>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span className="rounded-full bg-secondary px-2 py-0.5">{job.category}</span>
+                          <span>{job.location}</span>
+                          <span>{formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}</span>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <div className="text-sm font-semibold text-foreground">${job.budgetMin}–${job.budgetMax}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">budget</div>
+
+                        {job.status === "open" && (
+                          <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">
+                            <CheckCircle className="h-3 w-3" />
+                            Live
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </AppLayout>
