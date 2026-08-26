@@ -180,38 +180,84 @@ export default function HomeownerDashboard() {
         {!hasJobs ? (
           <>
             <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-emerald-50 shadow-sm">
-              <div className="p-6 sm:p-8">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-                  <Hammer className="h-6 w-6" />
-                </div>
+              <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-center lg:gap-10 lg:p-10">
+                <div>
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                    <Hammer className="h-6 w-6" />
+                  </div>
 
-                <h2 className="max-w-lg text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                  Get one home task off your list today.
-                </h2>
-                <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-                  Pick a common job below or describe your own. Posting is free, and you review bids before choosing anyone.
-                </p>
+                  <h2 className="max-w-xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl lg:text-4xl lg:leading-tight">
+                    Get one home task off your list today.
+                  </h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                    Pick a common job below or describe your own. Posting is free, and you review bids before choosing anyone.
+                  </p>
 
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {jobIdeas.map((idea) => (
-                    <Link key={idea} href={postJobHref(idea)}>
-                      <div className="cursor-pointer rounded-full border border-border/70 bg-white px-3.5 py-2 text-sm font-medium text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary hover:shadow-md active:translate-y-0">
-                        {idea}
-                      </div>
+                  <div className="mt-6 flex max-w-3xl flex-wrap gap-2">
+                    {jobIdeas.map((idea) => (
+                      <Link key={idea} href={postJobHref(idea)}>
+                        <div className="cursor-pointer rounded-full border border-border/70 bg-white px-3.5 py-2 text-sm font-medium text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary hover:shadow-md active:translate-y-0">
+                          {idea}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+
+                  <Button asChild size="lg" className="mt-7 w-full sm:w-auto">
+                    <Link href="/post-job">
+                      Post a job
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
-                  ))}
+                  </Button>
                 </div>
 
-                <Button asChild size="lg" className="mt-7 w-full sm:w-auto">
-                  <Link href="/post-job">
-                    Post a job
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                <div className="hidden lg:block">
+                  <div className="rounded-3xl border border-white/80 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
+                    <div className="mb-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">How it works</p>
+                      <h3 className="mt-2 text-xl font-semibold text-foreground">From task to trusted help in three steps.</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                      {[
+                        {
+                          icon: Plus,
+                          title: "Describe the job",
+                          text: "Tell us what you need in plain language.",
+                        },
+                        {
+                          icon: Briefcase,
+                          title: "Compare local bids",
+                          text: "Review price, profile, availability and messages.",
+                        },
+                        {
+                          icon: ShieldCheck,
+                          title: "Choose with confidence",
+                          text: "Payment is held securely until you confirm the work is complete.",
+                        },
+                      ].map(({ icon: Icon, title, text }, index) => (
+                        <div key={title} className="flex items-start gap-4 rounded-2xl border border-border/50 bg-white/80 p-4">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground">{index + 1}. {title}</p>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 flex items-center gap-2 rounded-2xl bg-primary/5 px-4 py-3 text-xs text-primary">
+                      <ShieldCheck className="h-4 w-4 shrink-0" />
+                      <span className="font-medium">Free to post. You choose who to hire.</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3 lg:hidden">
               {[
                 {
                   icon: Plus,

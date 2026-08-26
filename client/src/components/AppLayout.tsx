@@ -91,6 +91,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const [location] = useLocation();
 
   const navItems = user?.userType === "handyman" ? HANDYMAN_NAV : HOMEOWNER_NAV;
+  const visibleNavItems =
+    user?.role === "admin" ? navItems.filter((item) => item.href !== "/support") : navItems;
   const bottomNavItems =
     user?.userType === "handyman" ? HANDYMAN_BOTTOM_NAV : HOMEOWNER_BOTTOM_NAV;
 
@@ -124,7 +126,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = isActiveRoute(location, item.href);
 
               return (
@@ -213,7 +215,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 <DropdownMenuSeparator />
 
                 <div className="md:hidden">
-                  {navItems.map((item) => (
+                  {visibleNavItems.map((item) => (
                     <DropdownMenuItem key={item.href} asChild>
                       <Link href={item.href}>
                         <item.icon className="w-4 h-4 mr-2" />
