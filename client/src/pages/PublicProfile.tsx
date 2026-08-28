@@ -13,13 +13,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
 import {
-  AlertTriangle,
   Briefcase,
+  CheckCircle2,
   ExternalLink,
   Flag,
   Loader2,
   MapPin,
-  MessageSquare,
   Shield,
   Star,
   User,
@@ -38,7 +37,7 @@ function ProfileAvatar({
   const displayInitial = name.charAt(0).toUpperCase() || "H";
 
   return (
-    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center shrink-0 overflow-hidden border border-border/60">
+    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border border-border/60">
       {imageUrl ? (
         <img
           src={imageUrl}
@@ -69,18 +68,9 @@ function getGoldShieldVerified(profile: any) {
 
 function getExternalReviewLinks(profile: any) {
   return [
-    {
-      label: "Google reviews",
-      url: profile?.externalGoogleReviewsUrl,
-    },
-    {
-      label: "Facebook reviews",
-      url: profile?.externalFacebookReviewsUrl,
-    },
-    {
-      label: "Website / portfolio",
-      url: profile?.externalWebsiteUrl,
-    },
+    { label: "Google reviews", url: profile?.externalGoogleReviewsUrl },
+    { label: "Facebook reviews", url: profile?.externalFacebookReviewsUrl },
+    { label: "Portfolio / website", url: profile?.externalWebsiteUrl },
   ].filter((item) => Boolean(item.url));
 }
 
@@ -148,19 +138,6 @@ export default function PublicProfile() {
     [profile?.categories]
   );
 
-  const bidReadyCompletion = useMemo(() => {
-    if (!profile) return 0;
-
-    let score = 0;
-    if (profile.userName?.trim()) score += 20;
-    if (profile.profileImageUrl) score += 20;
-    if (profile.bio?.trim() && profile.bio.trim().length >= 25) score += 20;
-    if (categories.length > 0) score += 20;
-    if (getIdentityChecked(profile)) score += 20;
-
-    return Math.min(score, 100);
-  }, [profile, categories.length]);
-
   const safeReviews = reviews ?? [];
 
   if (!uid) {
@@ -203,406 +180,213 @@ export default function PublicProfile() {
   const identityChecked = getIdentityChecked(profile);
   const criminalRecordCheckReviewed = profile.criminalRecordCheckStatus === "reviewed";
   const tradeLicenseVerified = profile.tradeLicenseVerificationStatus === "approved";
+  const insuranceReviewed = profile.insuranceVerified === true;
   const goldShieldVerified = getGoldShieldVerified(profile);
   const externalReviewLinks = getExternalReviewLinks(profile);
 
+  const trustSignals = [
+    identityChecked
+      ? {
+          label: "ID name matched",
+          detail: "SaskHandy reviewed ID and matched it to the profile name.",
+        }
+      : null,
+    criminalRecordCheckReviewed
+      ? {
+          label: "Criminal record check reviewed",
+          detail: "A submitted criminal record check was reviewed by SaskHandy.",
+        }
+      : null,
+    tradeLicenseVerified
+      ? {
+          label: profile.tradeLicenseType
+            ? `${profile.tradeLicenseType} licence verified`
+            : "Trade licence verified",
+          detail: "Trade licence information was reviewed for this profile.",
+        }
+      : null,
+    insuranceReviewed
+      ? {
+          label: "Insurance reviewed",
+          detail: "An insurance document was submitted and reviewed.",
+        }
+      : null,
+  ].filter(Boolean) as Array<{ label: string; detail: string }>;
+
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-8">
-          <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-            <ProfileAvatar imageUrl={profile.profileImageUrl} name={displayName} />
+      <div className="max-w-3xl mx-auto space-y-5">
+        <section className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+          <div className="p-5 sm:p-7">
+            <div className="flex items-start gap-4 sm:gap-5">
+              <ProfileAvatar imageUrl={profile.profileImageUrl} name={displayName} />
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-xl font-serif text-foreground">{displayName}</h1>
-
-                {goldShieldVerified && (
-                  <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    Gold Shield
-                  </span>
-                )}
-
-                {identityChecked && (
-                  <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    ID Name Matched
-                  </span>
-                )}
-
-                {criminalRecordCheckReviewed && (
-                  <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    Criminal check reviewed
-                  </span>
-                )}
-
-                {tradeLicenseVerified && (
-                  <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    Licence verified
-                  </span>
-                )}
-
-                {profile.insuranceVerified && (
-                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    Insurance reviewed
-                  </span>
-                )}
-
-                {isNewToSaskHandy && (
-                  <span className="text-xs bg-slate-50 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-full font-medium">
-                    New to SaskHandy
-                  </span>
-                )}
-
-                {hasNoReviews && (
-                  <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                    No reviews yet
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-4 mb-3 flex-wrap">
-                {ratingValue > 0 ? (
-                  <StarRatingDisplay rating={ratingValue} showValue />
-                ) : (
-                  <span className="text-sm text-muted-foreground">No ratings yet</span>
-                )}
-
-                <span className="text-sm text-muted-foreground">
-                  <Briefcase className="w-3.5 h-3.5 inline mr-1" />
-                  {completedJobs} jobs completed
-                </span>
-              </div>
-
-              {hourlyRateValue !== null && !Number.isNaN(hourlyRateValue) && (
-                <p className="text-sm font-medium text-foreground">
-                  ${hourlyRateValue.toFixed(0)}/hr
-                </p>
-              )}
-
-              {profile.serviceArea && (
-                <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  <span>{profile.serviceArea}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl font-serif text-foreground">{displayName}</h1>
+                  {goldShieldVerified && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                      <Shield className="w-3.5 h-3.5" />
+                      Gold Shield
+                    </span>
+                  )}
+                  {isNewToSaskHandy && (
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+                      New to SaskHandy
+                    </span>
+                  )}
                 </div>
-              )}
 
-              {externalReviewLinks.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-                  <span className="text-muted-foreground">External reviews:</span>
+                <div className="mt-2 flex items-center gap-x-4 gap-y-2 flex-wrap text-sm">
+                  {ratingValue > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <StarRatingDisplay rating={ratingValue} showValue />
+                      <span className="text-muted-foreground">
+                        ({reviewCount} {reviewCount === 1 ? "review" : "reviews"})
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">No SaskHandy rating yet</span>
+                  )}
+
+                  <span className="text-muted-foreground">
+                    <Briefcase className="w-3.5 h-3.5 inline mr-1" />
+                    {completedJobs} {completedJobs === 1 ? "job" : "jobs"} completed
+                  </span>
+                </div>
+
+                <div className="mt-2 flex items-center gap-4 flex-wrap text-sm">
+                  {profile.serviceArea && (
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {profile.serviceArea}
+                    </span>
+                  )}
+                  {hourlyRateValue !== null && !Number.isNaN(hourlyRateValue) && (
+                    <span className="font-semibold text-foreground">
+                      ${hourlyRateValue.toFixed(0)}/hr
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {profile.bio?.trim() && (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold text-foreground mb-2">About</h2>
+                <p className="text-sm text-muted-foreground leading-6">{profile.bio}</p>
+              </div>
+            )}
+
+            {categories.length > 0 && (
+              <div className="mt-5">
+                <h2 className="text-sm font-semibold text-foreground mb-2.5">Services</h2>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((cat) => (
+                    <span
+                      key={cat}
+                      className="text-xs bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full font-medium"
+                    >
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-border/50 bg-muted/20 p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="font-semibold text-foreground">Trust & verification</h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Signals SaskHandy has reviewed for this profile.
+                </p>
+              </div>
+              {trustSignals.length > 0 && (
+                <span className="text-xs font-semibold text-primary shrink-0">
+                  {trustSignals.length} {trustSignals.length === 1 ? "signal" : "signals"}
+                </span>
+              )}
+            </div>
+
+            {trustSignals.length > 0 ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {trustSignals.map((signal) => (
+                  <div
+                    key={signal.label}
+                    className="rounded-xl border border-border/60 bg-white p-3.5 flex items-start gap-2.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{signal.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        {signal.detail}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border/60 bg-white p-4">
+                <p className="text-sm font-medium text-foreground">No optional trust checks shown yet</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Review their experience, messages and any past-work links before deciding.
+                </p>
+              </div>
+            )}
+
+            {goldShieldVerified && (
+              <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                <strong className="text-foreground">Gold Shield</strong> means both the ID name match and criminal record check review are complete. Trust signals help you decide, but they are not a guarantee of safety or work quality.
+              </p>
+            )}
+
+            {externalReviewLinks.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-border/50">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Past work & external reviews</p>
+                <div className="flex flex-wrap gap-2">
                   {externalReviewLinks.map((link) => (
                     <a
                       key={link.label}
                       href={link.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary"
                     >
                       {link.label}
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   ))}
                 </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  External links are supplied by the handyman. Review them independently.
+                </p>
+              </div>
+            )}
+
+            {hasNoReviews && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+                <p className="text-sm font-medium text-amber-900">No SaskHandy reviews yet</p>
+                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                  This can simply mean they are new to the platform. Use bid chat to ask about relevant experience and review any past-work links before choosing.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-500" />
+              <h2 className="font-semibold text-foreground">SaskHandy reviews</h2>
+              {safeReviews.length > 0 && (
+                <span className="text-sm text-muted-foreground">({safeReviews.length})</span>
               )}
-
-              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                Review this handyman’s services, experience, service area, external review links,
-                rating, and trust signals before choosing them for a job.
-              </p>
             </div>
-          </div>
-
-          <div className="mt-5 pt-5 border-t border-border/40">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground">Bid-ready profile</p>
-              <p className="text-xs font-semibold text-foreground">{bidReadyCompletion}%</p>
-            </div>
-
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all"
-                style={{ width: `${bidReadyCompletion}%` }}
-              />
-            </div>
-
-            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              SaskHandy requires a full name, profile photo, short bio, skills, and ID Name Matched
-              approval before a handyman can send bids.
-            </p>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-              <div className="flex items-start gap-2">
-                <MessageSquare className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Message before choosing</p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    You can ask about experience, availability, materials, service area, external
-                    reviews, and job details before moving forward.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-              <div className="flex items-start gap-2">
-                <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Payment protection</p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    If you choose this handyman, payment is held through SaskHandy until you mark the
-                    job complete.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {hasNoReviews && (
-            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-amber-900">No SaskHandy reviews yet</p>
-                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                    This handyman has not completed a reviewed job on SaskHandy yet. Consider
-                    messaging them first and reviewing any external links they added for past work or reviews.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {externalReviewLinks.length > 0 && (
-            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
-              <div className="flex items-start gap-2">
-                <ExternalLink className="w-4 h-4 text-blue-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-blue-900">External review sources</p>
-                  <p className="text-xs text-blue-800 mt-1 leading-relaxed">
-                    This handyman linked outside review or portfolio sources while building
-                    SaskHandy reviews. Review these links yourself before choosing.
-                  </p>
-
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {externalReviewLinks.map((link) => (
-                      <a
-                        key={link.label}
-                        href={link.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 rounded-full bg-white border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700 hover:underline"
-                      >
-                        {link.label}
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {profile.bio?.trim() && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
-            </div>
-          )}
-
-          {categories.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Services</p>
-
-              <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => (
-                  <span
-                    key={cat}
-                    className="text-xs bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full font-medium"
-                  >
-                    {cat}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {goldShieldVerified && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-2">
-                <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">Gold Shield</p>
-                  <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                    Gold Shield means this handyman has ID Name Matched and Criminal Record Check
-                    Reviewed badges. It helps you review trust signals, but it does not guarantee
-                    safety or replace your own judgment.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {identityChecked && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-2">
-                <Shield className="w-4 h-4 text-blue-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-blue-800">ID Name Matched</p>
-                  <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                    This means SaskHandy reviewed identification and confirmed the handyman’s profile name matches the ID. It
-                    does not replace your own judgment. You can message the handyman before choosing
-                    and should only move forward when you feel comfortable.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {criminalRecordCheckReviewed && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-2">
-                <Shield className="w-4 h-4 text-purple-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-purple-800">Criminal record check reviewed</p>
-                  <p className="text-xs text-purple-700 mt-1 leading-relaxed">
-                    This means SaskHandy reviewed an uploaded criminal record check document. It
-                    does not guarantee safety or replace your own judgment.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {tradeLicenseVerified && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 flex items-start gap-2">
-                <Shield className="w-4 h-4 text-sky-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-sky-800">Trade licence verified</p>
-                  <p className="text-xs text-sky-700 mt-1 leading-relaxed">
-                    SaskHandy reviewed this handyman’s uploaded trade licence information
-                    {profile.tradeLicenseType ? ` for ${profile.tradeLicenseType}` : ""}.
-                    Always confirm the work is appropriate for the job before choosing.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {profile.insuranceVerified && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-2">
-                <Shield className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-emerald-800">Insurance reviewed</p>
-                  <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
-                    This handyman uploaded an insurance document that was reviewed by admin.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-5 pt-5 border-t border-border/40">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-destructive/30 text-destructive hover:bg-destructive/5"
-              onClick={() => setReportOpen(true)}
-            >
-              <Flag className="w-4 h-4 mr-2" />
-              Report a concern about this profile
-            </Button>
-
-            <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Report this profile</DialogTitle>
-                  <DialogDescription>
-                    Tell us what concerns you. Reports are reviewed by the SaskHandy team.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <label htmlFor="report-reason" className="text-sm font-medium">
-                      Reason
-                    </label>
-                    <select
-                      id="report-reason"
-                      value={reportReason}
-                      onChange={(event) =>
-                        setReportReason(event.target.value as typeof reportReason)
-                      }
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      <option value="unsafe">Unsafe behaviour</option>
-                      <option value="suspicious_profile">Suspicious profile</option>
-                      <option value="false_information">False information</option>
-                      <option value="off_platform_payment">Off-platform payment request</option>
-                      <option value="other">Other concern</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="report-details" className="text-sm font-medium">
-                      Details <span className="font-normal text-muted-foreground">(optional)</span>
-                    </label>
-                    <Textarea
-                      id="report-details"
-                      value={reportDetails}
-                      onChange={(event) => setReportDetails(event.target.value)}
-                      maxLength={1000}
-                      rows={5}
-                      placeholder="Describe what happened or what looks concerning..."
-                    />
-                    <p className="text-right text-xs text-muted-foreground">
-                      {reportDetails.length}/1000
-                    </p>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setReportOpen(false)}
-                    disabled={createReport.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() =>
-                      createReport.mutate({
-                        reportedUserId: uid,
-                        reason: reportReason,
-                        details: reportDetails.trim() || undefined,
-                      })
-                    }
-                    disabled={createReport.isPending || uid <= 0}
-                  >
-                    {createReport.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Submit report
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Star className="w-4 h-4 text-amber-500" />
-            <h2 className="font-semibold text-foreground">Reviews</h2>
-            {safeReviews.length > 0 && (
-              <span className="text-sm text-muted-foreground">({safeReviews.length})</span>
+            {ratingValue > 0 && (
+              <StarRatingDisplay rating={ratingValue} size="sm" showValue />
             )}
           </div>
 
@@ -611,11 +395,11 @@ export default function PublicProfile() {
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
             </div>
           ) : safeReviews.length === 0 ? (
-            <div className="text-center py-6">
-              <Star className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <div className="rounded-xl bg-muted/30 py-8 text-center">
+              <Star className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm font-medium text-foreground">No reviews yet</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Reviews will appear here after completed jobs.
+                Reviews appear here after completed SaskHandy jobs.
               </p>
             </div>
           ) : (
@@ -657,14 +441,104 @@ export default function PublicProfile() {
                     </div>
 
                     {review.comment?.trim() && (
-                      <p className="text-sm text-muted-foreground ml-9">{review.comment}</p>
+                      <p className="text-sm text-muted-foreground ml-9 leading-relaxed">
+                        {review.comment}
+                      </p>
                     )}
                   </div>
                 );
               })}
             </div>
           )}
+        </section>
+
+        <div className="flex justify-center pb-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => setReportOpen(true)}
+          >
+            <Flag className="w-4 h-4 mr-2" />
+            Report a concern about this profile
+          </Button>
         </div>
+
+        <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Report this profile</DialogTitle>
+              <DialogDescription>
+                Tell us what concerns you. Reports are reviewed by the SaskHandy team.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label htmlFor="report-reason" className="text-sm font-medium">
+                  Reason
+                </label>
+                <select
+                  id="report-reason"
+                  value={reportReason}
+                  onChange={(event) =>
+                    setReportReason(event.target.value as typeof reportReason)
+                  }
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="unsafe">Unsafe behaviour</option>
+                  <option value="suspicious_profile">Suspicious profile</option>
+                  <option value="false_information">False information</option>
+                  <option value="off_platform_payment">Off-platform payment request</option>
+                  <option value="other">Other concern</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="report-details" className="text-sm font-medium">
+                  Details <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Textarea
+                  id="report-details"
+                  value={reportDetails}
+                  onChange={(event) => setReportDetails(event.target.value)}
+                  maxLength={1000}
+                  rows={5}
+                  placeholder="Describe what happened or what looks concerning..."
+                />
+                <p className="text-right text-xs text-muted-foreground">
+                  {reportDetails.length}/1000
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReportOpen(false)}
+                disabled={createReport.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() =>
+                  createReport.mutate({
+                    reportedUserId: uid,
+                    reason: reportReason,
+                    details: reportDetails.trim() || undefined,
+                  })
+                }
+                disabled={createReport.isPending || uid <= 0}
+              >
+                {createReport.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit report
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
