@@ -2106,6 +2106,72 @@ const disputesRouter = router({
 });
 
 const messagesRouter = router({
+  getInbox: protectedProcedure.query(async ({ ctx }) => {
+    const isHandyman = ctx.user.userType === "handyman";
+    const allJobs = isHandyman
+      ? await getJobsForHandyman(ctx.user.id)
+      : await getJobsByHomeowner(ctx.user.id);
+
+    const conversationJobs = isHandyman
+      ? allJobs
+      : allJobs.filter((job) => !!job.selectedHandymanId);
+
+    const conversations = await Promise.all(
+      conversationJobs.map(async (job) => {
+        const generalMessages = await getMessagesForJob(job.id);
+        const bidMessages = job.selectedBidId
+          ? await getMessagesForBid(job.id, job.selectedBidId)
+          : [];
+
+        const messageMap = new Map<number, (typeof generalMessages)[number]>();
+        [...generalMessages, ...bidMessages].forEach((message) => {
+          messageMap.set(message.id, message);
+        });
+
+        const conversationMessages = Array.from(messageMap.values()).sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        const latestMessage = conversationMessages.at(-1) ?? null;
+
+        const generalUnread = await getUnreadCount(job.id, ctx.user.id);
+        const bidUnread = job.selectedBidId
+          ? await getUnreadCountForBid(job.id, job.selectedBidId, ctx.user.id)
+          : 0;
+
+        const otherPartyId = isHandyman ? job.homeownerId : job.selectedHandymanId;
+        const otherParty = otherPartyId ? await safeGetUserById(otherPartyId) : null;
+        const lastSender = latestMessage ? await safeGetUserById(latestMessage.senderId) : null;
+
+        return {
+          id: job.id,
+          title: job.title,
+          status: job.status,
+          location: job.location,
+          selectedBidId: job.selectedBidId,
+          updatedAt: job.updatedAt,
+          createdAt: job.createdAt,
+          otherPartyName:
+            otherParty?.name ?? (isHandyman ? "Homeowner" : "Handyman"),
+          unreadCount: generalUnread + bidUnread,
+          lastMessage: latestMessage
+            ? {
+                content: latestMessage.content,
+                createdAt: latestMessage.createdAt,
+                senderId: latestMessage.senderId,
+                senderName: lastSender?.name ?? null,
+              }
+            : null,
+        };
+      })
+    );
+
+    return conversations.sort((a, b) => {
+      const aTime = new Date(a.lastMessage?.createdAt ?? a.updatedAt ?? a.createdAt).getTime();
+      const bTime = new Date(b.lastMessage?.createdAt ?? b.updatedAt ?? b.createdAt).getTime();
+      return bTime - aTime;
+    });
+  }),
+
   create: protectedProcedure
     .input(
       z.object({
@@ -2289,11 +2355,23 @@ const messagesRouter = router({
       z.object({
         jobId: z.number(),
         bidId: z.number().optional(),
+        includeJobThread: z.boolean().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       if (input.bidId) {
-        return getUnreadCountForBid(input.jobId, input.bidId, ctx.user.id);
+        const bidUnread = await getUnreadCountForBid(
+          input.jobId,
+          input.bidId,
+          ctx.user.id
+        );
+
+        if (input.includeJobThread) {
+          const jobUnread = await getUnreadCount(input.jobId, ctx.user.id);
+          return bidUnread + jobUnread;
+        }
+
+        return bidUnread;
       }
 
       return getUnreadCount(input.jobId, ctx.user.id);

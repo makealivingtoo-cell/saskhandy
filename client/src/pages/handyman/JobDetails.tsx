@@ -692,6 +692,7 @@ export default function HandymanJobDetails() {
             bidId={job.selectedBidId ?? undefined}
             includeJobThread
             paymentPending={job.status === "awaiting_payment"}
+            jobStatus={job.status}
             otherPartyLabel={job.homeownerName ?? "the homeowner"}
             description={
               job.status === "awaiting_payment"

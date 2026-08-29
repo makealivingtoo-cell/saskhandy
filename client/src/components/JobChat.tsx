@@ -14,6 +14,7 @@ interface JobChatProps {
   bidId?: number;
   includeJobThread?: boolean;
   paymentPending?: boolean;
+  jobStatus?: "open" | "awaiting_payment" | "in_progress" | "completed" | "disputed" | "cancelled";
   title?: string;
   description?: string;
   compact?: boolean;
@@ -32,6 +33,7 @@ export function JobChat({
   bidId,
   includeJobThread = false,
   paymentPending = false,
+  jobStatus,
   otherPartyLabel,
   title = "Chat",
   description,
@@ -71,6 +73,74 @@ export function JobChat({
   }, [messages.length]);
 
   const groupedMessages = useMemo(() => messages, [messages]);
+
+  const isHandyman = user?.userType === "handyman";
+
+  const coordinationCopy = useMemo(() => {
+    if (jobStatus === "awaiting_payment") {
+      return isHandyman
+        ? {
+            title: "Agree on timing while payment is pending",
+            body: "You can confirm availability now, but wait until payment is secured before starting work.",
+          }
+        : {
+            title: "Confirm availability while you finish payment",
+            body: "You can agree on a likely time now. Work should only start after SaskHandy confirms payment is secured.",
+          };
+    }
+
+    if (jobStatus === "in_progress") {
+      return isHandyman
+        ? {
+            title: "Coordinate the visit here",
+            body: "Confirm arrival time, access and materials. Send a quick update when you are on the way and when the work is ready to review.",
+          }
+        : {
+            title: "Keep the visit details in one place",
+            body: "Confirm arrival time, access and anything that needs to be ready. Check the work before marking the job complete.",
+          };
+    }
+
+    if (jobStatus === "completed") {
+      return {
+        title: "Job complete",
+        body: "Keep any final questions or follow-up notes in this conversation so the job history stays together.",
+      };
+    }
+
+    return null;
+  }, [isHandyman, jobStatus]);
+
+  const quickPrompts = useMemo(() => {
+    if (jobStatus === "awaiting_payment") {
+      return isHandyman
+        ? [
+            "Thanks — I’m available once payment is secured.",
+            "What day and time works best for you?",
+          ]
+        : [
+            "I’m completing payment now.",
+            "What day and time works best for you?",
+          ];
+    }
+
+    if (jobStatus === "in_progress") {
+      return isHandyman
+        ? [
+            "What arrival time works best for you?",
+            "I’m on my way.",
+            "I’ve arrived.",
+            "The work is ready for you to check.",
+          ]
+        : [
+            "What time should I expect you?",
+            "Please message me when you’re on the way.",
+            "Do I need to have anything ready?",
+          ];
+    }
+
+    return [];
+  }, [isHandyman, jobStatus]);
 
   const handleSend = () => {
     const content = message.trim();
@@ -126,6 +196,15 @@ export function JobChat({
               to the handyman until the homeowner marks the job complete.
             </p>
           </div>
+        </div>
+      )}
+
+      {coordinationCopy && !compact && (
+        <div className="border-b border-primary/10 bg-primary/[0.035] px-5 py-3">
+          <p className="text-xs font-semibold text-foreground">{coordinationCopy.title}</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground mt-0.5">
+            {coordinationCopy.body}
+          </p>
         </div>
       )}
 
@@ -211,6 +290,21 @@ export function JobChat({
         )}
 
         <div className={cn(compact ? "space-y-2" : "space-y-3")}>
+          {!compact && quickPrompts.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => setMessage(prompt)}
+                  className="shrink-0 rounded-full border border-border/70 bg-white px-3 py-1.5 text-[11px] font-medium text-foreground hover:border-primary/35 hover:bg-primary/5 transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
+
           <Textarea
             placeholder={`Write a message to ${otherPartyLabel}...`}
             value={message}

@@ -19,45 +19,18 @@ import {
 import { useState } from "react";
 import { useLocation } from "wouter";
 
-function useConversationJobs() {
-  const { user, isAuthenticated } = useAuth();
-
-  const homeownerJobs = trpc.jobs.getByHomeowner.useQuery(undefined, {
-    enabled: isAuthenticated && user?.userType !== "handyman",
-    refetchInterval: 10000,
-    refetchOnWindowFocus: true,
-  });
-
-  const handymanJobs = trpc.jobs.getForHandyman.useQuery(undefined, {
-    enabled: isAuthenticated && user?.userType === "handyman",
-    refetchInterval: 10000,
-    refetchOnWindowFocus: true,
-  });
-
-  const jobs =
-    user?.userType === "handyman"
-      ? handymanJobs.data ?? []
-      : (homeownerJobs.data ?? []).filter((job) => !!job.selectedHandymanId);
-
-  return { jobs };
-}
-
 export function useUnreadMessageTotal() {
-  const { jobs } = useConversationJobs();
+  const { isAuthenticated } = useAuth();
+  const inbox = trpc.messages.getInbox.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+  });
 
-  const unreadQueries = trpc.useQueries((t) =>
-    jobs.map((job) =>
-      t.messages.getUnreadCount(
-        { jobId: job.id },
-        {
-          refetchInterval: 10000,
-          refetchOnWindowFocus: true,
-        }
-      )
-    )
+  return (inbox.data ?? []).reduce(
+    (sum, conversation) => sum + conversation.unreadCount,
+    0
   );
-
-  return unreadQueries.reduce((sum, query) => sum + (query.data ?? 0), 0);
 }
 
 export function MessagesCounterBadge() {

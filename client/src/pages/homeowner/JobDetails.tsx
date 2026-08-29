@@ -1428,6 +1428,7 @@ export default function JobDetails() {
             bidId={job.selectedBidId ?? acceptedBid?.id}
             includeJobThread
             paymentPending={job.status === "awaiting_payment"}
+            jobStatus={job.status}
             otherPartyLabel={acceptedBid?.handymanName ?? "your handyman"}
             description={
               job.status === "awaiting_payment"
