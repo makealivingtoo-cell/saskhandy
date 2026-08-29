@@ -195,8 +195,11 @@ export function StripePaymentModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+    <div
+      className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/50 px-4 pt-4 backdrop-blur-sm sm:items-center sm:py-4"
+      style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+    >
+      <div className="flex max-h-[calc(100dvh-2rem-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:max-h-[90vh]">
         <div className="flex items-start justify-between gap-4 border-b border-border/60 p-5">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-foreground">
@@ -223,7 +226,10 @@ export function StripePaymentModal({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div
+          className="flex-1 overflow-y-auto p-5"
+          style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+        >
           {paymentSubmitted ? (
             <div className="py-3 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">

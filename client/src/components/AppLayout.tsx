@@ -262,7 +262,10 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         </div>
       </nav>
 
-      <main className="pt-14 pb-24 md:pb-0">
+      <main
+        className="pt-14 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0"
+        style={{ scrollPaddingBottom: "calc(7rem + env(safe-area-inset-bottom))" }}
+      >
         {title && (
           <div className="border-b border-border/40 bg-white">
             <div className="container py-4 md:py-6">
