@@ -23,7 +23,7 @@ import {
   Shield,
   User,
 } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,7 @@ function isActiveRoute(location: string, href: string) {
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { user, logout, isLoggingOut } = useAuth();
   const [location] = useLocation();
+  const [isTextInputFocused, setIsTextInputFocused] = useState(false);
 
   const navItems = user?.userType === "handyman" ? HANDYMAN_NAV : HOMEOWNER_NAV;
   const visibleNavItems =
@@ -102,6 +103,34 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
   const profileImageUrl =
     user?.userType === "handyman" ? handymanProfile?.profileImageUrl : null;
+
+  useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+
+      return target.matches(
+        'textarea, [contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="file"])'
+      );
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (isTypingTarget(event.target)) setIsTextInputFocused(true);
+    };
+
+    const handleFocusOut = () => {
+      window.setTimeout(() => {
+        setIsTextInputFocused(isTypingTarget(document.activeElement));
+      }, 0);
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -278,7 +307,10 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
       <nav
         aria-label="Primary mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-white/95 backdrop-blur md:hidden"
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-white/95 backdrop-blur transition-transform duration-150 md:hidden",
+          isTextInputFocused && "pointer-events-none translate-y-full"
+        )}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div

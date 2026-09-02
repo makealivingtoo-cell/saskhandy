@@ -1,6 +1,4 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { format, formatDistanceToNow } from "date-fns";
 import { Loader2, MessageSquare, Send, Shield } from "lucide-react";
@@ -44,6 +42,7 @@ export function JobChat({
   const utils = trpc.useUtils();
   const [message, setMessage] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
 
   const queryInput = bidId
     ? { jobId, bidId, includeJobThread }
@@ -62,6 +61,8 @@ export function JobChat({
       await utils.messages.getUnreadCount.invalidate(
         bidId ? { jobId, bidId } : { jobId }
       );
+
+      requestAnimationFrame(() => composerRef.current?.focus());
     },
     onError: (err) => toast.error(err.message),
   });
@@ -71,6 +72,14 @@ export function JobChat({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
+
+  useEffect(() => {
+    const textarea = composerRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 112)}px`;
+  }, [message]);
 
   const groupedMessages = useMemo(() => messages, [messages]);
 
@@ -278,71 +287,79 @@ export function JobChat({
         </div>
       )}
 
-      <div className={cn("border-t border-border/40 shrink-0", compact ? "p-2.5" : "p-4")}>
-        {!compact && (
-          <div className="mb-3 flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/15 px-3 py-2">
-            <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Keep messages, contact details, and payment communication on SaskHandy for safety,
-              payment protection, and dispute support.
-            </p>
+      <div
+        className={cn(
+          "border-t border-border/40 shrink-0 bg-white",
+          compact ? "px-2.5 py-2" : "px-3 py-3 sm:px-4"
+        )}
+      >
+        {!compact && quickPrompts.length > 0 && (
+          <div className="mb-2 flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+            {quickPrompts.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => {
+                  setMessage(prompt);
+                  requestAnimationFrame(() => composerRef.current?.focus());
+                }}
+                className="shrink-0 rounded-full border border-border/70 bg-white px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:border-primary/35 hover:bg-primary/5"
+              >
+                {prompt}
+              </button>
+            ))}
           </div>
         )}
 
-        <div className={cn(compact ? "space-y-2" : "space-y-3")}>
-          {!compact && quickPrompts.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {quickPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => setMessage(prompt)}
-                  className="shrink-0 rounded-full border border-border/70 bg-white px-3 py-1.5 text-[11px] font-medium text-foreground hover:border-primary/35 hover:bg-primary/5 transition-colors"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <Textarea
-            placeholder={`Write a message to ${otherPartyLabel}...`}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={compact ? 1 : 3}
-            className="resize-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-          />
-
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] text-muted-foreground">
-              {compact ? "Stay on SaskHandy for safety" : "Press Ctrl + Enter to send"}
-            </p>
-
-            <Button
-              size={compact ? "sm" : "default"}
-              onClick={handleSend}
-              disabled={sendMessage.isPending || !message.trim()}
-            >
-              {sendMessage.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send
-                </>
-              )}
-            </Button>
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1 rounded-[24px] border border-border/70 bg-muted/20 shadow-sm transition-colors focus-within:border-primary/55 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/10">
+            <textarea
+              ref={composerRef}
+              aria-label={`Message ${otherPartyLabel}`}
+              placeholder={`Message ${otherPartyLabel}...`}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={1}
+              className="block max-h-28 min-h-11 w-full resize-none overflow-y-auto bg-transparent px-4 py-[10px] text-base leading-6 text-foreground outline-none placeholder:text-muted-foreground sm:text-sm"
+              onFocus={() => {
+                window.setTimeout(() => {
+                  composerRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+                }, 250);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
           </div>
+
+          <button
+            type="button"
+            aria-label="Send message"
+            title="Send message"
+            onClick={handleSend}
+            disabled={sendMessage.isPending || !message.trim()}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all enabled:hover:bg-primary/90 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {sendMessage.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5 translate-x-[1px]" />
+            )}
+          </button>
         </div>
+
+        {!compact && (
+          <div className="mt-1.5 flex items-center gap-1.5 px-1 text-[10px] text-muted-foreground">
+            <Shield className="h-3 w-3 shrink-0 text-primary/70" />
+            <span>Keep job communication on SaskHandy for protection.</span>
+          </div>
+        )}
       </div>
     </div>
   );
