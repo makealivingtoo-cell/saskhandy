@@ -8,7 +8,6 @@ import {
   markMessageAsRead,
   getUnreadCount,
   getUnreadCountForBid,
-  getTotalUnreadCountForUser,
 } from "./db-messages";
 import {
   sendVerificationEmail,
@@ -2355,11 +2354,6 @@ const disputesRouter = router({
 });
 
 const messagesRouter = router({
-  // Header/nav badge: one lightweight query instead of rebuilding the full inbox.
-  getTotalUnread: protectedProcedure.query(async ({ ctx }) => {
-    return getTotalUnreadCountForUser(ctx.user.id);
-  }),
-
   getInbox: protectedProcedure.query(async ({ ctx }) => {
     const isHandyman = ctx.user.userType === "handyman";
     const allJobs = isHandyman
