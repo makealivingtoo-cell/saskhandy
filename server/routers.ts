@@ -228,13 +228,16 @@ function buildHandymanBidTrustFields(params: {
     handymanName: params.user?.name,
     handymanRating: params.profile?.rating,
     handymanTotalJobs: params.profile?.totalJobs ?? 0,
-    handymanReviewCount: params.profile?.reviewCount ?? params.profile?.totalReviews ?? 0,
+    handymanReviewCount:
+      params.profile?.reviewCount ?? params.profile?.totalReviews ?? 0,
     handymanInsuranceVerified: params.profile?.insuranceVerified ?? false,
     handymanProfileImageUrl: params.profile?.profileImageUrl ?? null,
     handymanBio: params.profile?.bio ?? null,
     handymanServiceArea: params.profile?.serviceArea ?? null,
-    handymanExternalGoogleReviewsUrl: params.profile?.externalGoogleReviewsUrl ?? null,
-    handymanExternalFacebookReviewsUrl: params.profile?.externalFacebookReviewsUrl ?? null,
+    handymanExternalGoogleReviewsUrl:
+      params.profile?.externalGoogleReviewsUrl ?? null,
+    handymanExternalFacebookReviewsUrl:
+      params.profile?.externalFacebookReviewsUrl ?? null,
     handymanExternalWebsiteUrl: params.profile?.externalWebsiteUrl ?? null,
     handymanSkills: categories,
     handymanIdentityChecked: getProfileIdentityChecked(params.profile),
@@ -259,7 +262,8 @@ function normalizeRequiredPhoneNumber(phoneNumber: string) {
   if (!normalized) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "Please enter a valid phone number so SaskHandy can send important job updates.",
+      message:
+        "Please enter a valid phone number so SaskHandy can send important job updates.",
     });
   }
 
@@ -315,7 +319,8 @@ async function safeGetUserByEmail(email: string) {
     console.error("[Auth] getUserByEmail failed:", error?.message ?? error);
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: "Unable to process your request right now. Please try again shortly.",
+      message:
+        "Unable to process your request right now. Please try again shortly.",
     });
   }
 }
@@ -327,7 +332,8 @@ async function safeGetUserById(userId: number) {
     console.error("[Auth] getUserById failed:", error?.message ?? error);
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: "Unable to process your request right now. Please try again shortly.",
+      message:
+        "Unable to process your request right now. Please try again shortly.",
     });
   }
 }
@@ -423,7 +429,6 @@ async function createAndSendPasswordReset(user: {
   }
 }
 
-
 function generateTwoFactorCode() {
   return randomInt(100000, 1000000).toString();
 }
@@ -456,7 +461,10 @@ async function createSessionForUser(ctx: any, user: any) {
   });
 
   const cookieOptions = getSessionCookieOptions(ctx.req);
-  ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+  ctx.res.cookie(COOKIE_NAME, sessionToken, {
+    ...cookieOptions,
+    maxAge: ONE_YEAR_MS,
+  });
 
   return latestUser;
 }
@@ -551,7 +559,8 @@ async function releasePaymentToHandyman(params: {
 
   if (profile) {
     const newEarnings = (
-      parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)
+      parseFloat(profile.totalEarnings ?? "0") +
+      parseFloat(payment.handymanPayout)
     ).toFixed(2);
 
     await updateHandymanProfile(params.handymanId, {
@@ -582,7 +591,7 @@ const authRouter = router({
         marketingOptIn: z.boolean().default(false),
         termsVersion: z.string().min(1),
         privacyVersion: z.string().min(1),
-      })
+      }),
     )
     .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
@@ -599,7 +608,8 @@ const authRouter = router({
       if (input.userType === "handyman" && input.skills.length < 1) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Please select at least one skill so we can match you with jobs.",
+          message:
+            "Please select at least one skill so we can match you with jobs.",
         });
       }
 
@@ -637,7 +647,7 @@ const authRouter = router({
             name: user.name,
             userType: input.userType,
             marketingOptIn: input.marketingOptIn,
-          })
+          }),
         );
       }
 
@@ -696,7 +706,7 @@ const authRouter = router({
     .input(
       z.object({
         email: z.string().email(),
-      })
+      }),
     )
     .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
@@ -719,7 +729,7 @@ const authRouter = router({
       z.object({
         token: z.string().min(10),
         password: z.string().min(6).max(100),
-      })
+      }),
     )
     .mutation(async ({ input }) => {
       const resetToken = await getValidPasswordResetToken(input.token);
@@ -754,7 +764,7 @@ const authRouter = router({
       z.object({
         email: z.string().email(),
         password: z.string().min(6).max(100),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const email = normalizeEmail(input.email);
@@ -783,9 +793,15 @@ const authRouter = router({
         });
       }
 
-      const adminEmails = ["donovanmmoyo@gmail.com"].map((value) => value.toLowerCase());
+      const adminEmails = ["donovanmmoyo@gmail.com"].map((value) =>
+        value.toLowerCase(),
+      );
 
-      if (user.email && adminEmails.includes(user.email.toLowerCase()) && user.role !== "admin") {
+      if (
+        user.email &&
+        adminEmails.includes(user.email.toLowerCase()) &&
+        user.role !== "admin"
+      ) {
         await upsertUser({
           openId: user.openId,
           role: "admin",
@@ -829,7 +845,7 @@ const authRouter = router({
         email: z.string().email(),
         challengeId: z.string().min(20),
         code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code."),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const email = normalizeEmail(input.email);
@@ -888,7 +904,7 @@ const authRouter = router({
     .input(
       z.object({
         confirmation: z.literal("DELETE"),
-      })
+      }),
     )
     .mutation(async ({ ctx }) => {
       if (ctx.user.role === "admin") {
@@ -904,7 +920,7 @@ const authRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `You cannot delete your account yet because you have: ${deletionStatus.blockers.join(
-            ", "
+            ", ",
           )}. Please resolve these first.`,
         });
       }
@@ -939,7 +955,7 @@ const authRouter = router({
             name: ctx.user.name,
             userType: input.userType,
             marketingOptIn: (ctx.user as any).marketingOptIn ?? false,
-          })
+          }),
         );
       }
 
@@ -952,18 +968,20 @@ const handymanProfilesRouter = router({
     return getHandymanProfile(ctx.user.id);
   }),
 
-  getById: publicProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
-    const profile = await getHandymanProfile(input.userId);
-    const user = await safeGetUserById(input.userId);
+  getById: publicProcedure
+    .input(z.object({ userId: z.number() }))
+    .query(async ({ input }) => {
+      const profile = await getHandymanProfile(input.userId);
+      const user = await safeGetUserById(input.userId);
 
-    if (!profile || !user) return null;
+      if (!profile || !user) return null;
 
-    return {
-      ...profile,
-      userName: user?.name,
-      userEmail: user?.email,
-    };
-  }),
+      return {
+        ...profile,
+        userName: user?.name,
+        userEmail: user?.email,
+      };
+    }),
 
   getAll: publicProcedure.query(async () => {
     return getAllHandymanProfiles();
@@ -980,14 +998,18 @@ const handymanProfilesRouter = router({
         profileImageUrl: z.string().optional(),
         serviceArea: z.string().max(500).optional(),
         externalGoogleReviewsUrl: z.string().url().optional().or(z.literal("")),
-        externalFacebookReviewsUrl: z.string().url().optional().or(z.literal("")),
+        externalFacebookReviewsUrl: z
+          .string()
+          .url()
+          .optional()
+          .or(z.literal("")),
         externalWebsiteUrl: z.string().url().optional().or(z.literal("")),
         identityDocumentUrl: z.string().optional(),
         criminalRecordCheckUrl: z.string().optional(),
         tradeLicenseDocumentUrl: z.string().optional(),
         tradeLicenseType: z.string().max(120).optional(),
         tradeLicenseNumber: z.string().max(120).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const existing = await getHandymanProfile(ctx.user.id);
@@ -1034,20 +1056,25 @@ const handymanProfilesRouter = router({
       }
 
       if ("externalGoogleReviewsUrl" in input) {
-        dataToSave.externalGoogleReviewsUrl = input.externalGoogleReviewsUrl?.trim() || null;
+        dataToSave.externalGoogleReviewsUrl =
+          input.externalGoogleReviewsUrl?.trim() || null;
       }
 
       if ("externalFacebookReviewsUrl" in input) {
-        dataToSave.externalFacebookReviewsUrl = input.externalFacebookReviewsUrl?.trim() || null;
+        dataToSave.externalFacebookReviewsUrl =
+          input.externalFacebookReviewsUrl?.trim() || null;
       }
 
       if ("externalWebsiteUrl" in input) {
-        dataToSave.externalWebsiteUrl = input.externalWebsiteUrl?.trim() || null;
+        dataToSave.externalWebsiteUrl =
+          input.externalWebsiteUrl?.trim() || null;
       }
 
       if ("identityDocumentUrl" in input) {
         dataToSave.identityDocumentUrl = input.identityDocumentUrl;
-        dataToSave.identityVerificationStatus = input.identityDocumentUrl ? "pending" : "not_submitted";
+        dataToSave.identityVerificationStatus = input.identityDocumentUrl
+          ? "pending"
+          : "not_submitted";
         dataToSave.identityReviewedAt = null;
         dataToSave.identityReviewedBy = null;
         dataToSave.identityRejectionReason = null;
@@ -1055,7 +1082,9 @@ const handymanProfilesRouter = router({
 
       if ("criminalRecordCheckUrl" in input) {
         dataToSave.criminalRecordCheckUrl = input.criminalRecordCheckUrl;
-        dataToSave.criminalRecordCheckStatus = input.criminalRecordCheckUrl ? "pending" : "not_submitted";
+        dataToSave.criminalRecordCheckStatus = input.criminalRecordCheckUrl
+          ? "pending"
+          : "not_submitted";
         dataToSave.criminalRecordCheckReviewedAt = null;
         dataToSave.criminalRecordCheckReviewedBy = null;
         dataToSave.criminalRecordCheckNotes = null;
@@ -1063,7 +1092,8 @@ const handymanProfilesRouter = router({
 
       if ("tradeLicenseDocumentUrl" in input) {
         dataToSave.tradeLicenseDocumentUrl = input.tradeLicenseDocumentUrl;
-        dataToSave.tradeLicenseVerificationStatus = input.tradeLicenseDocumentUrl ? "pending" : "not_submitted";
+        dataToSave.tradeLicenseVerificationStatus =
+          input.tradeLicenseDocumentUrl ? "pending" : "not_submitted";
         dataToSave.tradeLicenseReviewedAt = null;
         dataToSave.tradeLicenseReviewedBy = null;
         dataToSave.tradeLicenseRejectionReason = null;
@@ -1074,7 +1104,8 @@ const handymanProfilesRouter = router({
       }
 
       if ("tradeLicenseNumber" in input) {
-        dataToSave.tradeLicenseNumber = input.tradeLicenseNumber?.trim() || null;
+        dataToSave.tradeLicenseNumber =
+          input.tradeLicenseNumber?.trim() || null;
       }
 
       if (existing) {
@@ -1088,15 +1119,23 @@ const handymanProfilesRouter = router({
           insuranceCertUrl: input.insuranceCertUrl,
           profileImageUrl: input.profileImageUrl,
           serviceArea: input.serviceArea?.trim() || null,
-          externalGoogleReviewsUrl: input.externalGoogleReviewsUrl?.trim() || null,
-          externalFacebookReviewsUrl: input.externalFacebookReviewsUrl?.trim() || null,
+          externalGoogleReviewsUrl:
+            input.externalGoogleReviewsUrl?.trim() || null,
+          externalFacebookReviewsUrl:
+            input.externalFacebookReviewsUrl?.trim() || null,
           externalWebsiteUrl: input.externalWebsiteUrl?.trim() || null,
           identityDocumentUrl: input.identityDocumentUrl,
-          identityVerificationStatus: input.identityDocumentUrl ? "pending" : "not_submitted",
+          identityVerificationStatus: input.identityDocumentUrl
+            ? "pending"
+            : "not_submitted",
           criminalRecordCheckUrl: input.criminalRecordCheckUrl,
-          criminalRecordCheckStatus: input.criminalRecordCheckUrl ? "pending" : "not_submitted",
+          criminalRecordCheckStatus: input.criminalRecordCheckUrl
+            ? "pending"
+            : "not_submitted",
           tradeLicenseDocumentUrl: input.tradeLicenseDocumentUrl,
-          tradeLicenseVerificationStatus: input.tradeLicenseDocumentUrl ? "pending" : "not_submitted",
+          tradeLicenseVerificationStatus: input.tradeLicenseDocumentUrl
+            ? "pending"
+            : "not_submitted",
           tradeLicenseType: input.tradeLicenseType?.trim() || null,
           tradeLicenseNumber: input.tradeLicenseNumber?.trim() || null,
         } as any);
@@ -1117,11 +1156,14 @@ const jobsRouter = router({
         photos: z.array(z.string().url()).max(8).optional(),
         budgetMin: z.number().positive(),
         budgetMax: z.number().positive(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.userType !== "homeowner" && ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only homeowners can post jobs" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only homeowners can post jobs",
+        });
       }
 
       const expiresAt = new Date();
@@ -1167,7 +1209,7 @@ const jobsRouter = router({
               category: input.category,
               location: input.location,
               jobId,
-            })
+            }),
           );
         }
       }
@@ -1186,7 +1228,7 @@ const jobsRouter = router({
         photos: z.array(z.string().url()).max(8).optional(),
         budgetMin: z.number().positive(),
         budgetMax: z.number().positive(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -1197,11 +1239,17 @@ const jobsRouter = router({
       }
 
       if (job.status !== "open") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be edited" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only open jobs can be edited",
+        });
       }
 
       if (job.selectedBidId || job.selectedHandymanId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "This job can no longer be edited" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This job can no longer be edited",
+        });
       }
 
       await updateJob(input.jobId, {
@@ -1228,7 +1276,10 @@ const jobsRouter = router({
       }
 
       if (job.status !== "open") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be removed" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only open jobs can be removed",
+        });
       }
 
       const bidList = await getBidsForJob(input.jobId);
@@ -1243,7 +1294,8 @@ const jobsRouter = router({
       if (payment) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "This job cannot be deleted because a payment record exists.",
+          message:
+            "This job cannot be deleted because a payment record exists.",
         });
       }
 
@@ -1267,7 +1319,7 @@ const jobsRouter = router({
           ])
           .optional(),
         details: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -1278,7 +1330,10 @@ const jobsRouter = router({
       }
 
       if (job.status !== "open") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only open jobs can be cancelled" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only open jobs can be cancelled",
+        });
       }
 
       if (job.selectedBidId || job.selectedHandymanId) {
@@ -1300,13 +1355,15 @@ const jobsRouter = router({
     return getJobsByHomeowner(ctx.user.id);
   }),
 
-  getById: publicProcedure.input(z.object({ jobId: z.number() })).query(async ({ input }) => {
-    const job = await getJobById(input.jobId);
-    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+  getById: publicProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-    const homeowner = await safeGetUserById(job.homeownerId);
-    return { ...job, homeownerName: homeowner?.name };
-  }),
+      const homeowner = await safeGetUserById(job.homeownerId);
+      return { ...job, homeownerName: homeowner?.name };
+    }),
 
   getOpen: publicProcedure
     .input(
@@ -1314,10 +1371,148 @@ const jobsRouter = router({
         limit: z.number().default(20),
         offset: z.number().default(0),
         category: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ input }) => {
       return getOpenJobs(input.limit, input.offset, input.category);
+    }),
+
+  markWorkReady: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const isAssignedHandyman = job.selectedHandymanId === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin";
+
+      if (!isAssignedHandyman && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Only the handyman assigned to this job can mark the work ready for review.",
+        });
+      }
+
+      if (job.status !== "in_progress") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Work can only be submitted for review after payment is secured and the job is in progress.",
+        });
+      }
+
+      if (job.workReadyAt) {
+        return { success: true, workReadyAt: job.workReadyAt };
+      }
+
+      const workReadyAt = new Date();
+      await updateJob(input.jobId, { workReadyAt });
+
+      await createMessage({
+        jobId: input.jobId,
+        bidId: job.selectedBidId ?? undefined,
+        senderId: ctx.user.id,
+        content: "The agreed work is finished and ready for you to review.",
+      });
+
+      await notifyUser({
+        userId: job.homeownerId,
+        type: "system",
+        title: "Work ready to review",
+        message: `${ctx.user.name ?? "Your handyman"} marked the work on "${job.title}" ready for your review.`,
+        link: `/jobs/${job.id}`,
+      });
+
+      const homeowner = await safeGetUserById(job.homeownerId);
+      if (homeowner?.email) {
+        void safeSendEmail("workReadyForReview", () =>
+          sendNewMessageEmail({
+            to: homeowner.email,
+            recipientName: homeowner.name,
+            senderName: ctx.user.name,
+            jobTitle: job.title,
+            jobId: job.id,
+          }),
+        );
+      }
+
+      void safeSendSms("workReadyForReview", () =>
+        sendNewMessageSms({
+          user: homeowner,
+          jobTitle: job.title,
+        }),
+      );
+
+      return { success: true, workReadyAt };
+    }),
+
+  requestChanges: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const isHomeowner = job.homeownerId === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin";
+
+      if (!isHomeowner && !isAdmin) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      if (job.status !== "in_progress" || !job.workReadyAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This job is not currently waiting for homeowner review.",
+        });
+      }
+
+      if (!job.selectedHandymanId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No handyman is assigned to this job.",
+        });
+      }
+
+      await updateJob(input.jobId, { workReadyAt: null });
+
+      await createMessage({
+        jobId: input.jobId,
+        bidId: job.selectedBidId ?? undefined,
+        senderId: ctx.user.id,
+        content:
+          "I need a few changes before I can approve the job. I’ll add the details here.",
+      });
+
+      await notifyUser({
+        userId: job.selectedHandymanId,
+        type: "system",
+        title: "Changes requested",
+        message: `${ctx.user.name ?? "The homeowner"} requested changes on "${job.title}" before completion can be approved.`,
+        link: `/handyman/jobs/${job.id}`,
+      });
+
+      const handyman = await safeGetUserById(job.selectedHandymanId);
+      if (handyman?.email) {
+        void safeSendEmail("workChangesRequested", () =>
+          sendNewMessageEmail({
+            to: handyman.email,
+            recipientName: handyman.name,
+            senderName: ctx.user.name,
+            jobTitle: job.title,
+            jobId: job.id,
+          }),
+        );
+      }
+
+      void safeSendSms("workChangesRequested", () =>
+        sendNewMessageSms({
+          user: handyman,
+          jobTitle: job.title,
+        }),
+      );
+
+      return { success: true };
     }),
 
   updateStatus: protectedProcedure
@@ -1332,7 +1527,7 @@ const jobsRouter = router({
           "disputed",
           "cancelled",
         ]),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -1342,7 +1537,21 @@ const jobsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      if (input.status === "completed" && job.selectedHandymanId) {
+      if (input.status === "completed") {
+        if (job.status !== "in_progress") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Only an in-progress job can be marked complete.",
+          });
+        }
+
+        if (!job.selectedHandymanId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No handyman is assigned to this job.",
+          });
+        }
+
         await releasePaymentToHandyman({
           jobId: input.jobId,
           handymanId: job.selectedHandymanId,
@@ -1367,7 +1576,7 @@ const jobsRouter = router({
               to: handyman.email,
               handymanName: handyman.name,
               jobTitle: job.title,
-            })
+            }),
           );
         }
       }
@@ -1390,18 +1599,24 @@ const bidsRouter = router({
         bidAmount: z.number().positive(),
         message: z.string().optional(),
         availability: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.userType !== "handyman" && ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only handymen can place bids" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only handymen can place bids",
+        });
       }
 
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
       if (job.status !== "open") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open for bids" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Job is not open for bids",
+        });
       }
 
       const handymanProfile = await getHandymanProfile(ctx.user.id);
@@ -1414,7 +1629,7 @@ const bidsRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `You’re almost ready to bid. Please finish these profile items first: ${profileStatus.missingFields.join(
-            ", "
+            ", ",
           )}. A complete profile helps homeowners know who they’re reviewing before choosing.`,
         });
       }
@@ -1428,7 +1643,7 @@ const bidsRouter = router({
 
       const existingBids = await getBidsForJob(input.jobId);
       const alreadyBid = existingBids.find(
-        (b) => b.handymanId === ctx.user.id && b.status === "pending"
+        (b) => b.handymanId === ctx.user.id && b.status === "pending",
       );
 
       if (alreadyBid) {
@@ -1464,7 +1679,7 @@ const bidsRouter = router({
             jobTitle: job.title,
             bidAmount: input.bidAmount,
             jobId: job.id,
-          })
+          }),
         );
       }
 
@@ -1473,45 +1688,48 @@ const bidsRouter = router({
           user: homeowner,
           jobTitle: job.title,
           jobId: job.id,
-        })
+        }),
       );
 
       return { bidId };
     }),
 
-  getForJob: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
-    const job = await getJobById(input.jobId);
+  getForJob: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
 
-    if (!job) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Job not found.",
-      });
-    }
-
-    const bidList = await getBidsForJob(input.jobId);
-
-    const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
-
-    const visibleBids = canViewAllBids
-      ? bidList
-      : bidList.filter((bid) => bid.handymanId === ctx.user.id);
-
-    const enriched = await Promise.all(
-      visibleBids.map(async (bid) => {
-        const user = await safeGetUserById(bid.handymanId);
-        const profile = await getHandymanProfile(bid.handymanId);
-
-        return buildHandymanBidTrustFields({
-          bid,
-          user,
-          profile,
+      if (!job) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job not found.",
         });
-      })
-    );
+      }
 
-    return enriched;
-  }),
+      const bidList = await getBidsForJob(input.jobId);
+
+      const canViewAllBids =
+        ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
+
+      const visibleBids = canViewAllBids
+        ? bidList
+        : bidList.filter((bid) => bid.handymanId === ctx.user.id);
+
+      const enriched = await Promise.all(
+        visibleBids.map(async (bid) => {
+          const user = await safeGetUserById(bid.handymanId);
+          const profile = await getHandymanProfile(bid.handymanId);
+
+          return buildHandymanBidTrustFields({
+            bid,
+            user,
+            profile,
+          });
+        }),
+      );
+
+      return enriched;
+    }),
 
   getForJobSummary: protectedProcedure
     .input(z.object({ jobId: z.number() }))
@@ -1527,7 +1745,8 @@ const bidsRouter = router({
 
       const bidList = await getBidsForJob(input.jobId);
 
-      const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
+      const canViewAllBids =
+        ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
 
       const visibleBids = canViewAllBids
         ? bidList
@@ -1538,18 +1757,20 @@ const bidsRouter = router({
           const user = await safeGetUserById(bid.handymanId);
           const profile = await getHandymanProfile(bid.handymanId);
 
-        return buildHandymanBidTrustFields({
-          bid,
-          user,
-          profile,
-        });
-        })
+          return buildHandymanBidTrustFields({
+            bid,
+            user,
+            profile,
+          });
+        }),
       );
 
       return {
         visibleBids: enrichedVisibleBids,
         totalBidCount: bidList.length,
-        hiddenBidCount: canViewAllBids ? 0 : Math.max(0, bidList.length - visibleBids.length),
+        hiddenBidCount: canViewAllBids
+          ? 0
+          : Math.max(0, bidList.length - visibleBids.length),
         canViewAllBids,
       };
     }),
@@ -1566,112 +1787,121 @@ const bidsRouter = router({
           jobStatus: job?.status,
           jobLocation: job?.location,
         };
-      })
+      }),
     );
 
     return enriched;
   }),
 
-  accept: protectedProcedure.input(z.object({ bidId: z.number() })).mutation(async ({ ctx, input }) => {
-    const bid = await getBidById(input.bidId);
-    if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
+  accept: protectedProcedure
+    .input(z.object({ bidId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const bid = await getBidById(input.bidId);
+      if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
 
-    const job = await getJobById(bid.jobId);
-    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      const job = await getJobById(bid.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-    if (job.homeownerId !== ctx.user.id) {
-      throw new TRPCError({ code: "FORBIDDEN" });
-    }
+      if (job.homeownerId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
 
-    if (job.status !== "open") {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open" });
-    }
+      if (job.status !== "open") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Job is not open",
+        });
+      }
 
-    await updateBidStatus(input.bidId, "accepted");
-    await rejectOtherBids(bid.jobId, input.bidId);
+      await updateBidStatus(input.bidId, "accepted");
+      await rejectOtherBids(bid.jobId, input.bidId);
 
-    await updateJobStatus(bid.jobId, "awaiting_payment", {
-      selectedHandymanId: bid.handymanId,
-      selectedBidId: input.bidId,
-    });
+      await updateJobStatus(bid.jobId, "awaiting_payment", {
+        selectedHandymanId: bid.handymanId,
+        selectedBidId: input.bidId,
+      });
 
-    const amount = parseFloat(bid.bidAmount);
-    const platformFee = parseFloat((amount * 0.2).toFixed(2));
-    const handymanPayout = parseFloat((amount * 0.8).toFixed(2));
+      const amount = parseFloat(bid.bidAmount);
+      const platformFee = parseFloat((amount * 0.2).toFixed(2));
+      const handymanPayout = parseFloat((amount * 0.8).toFixed(2));
 
-    await createPayment({
-      jobId: bid.jobId,
-      homeownerId: ctx.user.id,
-      handymanId: bid.handymanId,
-      amount: amount.toFixed(2),
-      platformFee: platformFee.toFixed(2),
-      handymanPayout: handymanPayout.toFixed(2),
-      status: "pending",
-    });
+      await createPayment({
+        jobId: bid.jobId,
+        homeownerId: ctx.user.id,
+        handymanId: bid.handymanId,
+        amount: amount.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        handymanPayout: handymanPayout.toFixed(2),
+        status: "pending",
+      });
 
-    await notifyUser({
-      userId: bid.handymanId,
-      type: "bid_accepted",
-      title: "Bid accepted",
-      message: `Your bid for "${job.title}" was accepted. Waiting for homeowner payment.`,
-      link: "/handyman/dashboard",
-    });
+      await notifyUser({
+        userId: bid.handymanId,
+        type: "bid_accepted",
+        title: "Bid accepted",
+        message: `Your bid for "${job.title}" was accepted. Waiting for homeowner payment.`,
+        link: "/handyman/dashboard",
+      });
 
-    const handyman = await safeGetUserById(bid.handymanId);
-    if (handyman?.email) {
-      void safeSendEmail("sendBidAcceptedEmail", () =>
-        sendBidAcceptedEmail({
-          to: handyman.email,
-          handymanName: handyman.name,
+      const handyman = await safeGetUserById(bid.handymanId);
+      if (handyman?.email) {
+        void safeSendEmail("sendBidAcceptedEmail", () =>
+          sendBidAcceptedEmail({
+            to: handyman.email,
+            handymanName: handyman.name,
+            jobTitle: job.title,
+            bidAmount: amount,
+            jobId: job.id,
+          }),
+        );
+      }
+
+      void safeSendSms("sendPaymentNeededSms", () =>
+        sendPaymentNeededSms({
+          user: ctx.user,
           jobTitle: job.title,
-          bidAmount: amount,
           jobId: job.id,
-        })
+        }),
       );
-    }
 
-    void safeSendSms("sendPaymentNeededSms", () =>
-      sendPaymentNeededSms({
-        user: ctx.user,
-        jobTitle: job.title,
-        jobId: job.id,
-      })
-    );
+      return { success: true, amount, platformFee, handymanPayout };
+    }),
 
-    return { success: true, amount, platformFee, handymanPayout };
-  }),
+  reject: protectedProcedure
+    .input(z.object({ bidId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const bid = await getBidById(input.bidId);
+      if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
 
-  reject: protectedProcedure.input(z.object({ bidId: z.number() })).mutation(async ({ ctx, input }) => {
-    const bid = await getBidById(input.bidId);
-    if (!bid) throw new TRPCError({ code: "NOT_FOUND" });
+      const job = await getJobById(bid.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-    const job = await getJobById(bid.jobId);
-    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      if (job.homeownerId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
 
-    if (job.homeownerId !== ctx.user.id) {
-      throw new TRPCError({ code: "FORBIDDEN" });
-    }
-
-    await updateBidStatus(input.bidId, "rejected");
-    return { success: true };
-  }),
+      await updateBidStatus(input.bidId, "rejected");
+      return { success: true };
+    }),
 });
 
 const paymentsRouter = router({
-  getByJob: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
-    const job = await getJobById(input.jobId);
-    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+  getByJob: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-    if (
-      job.homeownerId !== ctx.user.id &&
-      job.selectedHandymanId !== ctx.user.id &&
-      ctx.user.role !== "admin"
-    ) {
-      throw new TRPCError({ code: "FORBIDDEN" });
-    }
+      if (
+        job.homeownerId !== ctx.user.id &&
+        job.selectedHandymanId !== ctx.user.id &&
+        ctx.user.role !== "admin"
+      ) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
 
-    return getPaymentByJob(input.jobId);
-  }),
+      return getPaymentByJob(input.jobId);
+    }),
 
   getHandymanEarnings: protectedProcedure.query(async ({ ctx }) => {
     const summary = await getHandymanPayoutSummary(ctx.user.id);
@@ -1693,7 +1923,7 @@ const paymentsRouter = router({
         amount: z.number().positive(),
         payoutEmail: z.string().email(),
         notes: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.userType !== "handyman" && ctx.user.role !== "admin") {
@@ -1757,7 +1987,9 @@ const paymentsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      await updatePayment(payment.id, { stripePaymentIntentId: input.stripePaymentIntentId });
+      await updatePayment(payment.id, {
+        stripePaymentIntentId: input.stripePaymentIntentId,
+      });
 
       const job = await getJobById(input.jobId);
       if (job?.selectedHandymanId) {
@@ -1776,7 +2008,7 @@ const paymentsRouter = router({
               to: handyman.email,
               handymanName: handyman.name,
               jobTitle: job.title,
-            })
+            }),
           );
         }
 
@@ -1785,7 +2017,7 @@ const paymentsRouter = router({
             user: handyman,
             jobTitle: job.title,
             jobId: job.id,
-          })
+          }),
         );
       }
 
@@ -1801,7 +2033,7 @@ const reviewsRouter = router({
         revieweeId: z.number(),
         rating: z.number().min(1).max(5).int(),
         comment: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -1814,7 +2046,10 @@ const reviewsRouter = router({
         });
       }
 
-      if (job.homeownerId !== ctx.user.id && job.selectedHandymanId !== ctx.user.id) {
+      if (
+        job.homeownerId !== ctx.user.id &&
+        job.selectedHandymanId !== ctx.user.id
+      ) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
@@ -1841,22 +2076,26 @@ const reviewsRouter = router({
       return { success: true };
     }),
 
-  getForUser: publicProcedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
-    const reviewList = await getReviewsForUser(input.userId);
+  getForUser: publicProcedure
+    .input(z.object({ userId: z.number() }))
+    .query(async ({ input }) => {
+      const reviewList = await getReviewsForUser(input.userId);
 
-    const enriched = await Promise.all(
-      reviewList.map(async (r) => {
-        const reviewer = await safeGetUserById(r.reviewerId);
-        return { ...r, reviewerName: reviewer?.name };
-      })
-    );
+      const enriched = await Promise.all(
+        reviewList.map(async (r) => {
+          const reviewer = await safeGetUserById(r.reviewerId);
+          return { ...r, reviewerName: reviewer?.name };
+        }),
+      );
 
-    return enriched;
-  }),
+      return enriched;
+    }),
 
-  getMyReview: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
-    return getReviewForJob(input.jobId, ctx.user.id);
-  }),
+  getMyReview: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      return getReviewForJob(input.jobId, ctx.user.id);
+    }),
 });
 
 const disputesRouter = router({
@@ -1866,7 +2105,10 @@ const disputesRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (job.homeownerId !== ctx.user.id && job.selectedHandymanId !== ctx.user.id) {
+      if (
+        job.homeownerId !== ctx.user.id &&
+        job.selectedHandymanId !== ctx.user.id
+      ) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
@@ -1894,7 +2136,9 @@ const disputesRouter = router({
       });
 
       const otherUserId =
-        job.homeownerId === ctx.user.id ? job.selectedHandymanId : job.homeownerId;
+        job.homeownerId === ctx.user.id
+          ? job.selectedHandymanId
+          : job.homeownerId;
 
       if (otherUserId) {
         await notifyUser({
@@ -1914,7 +2158,7 @@ const disputesRouter = router({
               jobTitle: job.title,
               reason: input.reason,
               jobId: job.id,
-            })
+            }),
           );
         }
       }
@@ -1922,20 +2166,22 @@ const disputesRouter = router({
       return { disputeId };
     }),
 
-  getByJob: protectedProcedure.input(z.object({ jobId: z.number() })).query(async ({ ctx, input }) => {
-    const job = await getJobById(input.jobId);
-    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+  getByJob: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-    if (
-      job.homeownerId !== ctx.user.id &&
-      job.selectedHandymanId !== ctx.user.id &&
-      ctx.user.role !== "admin"
-    ) {
-      throw new TRPCError({ code: "FORBIDDEN" });
-    }
+      if (
+        job.homeownerId !== ctx.user.id &&
+        job.selectedHandymanId !== ctx.user.id &&
+        ctx.user.role !== "admin"
+      ) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
 
-    return getDisputeByJob(input.jobId);
-  }),
+      return getDisputeByJob(input.jobId);
+    }),
 
   getAll: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -1947,7 +2193,7 @@ const disputesRouter = router({
         const job = await getJobById(d.jobId);
         const initiator = await safeGetUserById(d.initiatedBy);
         return { ...d, jobTitle: job?.title, initiatorName: initiator?.name };
-      })
+      }),
     );
 
     return enriched;
@@ -1959,7 +2205,7 @@ const disputesRouter = router({
         disputeId: z.number(),
         resolution: z.enum(["resolved_release", "resolved_refund"]),
         adminNotes: z.string(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -2020,7 +2266,7 @@ const disputesRouter = router({
                     jobTitle: job.title,
                     outcome: "Payment was released to the handyman.",
                     jobId: job.id,
-                  })
+                  }),
                 );
               }
 
@@ -2032,7 +2278,7 @@ const disputesRouter = router({
                     jobTitle: job.title,
                     outcome: "Payment was released.",
                     jobId: job.id,
-                  })
+                  }),
                 );
               }
             } else {
@@ -2043,7 +2289,9 @@ const disputesRouter = router({
                     reason: "requested_by_customer",
                   });
                 } catch (err: any) {
-                  console.error(`[Dispute] Stripe refund failed: ${err.message}`);
+                  console.error(
+                    `[Dispute] Stripe refund failed: ${err.message}`,
+                  );
                 }
               }
 
@@ -2081,7 +2329,7 @@ const disputesRouter = router({
                     jobTitle: job.title,
                     outcome: "Your payment was refunded.",
                     jobId: job.id,
-                  })
+                  }),
                 );
               }
 
@@ -2093,7 +2341,7 @@ const disputesRouter = router({
                     jobTitle: job.title,
                     outcome: "The homeowner was refunded.",
                     jobId: job.id,
-                  })
+                  }),
                 );
               }
             }
@@ -2129,7 +2377,8 @@ const messagesRouter = router({
         });
 
         const conversationMessages = Array.from(messageMap.values()).sort(
-          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
         );
         const latestMessage = conversationMessages.at(-1) ?? null;
 
@@ -2138,14 +2387,21 @@ const messagesRouter = router({
           ? await getUnreadCountForBid(job.id, job.selectedBidId, ctx.user.id)
           : 0;
 
-        const otherPartyId = isHandyman ? job.homeownerId : job.selectedHandymanId;
-        const otherParty = otherPartyId ? await safeGetUserById(otherPartyId) : null;
-        const lastSender = latestMessage ? await safeGetUserById(latestMessage.senderId) : null;
+        const otherPartyId = isHandyman
+          ? job.homeownerId
+          : job.selectedHandymanId;
+        const otherParty = otherPartyId
+          ? await safeGetUserById(otherPartyId)
+          : null;
+        const lastSender = latestMessage
+          ? await safeGetUserById(latestMessage.senderId)
+          : null;
 
         return {
           id: job.id,
           title: job.title,
           status: job.status,
+          workReadyAt: job.workReadyAt,
           location: job.location,
           selectedBidId: job.selectedBidId,
           updatedAt: job.updatedAt,
@@ -2162,12 +2418,16 @@ const messagesRouter = router({
               }
             : null,
         };
-      })
+      }),
     );
 
     return conversations.sort((a, b) => {
-      const aTime = new Date(a.lastMessage?.createdAt ?? a.updatedAt ?? a.createdAt).getTime();
-      const bTime = new Date(b.lastMessage?.createdAt ?? b.updatedAt ?? b.createdAt).getTime();
+      const aTime = new Date(
+        a.lastMessage?.createdAt ?? a.updatedAt ?? a.createdAt,
+      ).getTime();
+      const bTime = new Date(
+        b.lastMessage?.createdAt ?? b.updatedAt ?? b.createdAt,
+      ).getTime();
       return bTime - aTime;
     });
   }),
@@ -2178,7 +2438,7 @@ const messagesRouter = router({
         jobId: z.number(),
         bidId: z.number().optional(),
         content: z.string().min(1).max(2000),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -2221,11 +2481,14 @@ const messagesRouter = router({
         if (!job.selectedHandymanId && !isAdmin) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "This job does not have an accepted handyman yet. Use bid chat instead.",
+            message:
+              "This job does not have an accepted handyman yet. Use bid chat instead.",
           });
         }
 
-        recipientUserId = isHomeowner ? job.selectedHandymanId : job.homeownerId;
+        recipientUserId = isHomeowner
+          ? job.selectedHandymanId
+          : job.homeownerId;
       }
 
       const msg = await createMessage({
@@ -2254,7 +2517,7 @@ const messagesRouter = router({
               senderName: ctx.user.name,
               jobTitle: job.title,
               jobId: job.id,
-            })
+            }),
           );
         }
 
@@ -2262,7 +2525,7 @@ const messagesRouter = router({
           sendNewMessageSms({
             user: recipient,
             jobTitle: job.title,
-          })
+          }),
         );
       }
 
@@ -2275,7 +2538,7 @@ const messagesRouter = router({
         jobId: z.number(),
         bidId: z.number().optional(),
         includeJobThread: z.boolean().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -2312,7 +2575,8 @@ const messagesRouter = router({
           });
 
           jobMessages = Array.from(messageMap.values()).sort(
-            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
           );
         } else {
           jobMessages = bidMessages;
@@ -2336,9 +2600,11 @@ const messagesRouter = router({
           return {
             ...msg,
             senderName: sender?.name,
-            isRead: msg.readBy ? JSON.parse(msg.readBy).includes(ctx.user.id) : false,
+            isRead: msg.readBy
+              ? JSON.parse(msg.readBy).includes(ctx.user.id)
+              : false,
           };
-        })
+        }),
       );
 
       for (const msg of jobMessages) {
@@ -2356,14 +2622,14 @@ const messagesRouter = router({
         jobId: z.number(),
         bidId: z.number().optional(),
         includeJobThread: z.boolean().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       if (input.bidId) {
         const bidUnread = await getUnreadCountForBid(
           input.jobId,
           input.bidId,
-          ctx.user.id
+          ctx.user.id,
         );
 
         if (input.includeJobThread) {
@@ -2377,7 +2643,6 @@ const messagesRouter = router({
       return getUnreadCount(input.jobId, ctx.user.id);
     }),
 });
-
 
 const reportsRouter = router({
   create: protectedProcedure
@@ -2396,10 +2661,15 @@ const reportsRouter = router({
           "other",
         ]),
         details: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!input.reportedUserId && !input.jobId && !input.bidId && !input.messageId) {
+      if (
+        !input.reportedUserId &&
+        !input.jobId &&
+        !input.bidId &&
+        !input.messageId
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Please choose something to report.",
@@ -2454,7 +2724,8 @@ const reportsRouter = router({
         userId: ctx.user.id,
         type: "system",
         title: "Report received",
-        message: "Thanks for reporting your concern. The SaskHandy team will review it.",
+        message:
+          "Thanks for reporting your concern. The SaskHandy team will review it.",
         link: jobId ? `/jobs/${jobId}` : "/support",
       });
 
@@ -2472,7 +2743,7 @@ const reportsRouter = router({
         reportId: z.number(),
         status: z.enum(["open", "reviewing", "resolved", "dismissed"]),
         adminNotes: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -2486,10 +2757,11 @@ const reportsRouter = router({
     }),
 });
 
-
 const notificationsRouter = router({
   getMine: protectedProcedure
-    .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
+    .input(
+      z.object({ limit: z.number().min(1).max(100).default(20) }).optional(),
+    )
     .query(async ({ ctx, input }) => {
       return getNotificationsForUser(ctx.user.id, input?.limit ?? 20);
     }),
@@ -2498,10 +2770,12 @@ const notificationsRouter = router({
     return getUnreadNotificationCount(ctx.user.id);
   }),
 
-  markRead: protectedProcedure.input(z.object({ notificationId: z.number() })).mutation(async ({ ctx, input }) => {
-    await markNotificationRead(input.notificationId, ctx.user.id);
-    return { success: true };
-  }),
+  markRead: protectedProcedure
+    .input(z.object({ notificationId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await markNotificationRead(input.notificationId, ctx.user.id);
+      return { success: true };
+    }),
 
   markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
     await markAllNotificationsRead(ctx.user.id);
@@ -2523,57 +2797,64 @@ const adminRouter = router({
     return getAllJobsForAdmin();
   }),
 
-  deleteJob: protectedProcedure.input(z.object({ jobId: z.number() })).mutation(async ({ ctx, input }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN" });
-    }
+  deleteJob: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
 
-    const job = await getJobById(input.jobId);
+      const job = await getJobById(input.jobId);
 
-    if (!job) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Job not found",
-      });
-    }
+      if (!job) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Job not found",
+        });
+      }
 
-    await adminDeleteJobById(input.jobId);
+      await adminDeleteJobById(input.jobId);
 
-    return { success: true };
-  }),
+      return { success: true };
+    }),
 
-  deleteUser: protectedProcedure.input(z.object({ userId: z.number() })).mutation(async ({ ctx, input }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-    }
+  deleteUser: protectedProcedure
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Admin access required",
+        });
+      }
 
-    if (ctx.user.id === input.userId) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "You cannot delete your own admin account.",
-      });
-    }
+      if (ctx.user.id === input.userId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You cannot delete your own admin account.",
+        });
+      }
 
-    const user = await safeGetUserById(input.userId);
+      const user = await safeGetUserById(input.userId);
 
-    if (!user) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
-    }
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
 
-    if (user.role === "admin") {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Admin users cannot be deleted from this action.",
-      });
-    }
+      if (user.role === "admin") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Admin users cannot be deleted from this action.",
+        });
+      }
 
-    await deleteUserById(input.userId);
+      await deleteUserById(input.userId);
 
-    return { success: true };
-  }),
+      return { success: true };
+    }),
 
   getStats: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -2589,7 +2870,9 @@ const adminRouter = router({
       handymen: userList.filter((u) => u.userType === "handyman").length,
       openJobs: openJobList.length,
       openDisputes: disputeList.filter((d) => d.status === "open").length,
-      pendingPayoutRequests: payoutRequestList.filter((p) => p.status === "pending").length,
+      pendingPayoutRequests: payoutRequestList.filter(
+        (p) => p.status === "pending",
+      ).length,
     };
   }),
 
@@ -2604,7 +2887,7 @@ const adminRouter = router({
         userId: z.number(),
         insuranceVerified: z.boolean(),
         rejectionReason: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -2612,13 +2895,15 @@ const adminRouter = router({
       await setHandymanInsuranceVerification(
         input.userId,
         input.insuranceVerified,
-        input.rejectionReason?.trim() || null
+        input.rejectionReason?.trim() || null,
       );
 
       await notifyUser({
         userId: input.userId,
         type: "system",
-        title: input.insuranceVerified ? "Insurance approved" : "Insurance review update",
+        title: input.insuranceVerified
+          ? "Insurance approved"
+          : "Insurance review update",
         message: input.insuranceVerified
           ? "Your insurance document has been approved and can now appear as verified on your SaskHandy profile."
           : `Your insurance document was not approved. ${
@@ -2637,7 +2922,7 @@ const adminRouter = router({
         userId: z.number(),
         status: z.enum(["not_submitted", "pending", "approved", "rejected"]),
         rejectionReason: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -2652,7 +2937,10 @@ const adminRouter = router({
         await notifyUser({
           userId: input.userId,
           type: "system",
-          title: input.status === "approved" ? "ID name matched" : "ID verification update",
+          title:
+            input.status === "approved"
+              ? "ID name matched"
+              : "ID verification update",
           message:
             input.status === "approved"
               ? "Your ID name match has been approved and can now appear on your SaskHandy profile."
@@ -2671,10 +2959,16 @@ const adminRouter = router({
     .input(
       z.object({
         userId: z.number(),
-        status: z.enum(["not_submitted", "pending", "reviewed", "rejected", "expired"]),
+        status: z.enum([
+          "not_submitted",
+          "pending",
+          "reviewed",
+          "rejected",
+          "expired",
+        ]),
         expiresAt: z.string().datetime().optional(),
         notes: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -2715,7 +3009,7 @@ const adminRouter = router({
         status: z.enum(["not_submitted", "pending", "approved", "rejected"]),
         rejectionReason: z.string().max(1000).optional(),
         notes: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -2731,7 +3025,10 @@ const adminRouter = router({
         await notifyUser({
           userId: input.userId,
           type: "system",
-          title: input.status === "approved" ? "Trade licence verified" : "Trade licence update",
+          title:
+            input.status === "approved"
+              ? "Trade licence verified"
+              : "Trade licence update",
           message:
             input.status === "approved"
               ? "Your trade licence has been verified and can now appear on your SaskHandy profile."
@@ -2761,7 +3058,7 @@ const adminRouter = router({
           handymanName: user?.name ?? null,
           handymanEmail: user?.email ?? null,
         };
-      })
+      }),
     );
 
     return enriched;
@@ -2773,7 +3070,7 @@ const adminRouter = router({
         payoutRequestId: z.number(),
         status: z.enum(["paid", "rejected"]),
         adminNotes: z.string().max(1000).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") {
@@ -2805,7 +3102,10 @@ const adminRouter = router({
       await notifyUser({
         userId: payoutRequest.handymanId,
         type: input.status === "paid" ? "payout_paid" : "payout_rejected",
-        title: input.status === "paid" ? "Payout marked paid" : "Payout request rejected",
+        title:
+          input.status === "paid"
+            ? "Payout marked paid"
+            : "Payout request rejected",
         message:
           input.status === "paid"
             ? `Your payout request for $${parseFloat(payoutRequest.amount).toFixed(2)} has been marked as paid.`
@@ -2821,7 +3121,7 @@ const adminRouter = router({
               to: handyman.email,
               handymanName: handyman.name,
               amount: parseFloat(payoutRequest.amount),
-            })
+            }),
           );
         } else {
           void safeSendEmail("sendPayoutRejectedEmail", () =>
@@ -2830,7 +3130,7 @@ const adminRouter = router({
               handymanName: handyman.name,
               amount: parseFloat(payoutRequest.amount),
               adminNotes: input.adminNotes ?? null,
-            })
+            }),
           );
         }
       }
@@ -2863,22 +3163,21 @@ const adminRouter = router({
       if (!job) continue;
 
       const involvedUserIds = [job.homeownerId, job.selectedHandymanId].filter(
-        (value): value is number => typeof value === "number"
+        (value): value is number => typeof value === "number",
       );
 
       for (const userId of involvedUserIds) {
         const user = users.find((u) => u.id === userId);
         if (!user) continue;
 
-        const existing =
-          flaggedMap.get(userId) ?? {
-            userId,
-            name: user.name ?? null,
-            email: user.email ?? null,
-            reasons: [],
-            openDisputes: 0,
-            totalDisputes: 0,
-          };
+        const existing = flaggedMap.get(userId) ?? {
+          userId,
+          name: user.name ?? null,
+          email: user.email ?? null,
+          reasons: [],
+          openDisputes: 0,
+          totalDisputes: 0,
+        };
 
         existing.totalDisputes += 1;
 
@@ -2895,7 +3194,9 @@ const adminRouter = router({
         const reasons: string[] = [];
 
         if (item.openDisputes > 0) {
-          reasons.push(`${item.openDisputes} open dispute${item.openDisputes > 1 ? "s" : ""}`);
+          reasons.push(
+            `${item.openDisputes} open dispute${item.openDisputes > 1 ? "s" : ""}`,
+          );
         }
 
         if (item.totalDisputes >= 2) {
@@ -2909,7 +3210,8 @@ const adminRouter = router({
       })
       .filter((item) => item.reasons.length > 0)
       .sort((a, b) => {
-        if (b.openDisputes !== a.openDisputes) return b.openDisputes - a.openDisputes;
+        if (b.openDisputes !== a.openDisputes)
+          return b.openDisputes - a.openDisputes;
         return b.totalDisputes - a.totalDisputes;
       });
 
@@ -2975,10 +3277,17 @@ const supportRouter = router({
     .input(
       z.object({
         subject: z.string().min(3).max(255),
-        category: z.enum(["general", "payments", "dispute", "account", "insurance", "technical"]),
+        category: z.enum([
+          "general",
+          "payments",
+          "dispute",
+          "account",
+          "insurance",
+          "technical",
+        ]),
         content: z.string().min(10),
         jobId: z.number().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const ticketId = await createSupportTicket({
@@ -3027,58 +3336,62 @@ const supportRouter = router({
           submitterEmail: submitter?.email ?? null,
           submitterUserType: submitter?.userType ?? null,
         };
-      })
+      }),
     );
   }),
 
-  getById: protectedProcedure.input(z.object({ ticketId: z.number() })).query(async ({ ctx, input }) => {
-    const ticket = await getSupportTicketById(input.ticketId);
-    if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
+  getById: protectedProcedure
+    .input(z.object({ ticketId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const ticket = await getSupportTicketById(input.ticketId);
+      if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
 
-    if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN" });
-    }
+      if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
 
-    const submitter = await safeGetUserById(ticket.userId);
+      const submitter = await safeGetUserById(ticket.userId);
 
-    return {
-      ...ticket,
-      submitterName: submitter?.name ?? null,
-      submitterEmail: submitter?.email ?? null,
-      submitterUserType: submitter?.userType ?? null,
-    };
-  }),
+      return {
+        ...ticket,
+        submitterName: submitter?.name ?? null,
+        submitterEmail: submitter?.email ?? null,
+        submitterUserType: submitter?.userType ?? null,
+      };
+    }),
 
-  getMessages: protectedProcedure.input(z.object({ ticketId: z.number() })).query(async ({ ctx, input }) => {
-    const ticket = await getSupportTicketById(input.ticketId);
-    if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
+  getMessages: protectedProcedure
+    .input(z.object({ ticketId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const ticket = await getSupportTicketById(input.ticketId);
+      if (!ticket) throw new TRPCError({ code: "NOT_FOUND" });
 
-    if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN" });
-    }
+      if (ticket.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
 
-    const ticketMessages = await getSupportTicketMessages(input.ticketId);
+      const ticketMessages = await getSupportTicketMessages(input.ticketId);
 
-    return Promise.all(
-      ticketMessages.map(async (message) => {
-        const sender = await safeGetUserById(message.senderId);
+      return Promise.all(
+        ticketMessages.map(async (message) => {
+          const sender = await safeGetUserById(message.senderId);
 
-        return {
-          ...message,
-          senderName: sender?.name ?? null,
-          senderEmail: sender?.email ?? null,
-          senderUserType: sender?.userType ?? null,
-        };
-      })
-    );
-  }),
+          return {
+            ...message,
+            senderName: sender?.name ?? null,
+            senderEmail: sender?.email ?? null,
+            senderUserType: sender?.userType ?? null,
+          };
+        }),
+      );
+    }),
 
   reply: protectedProcedure
     .input(
       z.object({
         ticketId: z.number(),
         content: z.string().min(1).max(3000),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const ticket = await getSupportTicketById(input.ticketId);
@@ -3106,7 +3419,7 @@ const supportRouter = router({
       z.object({
         ticketId: z.number(),
         status: z.enum(["open", "replied", "closed"]),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") {

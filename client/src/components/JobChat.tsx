@@ -12,7 +12,14 @@ interface JobChatProps {
   bidId?: number;
   includeJobThread?: boolean;
   paymentPending?: boolean;
-  jobStatus?: "open" | "awaiting_payment" | "in_progress" | "completed" | "disputed" | "cancelled";
+  workReadyForReview?: boolean;
+  jobStatus?:
+    | "open"
+    | "awaiting_payment"
+    | "in_progress"
+    | "completed"
+    | "disputed"
+    | "cancelled";
   title?: string;
   description?: string;
   compact?: boolean;
@@ -31,6 +38,7 @@ export function JobChat({
   bidId,
   includeJobThread = false,
   paymentPending = false,
+  workReadyForReview = false,
   jobStatus,
   otherPartyLabel,
   title = "Chat",
@@ -59,7 +67,7 @@ export function JobChat({
 
       await utils.messages.getForJob.invalidate(queryInput);
       await utils.messages.getUnreadCount.invalidate(
-        bidId ? { jobId, bidId } : { jobId }
+        bidId ? { jobId, bidId } : { jobId },
       );
 
       requestAnimationFrame(() => composerRef.current?.focus());
@@ -98,15 +106,27 @@ export function JobChat({
           };
     }
 
+    if (jobStatus === "in_progress" && workReadyForReview) {
+      return isHandyman
+        ? {
+            title: "Waiting for homeowner review",
+            body: "You marked the work ready. Keep any follow-up or requested adjustments in this chat until the homeowner approves completion.",
+          }
+        : {
+            title: "Work is ready for your review",
+            body: "Inspect the agreed work before approving completion. If something needs adjustment, request changes and explain them here.",
+          };
+    }
+
     if (jobStatus === "in_progress") {
       return isHandyman
         ? {
             title: "Coordinate the visit here",
-            body: "Confirm arrival time, access and materials. Send a quick update when you are on the way and when the work is ready to review.",
+            body: "Confirm arrival time, access and materials. When the agreed work is finished, use the Ready for Review action on the job page.",
           }
         : {
             title: "Keep the visit details in one place",
-            body: "Confirm arrival time, access and anything that needs to be ready. Check the work before marking the job complete.",
+            body: "Confirm arrival time, access and anything that needs to be ready. You’ll get a clear review request when the handyman marks the work finished.",
           };
     }
 
@@ -118,7 +138,7 @@ export function JobChat({
     }
 
     return null;
-  }, [isHandyman, jobStatus]);
+  }, [isHandyman, jobStatus, workReadyForReview]);
 
   const quickPrompts = useMemo(() => {
     if (jobStatus === "awaiting_payment") {
@@ -133,13 +153,21 @@ export function JobChat({
           ];
     }
 
+    if (jobStatus === "in_progress" && workReadyForReview) {
+      return isHandyman
+        ? ["Let me know if you’d like anything adjusted."]
+        : [
+            "I’m checking the work now.",
+            "I need one adjustment before I can approve the job.",
+          ];
+    }
+
     if (jobStatus === "in_progress") {
       return isHandyman
         ? [
             "What arrival time works best for you?",
             "I’m on my way.",
             "I’ve arrived.",
-            "The work is ready for you to check.",
           ]
         : [
             "What time should I expect you?",
@@ -149,7 +177,7 @@ export function JobChat({
     }
 
     return [];
-  }, [isHandyman, jobStatus]);
+  }, [isHandyman, jobStatus, workReadyForReview]);
 
   const handleSend = () => {
     const content = message.trim();
@@ -157,7 +185,7 @@ export function JobChat({
 
     if (containsRestrictedContactInfo(content)) {
       toast.error(
-        "Please keep contact details and payment communication inside SaskHandy for safety and payment protection."
+        "Please keep contact details and payment communication inside SaskHandy for safety and payment protection.",
       );
       return;
     }
@@ -174,22 +202,27 @@ export function JobChat({
       className={cn(
         "bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden",
         compact ? "h-full min-h-0 flex flex-col" : "mt-6",
-        className
+        className,
       )}
     >
       <div
         className={cn(
           "border-b border-border/40 shrink-0",
-          compact ? "px-4 py-2.5" : "px-5 py-4"
+          compact ? "px-4 py-2.5" : "px-5 py-4",
         )}
       >
-        <h3 className={cn("font-semibold text-foreground", compact ? "text-sm" : "text-base")}>
+        <h3
+          className={cn(
+            "font-semibold text-foreground",
+            compact ? "text-sm" : "text-base",
+          )}
+        >
           {title}
         </h3>
         <p
           className={cn(
             "text-muted-foreground mt-0.5",
-            compact ? "text-[11px] line-clamp-1" : "text-xs"
+            compact ? "text-[11px] line-clamp-1" : "text-xs",
           )}
         >
           {description ?? `Message ${otherPartyLabel} about this job.`}
@@ -201,8 +234,9 @@ export function JobChat({
           <div className="flex items-start gap-2">
             <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
             <p className="text-xs leading-relaxed text-amber-800">
-              Payment is pending. Payment is held securely through SaskHandy and is not released
-              to the handyman until the homeowner marks the job complete.
+              Payment is pending. Payment is held securely through SaskHandy and
+              is not released to the handyman until the homeowner marks the job
+              complete.
             </p>
           </div>
         </div>
@@ -210,7 +244,9 @@ export function JobChat({
 
       {coordinationCopy && !compact && (
         <div className="border-b border-primary/10 bg-primary/[0.035] px-5 py-3">
-          <p className="text-xs font-semibold text-foreground">{coordinationCopy.title}</p>
+          <p className="text-xs font-semibold text-foreground">
+            {coordinationCopy.title}
+          </p>
           <p className="text-[11px] leading-relaxed text-muted-foreground mt-0.5">
             {coordinationCopy.body}
           </p>
@@ -221,7 +257,7 @@ export function JobChat({
         <div
           className={cn(
             "flex items-center justify-center flex-1 min-h-0",
-            compact ? "py-4" : "py-8"
+            compact ? "py-4" : "py-8",
           )}
         >
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -230,11 +266,14 @@ export function JobChat({
         <div
           className={cn(
             "text-center flex-1 min-h-0 flex flex-col items-center justify-center",
-            compact ? "px-4 py-4" : "px-6 py-6"
+            compact ? "px-4 py-4" : "px-6 py-6",
           )}
         >
           <MessageSquare
-            className={cn("text-muted-foreground mx-auto mb-2", compact ? "w-6 h-6" : "w-8 h-8")}
+            className={cn(
+              "text-muted-foreground mx-auto mb-2",
+              compact ? "w-6 h-6" : "w-8 h-8",
+            )}
           />
           <p className="text-sm font-medium text-foreground">No messages yet</p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -245,20 +284,25 @@ export function JobChat({
         <div
           className={cn(
             "overflow-y-auto bg-muted/20 flex-1",
-            compact ? "min-h-0 px-3 py-3 space-y-2" : "max-h-[420px] px-4 py-4 space-y-3"
+            compact
+              ? "min-h-0 px-3 py-3 space-y-2"
+              : "max-h-[420px] px-4 py-4 space-y-3",
           )}
         >
           {groupedMessages.map((msg) => {
             const isMine = msg.senderId === user?.id;
 
             return (
-              <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
+              <div
+                key={msg.id}
+                className={cn("flex", isMine ? "justify-end" : "justify-start")}
+              >
                 <div
                   className={cn(
                     "max-w-[82%] rounded-2xl px-4 py-3 shadow-sm",
                     isMine
                       ? "bg-primary text-primary-foreground"
-                      : "bg-white border border-border/60 text-foreground"
+                      : "bg-white border border-border/60 text-foreground",
                   )}
                 >
                   {!isMine && (
@@ -267,16 +311,25 @@ export function JobChat({
                     </p>
                   )}
 
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">
+                    {msg.content}
+                  </p>
 
                   <p
                     className={cn(
                       "text-[10px] mt-2",
-                      isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+                      isMine
+                        ? "text-primary-foreground/80"
+                        : "text-muted-foreground",
                     )}
-                    title={format(new Date(msg.createdAt), "MMM d, yyyy h:mm a")}
+                    title={format(
+                      new Date(msg.createdAt),
+                      "MMM d, yyyy h:mm a",
+                    )}
                   >
-                    {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(msg.createdAt), {
+                      addSuffix: true,
+                    })}
                   </p>
                 </div>
               </div>
@@ -290,7 +343,7 @@ export function JobChat({
       <div
         className={cn(
           "border-t border-border/40 shrink-0 bg-white",
-          compact ? "px-2.5 py-2" : "px-3 py-3 sm:px-4"
+          compact ? "px-2.5 py-2" : "px-3 py-3 sm:px-4",
         )}
       >
         {!compact && quickPrompts.length > 0 && (

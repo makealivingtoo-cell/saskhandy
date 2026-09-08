@@ -76,8 +76,10 @@ export const twoFactorCodes = mysqlTable("two_factor_codes", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
-export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
+export type EmailVerificationToken =
+  typeof emailVerificationTokens.$inferSelect;
+export type InsertEmailVerificationToken =
+  typeof emailVerificationTokens.$inferInsert;
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
@@ -94,9 +96,13 @@ export const handymanProfiles = mysqlTable("handyman_profiles", {
   hourlyRate: decimal("hourlyRate", { precision: 10, scale: 2 }),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
   totalJobs: int("totalJobs").default(0).notNull(),
-  totalEarnings: decimal("totalEarnings", { precision: 12, scale: 2 }).default("0.00"),
+  totalEarnings: decimal("totalEarnings", { precision: 12, scale: 2 }).default(
+    "0.00",
+  ),
   verified: boolean("verified").default(false).notNull(),
-  backgroundCheckPassed: boolean("backgroundCheckPassed").default(false).notNull(),
+  backgroundCheckPassed: boolean("backgroundCheckPassed")
+    .default(false)
+    .notNull(),
   insuranceVerified: boolean("insuranceVerified").default(false).notNull(),
   insuranceCertUrl: text("insuranceCertUrl"),
   profileImageUrl: text("profileImageUrl"),
@@ -151,9 +157,15 @@ export const handymanProfiles = mysqlTable("handyman_profiles", {
   tradeLicenseNotes: text("tradeLicenseNotes"),
 
   stripeAccountId: varchar("stripeAccountId", { length: 255 }),
-  stripeChargesEnabled: boolean("stripeChargesEnabled").default(false).notNull(),
-  stripePayoutsEnabled: boolean("stripePayoutsEnabled").default(false).notNull(),
-  stripeDetailsSubmitted: boolean("stripeDetailsSubmitted").default(false).notNull(),
+  stripeChargesEnabled: boolean("stripeChargesEnabled")
+    .default(false)
+    .notNull(),
+  stripePayoutsEnabled: boolean("stripePayoutsEnabled")
+    .default(false)
+    .notNull(),
+  stripeDetailsSubmitted: boolean("stripeDetailsSubmitted")
+    .default(false)
+    .notNull(),
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -185,6 +197,7 @@ export const jobs = mysqlTable("jobs", {
     .notNull(),
   selectedHandymanId: int("selectedHandymanId"),
   selectedBidId: int("selectedBidId"),
+  workReadyAt: timestamp("workReadyAt"),
 
   cancelReason: varchar("cancelReason", { length: 120 }),
   cancelDetails: text("cancelDetails"),
@@ -235,7 +248,10 @@ export const payments = mysqlTable("payments", {
   handymanId: int("handymanId").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   platformFee: decimal("platformFee", { precision: 10, scale: 2 }).notNull(),
-  handymanPayout: decimal("handymanPayout", { precision: 10, scale: 2 }).notNull(),
+  handymanPayout: decimal("handymanPayout", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
   stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
   stripeTransferId: varchar("stripeTransferId", { length: 255 }),
   stripeTransferStatus: mysqlEnum("stripeTransferStatus", [
@@ -417,4 +433,5 @@ export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = typeof supportTickets.$inferInsert;
 
 export type SupportTicketMessage = typeof supportTicketMessages.$inferSelect;
-export type InsertSupportTicketMessage = typeof supportTicketMessages.$inferInsert;
+export type InsertSupportTicketMessage =
+  typeof supportTicketMessages.$inferInsert;
