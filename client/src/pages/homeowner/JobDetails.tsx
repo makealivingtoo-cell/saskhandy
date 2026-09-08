@@ -267,8 +267,7 @@ function HandymanTrustSummary({
 
       {hasNoReviews && !compact && (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          No SaskHandy reviews yet. This may simply mean they are new here; use
-          chat and any linked past work to decide whether they are a fit.
+          No SaskHandy reviews yet. This may simply mean they are new here; use chat and any linked past work to decide whether they are a fit.
         </p>
       )}
     </div>
@@ -380,8 +379,7 @@ function BidChatDrawer({
                     )}
 
                     <span className="text-xs text-muted-foreground">
-                      {getBidReviewCount(bid)}{" "}
-                      {getBidReviewCount(bid) === 1 ? "review" : "reviews"}
+                      {getBidReviewCount(bid)} {getBidReviewCount(bid) === 1 ? "review" : "reviews"}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {getBidCompletedJobs(bid)} jobs completed
@@ -435,9 +433,7 @@ function BidChatDrawer({
             )}
 
             <div className="mt-3 rounded-xl border border-border/60 bg-white p-3">
-              <p className="text-xs font-semibold text-foreground">
-                Before you choose
-              </p>
+              <p className="text-xs font-semibold text-foreground">Before you choose</p>
               <div className="mt-2 grid gap-1.5 text-xs text-muted-foreground">
                 <p>• Review their profile, trust signals and past work.</p>
                 <p>• Ask anything you need in the chat below.</p>
@@ -483,6 +479,7 @@ function BidChatDrawer({
                 Report a concern
               </Button>
             </div>
+
           </div>
         </div>
 
@@ -574,19 +571,6 @@ export default function JobDetails() {
       setShowCompleteConfirm(false);
       await utils.jobs.getById.invalidate({ jobId });
       await utils.payments.getByJob.invalidate({ jobId });
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const requestChanges = trpc.jobs.requestChanges.useMutation({
-    onSuccess: async () => {
-      toast.success(
-        "Changes requested. Tell your handyman what needs adjusting in the chat.",
-      );
-      setShowCompleteConfirm(false);
-      await utils.jobs.getById.invalidate({ jobId });
-      await utils.messages.getInbox.invalidate();
-      await utils.messages.getForJob.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -683,14 +667,12 @@ export default function JobDetails() {
   const isAwaitingPayment = job.status === "awaiting_payment";
   const isInProgress = job.status === "in_progress";
   const isCompleted = job.status === "completed";
-  const isWorkReady = isInProgress && !!job.workReadyAt;
-  const displayStatus = isWorkReady ? "ready_for_review" : job.status;
   const canRetryPayment = isAwaitingPayment && !!acceptedBid;
 
   const workflowSteps = [
     { label: "Handyman selected", done: !!job.selectedHandymanId },
     { label: "Payment secured", done: isInProgress || isCompleted },
-    { label: "Work ready", done: isWorkReady || isCompleted },
+    { label: "Work underway", done: isCompleted },
     { label: "Complete", done: isCompleted },
   ];
 
@@ -742,7 +724,7 @@ export default function JobDetails() {
                 <h1 className="text-xl font-serif text-foreground">
                   {job.title}
                 </h1>
-                <StatusBadge status={displayStatus} />
+                <StatusBadge status={job.status} />
               </div>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 {job.description}
@@ -792,24 +774,21 @@ export default function JobDetails() {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {isAwaitingPayment
                     ? "One step left before the job can start."
-                    : isWorkReady
-                      ? "The handyman says the work is finished. Review it before releasing payment."
-                      : isInProgress
-                        ? "Payment is secured. Coordinate the work with your handyman."
-                        : isCompleted
-                          ? "This job is complete."
-                          : "Keep everything for this job in one place."}
+                    : isInProgress
+                      ? "Payment is secured. Coordinate the work with your handyman."
+                      : isCompleted
+                        ? "This job is complete."
+                        : "Keep everything for this job in one place."}
                 </p>
               </div>
-              <StatusBadge status={displayStatus} />
+              <StatusBadge status={job.status} />
             </div>
 
             <div className="grid grid-cols-4 gap-2">
               {workflowSteps.map((step, index) => {
                 const active =
                   (!step.done && isAwaitingPayment && index === 1) ||
-                  (!step.done && isInProgress && !isWorkReady && index === 2) ||
-                  (!step.done && isWorkReady && index === 3);
+                  (!step.done && isInProgress && index === 2);
 
                 return (
                   <div key={step.label} className="min-w-0">
@@ -877,39 +856,17 @@ export default function JobDetails() {
         )}
 
         {isInProgress && acceptedBid && (
-          <div
-            className={`rounded-2xl border p-5 mb-6 ${
-              isWorkReady
-                ? "bg-violet-50 border-violet-200"
-                : "bg-emerald-50 border-emerald-200"
-            }`}
-          >
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6">
             <div className="flex items-start gap-3">
-              <CheckCircle
-                className={`w-5 h-5 mt-0.5 shrink-0 ${
-                  isWorkReady ? "text-violet-700" : "text-emerald-700"
-                }`}
-              />
+              <CheckCircle className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
               <div className="min-w-0">
-                <p
-                  className={`font-semibold ${
-                    isWorkReady ? "text-violet-950" : "text-emerald-950"
-                  }`}
-                >
-                  {isWorkReady
-                    ? "The work is ready for your review"
-                    : `You’re booked with ${acceptedBid.handymanName ?? "your handyman"}`}
+                <p className="font-semibold text-emerald-950">
+                  You’re booked with{" "}
+                  {acceptedBid.handymanName ?? "your handyman"}
                 </p>
-                <p
-                  className={`text-sm mt-1 leading-relaxed ${
-                    isWorkReady ? "text-violet-800" : "text-emerald-800"
-                  }`}
-                >
-                  {isWorkReady
-                    ? payment?.amount
-                      ? `Inspect the agreed work before approving completion. Your $${payment.amount} payment stays held until you confirm.`
-                      : "Inspect the agreed work before approving completion. Payment stays held until you confirm."
-                    : "Payment is secured. Use the job chat below to confirm timing, access, materials, and any final details."}
+                <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                  Payment is secured. Use the job chat below to confirm timing,
+                  access, materials, and any final details.
                 </p>
               </div>
             </div>
@@ -1146,100 +1103,66 @@ export default function JobDetails() {
 
         {job.status === "in_progress" && isOwner && (
           <div className="bg-white rounded-2xl border border-border/60 p-5 mb-6 shadow-sm">
-            {isWorkReady ? (
-              !showCompleteConfirm ? (
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        Review the finished work
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        {acceptedBid?.handymanName ?? "Your handyman"} says the
-                        agreed work is finished. Check it before releasing
-                        payment.
-                      </p>
-                    </div>
-
-                    <Button
-                      onClick={() => setShowCompleteConfirm(true)}
-                      className="sm:shrink-0"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve Work
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-4">
-                    <p className="text-xs text-muted-foreground">
-                      Something still needs fixing?
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => requestChanges.mutate({ jobId })}
-                      disabled={requestChanges.isPending}
-                    >
-                      {requestChanges.isPending && (
-                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      )}
-                      Needs Changes
-                    </Button>
-                  </div>
+            {!showCompleteConfirm ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Is the work finished?
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Only mark the job complete after you have checked the work
+                    and are satisfied.
+                  </p>
                 </div>
-              ) : (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-semibold text-emerald-950">
-                        Confirm completion and release payment
-                      </p>
-                      <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
-                        By confirming, you’re saying you checked the agreed work
-                        and it is complete. SaskHandy will release the held
-                        payment to {acceptedBid?.handymanName ?? "the handyman"}
-                        .
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                    <Button
-                      className="flex-1"
-                      onClick={() =>
-                        markComplete.mutate({ jobId, status: "completed" })
-                      }
-                      disabled={markComplete.isPending}
-                    >
-                      {markComplete.isPending ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                      )}
-                      Confirm & Release Payment
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setShowCompleteConfirm(false)}
-                      disabled={markComplete.isPending}
-                    >
-                      Check Again
-                    </Button>
-                  </div>
-                </div>
-              )
+                <Button
+                  onClick={() => setShowCompleteConfirm(true)}
+                  className="sm:shrink-0"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Finish Job
+                </Button>
+              </div>
             ) : (
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Work in progress
-                </p>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Keep coordinating in the chat. When the handyman finishes,
-                  they’ll mark the work ready and SaskHandy will ask you to
-                  review it before payment is released.
-                </p>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-emerald-950">
+                      Confirm completion and release payment
+                    </p>
+                    <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                      By confirming, you’re saying the agreed work is complete
+                      and SaskHandy can release the held payment to{" "}
+                      {acceptedBid?.handymanName ?? "the handyman"}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() =>
+                      markComplete.mutate({ jobId, status: "completed" })
+                    }
+                    disabled={markComplete.isPending}
+                  >
+                    {markComplete.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Confirm & Release Payment
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowCompleteConfirm(false)}
+                    disabled={markComplete.isPending}
+                  >
+                    Not Yet
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1505,7 +1428,6 @@ export default function JobDetails() {
             bidId={job.selectedBidId ?? acceptedBid?.id}
             includeJobThread
             paymentPending={job.status === "awaiting_payment"}
-            workReadyForReview={isWorkReady}
             jobStatus={job.status}
             otherPartyLabel={acceptedBid?.handymanName ?? "your handyman"}
             description={

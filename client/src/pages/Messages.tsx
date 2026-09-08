@@ -35,41 +35,29 @@ export default function MessagesPage() {
     const attention = conversations.filter(
       (conversation) =>
         conversation.unreadCount > 0 ||
-        (!isHandyman && conversation.status === "awaiting_payment") ||
-        (!isHandyman &&
-          conversation.status === "in_progress" &&
-          !!conversation.workReadyAt),
+        (!isHandyman && conversation.status === "awaiting_payment"),
     );
-    const attentionIds = new Set(
-      attention.map((conversation) => conversation.id),
-    );
+    const attentionIds = new Set(attention.map((conversation) => conversation.id));
     return {
       needsAttention: attention,
-      active: conversations.filter(
-        (conversation) => !attentionIds.has(conversation.id),
-      ),
+      active: conversations.filter((conversation) => !attentionIds.has(conversation.id)),
     };
   }, [conversations, isHandyman]);
 
-  const getNextStep = (conversation: (typeof conversations)[number]) => {
-    if (conversation.status === "awaiting_payment") {
+  const getNextStep = (status: string) => {
+    if (status === "awaiting_payment") {
       return isHandyman
         ? "Payment pending — agree on likely timing"
         : "Payment needed before work starts";
     }
-    if (conversation.status === "in_progress" && conversation.workReadyAt) {
-      return isHandyman
-        ? "Waiting for homeowner review"
-        : "Work is ready — review it now";
-    }
-    if (conversation.status === "in_progress") {
+    if (status === "in_progress") {
       return isHandyman
         ? "Coordinate arrival and job updates"
-        : "Work is underway";
+        : "Coordinate the visit here";
     }
-    if (conversation.status === "completed") return "Job complete";
-    if (conversation.status === "disputed") return "Dispute in review";
-    if (conversation.status === "cancelled") return "Job cancelled";
+    if (status === "completed") return "Job complete";
+    if (status === "disputed") return "Dispute in review";
+    if (status === "cancelled") return "Job cancelled";
     return "Open conversation";
   };
 
@@ -113,14 +101,7 @@ export default function MessagesPage() {
                     <p className="font-semibold text-foreground text-sm truncate">
                       {conversation.otherPartyName}
                     </p>
-                    <StatusBadge
-                      status={
-                        conversation.status === "in_progress" &&
-                        conversation.workReadyAt
-                          ? "ready_for_review"
-                          : conversation.status
-                      }
-                    />
+                    <StatusBadge status={conversation.status} />
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
                     {conversation.title}
@@ -130,9 +111,7 @@ export default function MessagesPage() {
                 <div className="shrink-0 flex items-center gap-2">
                   {hasUnread && (
                     <span className="inline-flex min-w-6 h-6 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold px-1.5">
-                      {conversation.unreadCount > 99
-                        ? "99+"
-                        : conversation.unreadCount}
+                      {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
                     </span>
                   )}
                   <ArrowRight className="w-4 h-4 text-primary" />
@@ -141,9 +120,7 @@ export default function MessagesPage() {
 
               <p
                 className={`mt-3 text-sm line-clamp-1 ${
-                  hasUnread
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground"
+                  hasUnread ? "font-medium text-foreground" : "text-muted-foreground"
                 }`}
               >
                 {preview}
@@ -151,7 +128,7 @@ export default function MessagesPage() {
 
               <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                 <p className="text-xs font-medium text-primary">
-                  {getNextStep(conversation)}
+                  {getNextStep(conversation.status)}
                 </p>
 
                 <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
@@ -160,9 +137,7 @@ export default function MessagesPage() {
                     <span className="truncate">{conversation.location}</span>
                   </span>
                   <span>
-                    {formatDistanceToNow(new Date(latestTime), {
-                      addSuffix: true,
-                    })}
+                    {formatDistanceToNow(new Date(latestTime), { addSuffix: true })}
                   </span>
                 </div>
               </div>
@@ -179,13 +154,11 @@ export default function MessagesPage() {
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm text-muted-foreground">
-              {conversations.length} job{" "}
-              {conversations.length === 1 ? "conversation" : "conversations"}
+              {conversations.length} job {conversations.length === 1 ? "conversation" : "conversations"}
             </p>
             {totalUnread > 0 && (
               <p className="mt-1 text-xs font-medium text-primary">
-                {totalUnread} unread{" "}
-                {totalUnread === 1 ? "message" : "messages"}
+                {totalUnread} unread {totalUnread === 1 ? "message" : "messages"}
               </p>
             )}
           </div>
@@ -204,9 +177,7 @@ export default function MessagesPage() {
         ) : conversations.length === 0 ? (
           <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-8 sm:p-12 text-center">
             <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <h2 className="font-semibold text-foreground mb-2">
-              No job conversations yet
-            </h2>
+            <h2 className="font-semibold text-foreground mb-2">No job conversations yet</h2>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
               {isHandyman
                 ? "Once a homeowner accepts your bid, the job conversation will stay here from payment through completion."
@@ -231,9 +202,7 @@ export default function MessagesPage() {
                     {needsAttention.length}
                   </span>
                 </div>
-                <div className="space-y-3">
-                  {needsAttention.map(renderConversation)}
-                </div>
+                <div className="space-y-3">{needsAttention.map(renderConversation)}</div>
               </section>
             )}
 
@@ -244,14 +213,10 @@ export default function MessagesPage() {
                     <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
                       Other conversations
                     </h2>
-                    <span className="text-[11px] text-muted-foreground">
-                      {active.length}
-                    </span>
+                    <span className="text-[11px] text-muted-foreground">{active.length}</span>
                   </div>
                 )}
-                <div className="space-y-3">
-                  {active.map(renderConversation)}
-                </div>
+                <div className="space-y-3">{active.map(renderConversation)}</div>
               </section>
             )}
           </div>

@@ -99,7 +99,6 @@ export default function HandymanJobDetails() {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [showReadyConfirm, setShowReadyConfirm] = useState(false);
 
   const { data: job, isLoading } = trpc.jobs.getById.useQuery(
     { jobId },
@@ -199,17 +198,6 @@ export default function HandymanJobDetails() {
     onError: (err) => toast.error(err.message),
   });
 
-  const markWorkReady = trpc.jobs.markWorkReady.useMutation({
-    onSuccess: async () => {
-      toast.success("Work sent to the homeowner for review.");
-      setShowReadyConfirm(false);
-      await utils.jobs.getById.invalidate({ jobId });
-      await utils.messages.getInbox.invalidate();
-      await utils.messages.getForJob.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   if (loading || isLoading) {
     return (
       <AppLayout>
@@ -229,9 +217,6 @@ export default function HandymanJobDetails() {
       </AppLayout>
     );
   }
-
-  const isWorkReady = job.status === "in_progress" && !!job.workReadyAt;
-  const displayStatus = isWorkReady ? "ready_for_review" : job.status;
 
   const parsedBidAmount = parseFloat(bidAmount);
   const estimatedPayout =
@@ -270,7 +255,7 @@ export default function HandymanJobDetails() {
                 <h1 className="text-xl font-serif text-foreground">
                   {job.title}
                 </h1>
-                <StatusBadge status={displayStatus} />
+                <StatusBadge status={job.status} />
               </div>
 
               {job.homeownerName && (
@@ -341,90 +326,22 @@ export default function HandymanJobDetails() {
         )}
 
         {isAssignedHandyman && job.status === "in_progress" && (
-          <div
-            className={`rounded-2xl border p-5 mb-6 shadow-sm ${
-              isWorkReady
-                ? "bg-violet-50 border-violet-200"
-                : "bg-emerald-50 border-emerald-200"
-            }`}
-          >
-            {isWorkReady ? (
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
-                  <CheckCircle className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-violet-950">
-                    Work submitted — waiting for review
-                  </p>
-                  <p className="text-sm text-violet-800 mt-1 leading-relaxed">
-                    {job.homeownerName ?? "The homeowner"} has been asked to
-                    inspect the work. Payment remains held until they approve
-                    completion.
-                  </p>
-                  <p className="text-xs text-violet-800 mt-2">
-                    If they request an adjustment, this job will return to
-                    normal in-progress work.
-                  </p>
-                </div>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <CheckCircle className="w-5 h-5" />
               </div>
-            ) : !showReadyConfirm ? (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <CheckCircle className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-emerald-950">
-                      Payment secured — you can proceed
-                    </p>
-                    <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
-                      Coordinate timing and finish the agreed work. When it is
-                      actually done, send it to{" "}
-                      {job.homeownerName ?? "the homeowner"} for review.
-                    </p>
-                  </div>
-                </div>
-
-                <Button
-                  className="sm:shrink-0"
-                  onClick={() => setShowReadyConfirm(true)}
-                >
-                  Ready for Review
-                </Button>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-emerald-200 bg-white/70 p-4">
+              <div className="min-w-0">
                 <p className="font-semibold text-emerald-950">
-                  Is the agreed work finished?
+                  Payment secured — you can proceed
                 </p>
                 <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
-                  This will notify {job.homeownerName ?? "the homeowner"} that
-                  the work is ready to inspect. It does not release payment —
-                  only the homeowner can approve completion.
+                  Confirm the arrival time, access, materials, and any final
+                  scope details with {job.homeownerName ?? "the homeowner"} in
+                  the job chat.
                 </p>
-                <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                  <Button
-                    className="flex-1"
-                    onClick={() => markWorkReady.mutate({ jobId })}
-                    disabled={markWorkReady.isPending}
-                  >
-                    {markWorkReady.isPending && (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    )}
-                    Yes, Send for Review
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 bg-white"
-                    onClick={() => setShowReadyConfirm(false)}
-                    disabled={markWorkReady.isPending}
-                  >
-                    Not Yet
-                  </Button>
-                </div>
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -775,7 +692,6 @@ export default function HandymanJobDetails() {
             bidId={job.selectedBidId ?? undefined}
             includeJobThread
             paymentPending={job.status === "awaiting_payment"}
-            workReadyForReview={isWorkReady}
             jobStatus={job.status}
             otherPartyLabel={job.homeownerName ?? "the homeowner"}
             description={
