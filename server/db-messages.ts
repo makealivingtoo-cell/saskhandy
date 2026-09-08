@@ -1,5 +1,5 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
-import { messages, type Message, type InsertMessage } from "../drizzle/schema";
+import { and, asc, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { bids, jobs, messages, type Message, type InsertMessage } from "../drizzle/schema";
 import { getDb } from "./db";
 
 export async function createMessage(data: InsertMessage): Promise<Message | null> {
@@ -121,5 +121,60 @@ export async function getUnreadCountForBid(
     }
 
     return !readByArray.includes(userId) && msg.senderId !== userId;
+  }).length;
+}
+
+/**
+ * Lightweight global unread count for the header/navigation badge.
+ *
+ * This intentionally does NOT rebuild the user's full inbox. It performs one
+ * joined query that returns only sender/read-state fields for messages the
+ * signed-in user is actually allowed to participate in, then evaluates the
+ * existing JSON-in-text readBy field in memory.
+ *
+ * Participation rules:
+ * - job-level message: homeowner or selected handyman
+ * - bid-level message: homeowner or handyman who owns that bid
+ */
+export async function getTotalUnreadCountForUser(userId: number): Promise<number> {
+  const db = await getDb();
+
+  const candidateMessages = await db
+    .select({
+      senderId: messages.senderId,
+      readBy: messages.readBy,
+    })
+    .from(messages)
+    .innerJoin(jobs, eq(messages.jobId, jobs.id))
+    .leftJoin(bids, eq(messages.bidId, bids.id))
+    .where(
+      and(
+        ne(messages.senderId, userId),
+        or(
+          and(
+            isNull(messages.bidId),
+            or(
+              eq(jobs.homeownerId, userId),
+              eq(jobs.selectedHandymanId, userId)
+            )
+          ),
+          and(
+            isNotNull(messages.bidId),
+            or(eq(jobs.homeownerId, userId), eq(bids.handymanId, userId))
+          )
+        )
+      )
+    );
+
+  return candidateMessages.filter((message) => {
+    let readByArray: number[] = [];
+
+    try {
+      readByArray = message.readBy ? JSON.parse(message.readBy) : [];
+    } catch {
+      readByArray = [];
+    }
+
+    return !readByArray.includes(userId);
   }).length;
 }

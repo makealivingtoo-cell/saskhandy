@@ -16,21 +16,37 @@ import {
   ShieldAlert,
   Wallet,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+
+function useBackgroundQueryReady(isAuthenticated: boolean) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setReady(false);
+      return;
+    }
+
+    // Keep non-critical badge requests out of the dashboard's first tRPC batch.
+    const timer = window.setTimeout(() => setReady(true), 300);
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated]);
+
+  return ready;
+}
 
 export function useUnreadMessageTotal() {
   const { isAuthenticated } = useAuth();
-  const inbox = trpc.messages.getInbox.useQuery(undefined, {
-    enabled: isAuthenticated,
+  const backgroundReady = useBackgroundQueryReady(isAuthenticated);
+  const { data: totalUnread = 0 } = trpc.messages.getTotalUnread.useQuery(undefined, {
+    enabled: backgroundReady,
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
-  return (inbox.data ?? []).reduce(
-    (sum, conversation) => sum + conversation.unreadCount,
-    0
-  );
+  return totalUnread;
 }
 
 export function MessagesCounterBadge() {
@@ -141,7 +157,8 @@ function resolveNotificationLink(
 }
 
 export function NotificationBell() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const backgroundReady = useBackgroundQueryReady(isAuthenticated);
   const utils = trpc.useUtils();
   const [, navigate] = useLocation();
   const [open, setOpen] = useState(false);
@@ -153,14 +170,19 @@ export function NotificationBell() {
   } = trpc.notifications.getMine.useQuery(
     { limit: 20 },
     {
-      refetchInterval: 10000,
-      refetchOnWindowFocus: true,
+      // The full list is only useful after the user opens the bell.
+      enabled: isAuthenticated && open,
+      refetchInterval: open ? 10000 : false,
+      refetchOnWindowFocus: open,
+      staleTime: 10000,
     }
   );
 
   const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(undefined, {
+    enabled: backgroundReady,
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   const markRead = trpc.notifications.markRead.useMutation({
