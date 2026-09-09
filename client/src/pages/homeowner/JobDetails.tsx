@@ -332,7 +332,7 @@ function BidChatDrawer({
   if (!isOpen || !bid) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[70]">
       <button
         type="button"
         aria-label="Close chat overlay"
@@ -340,7 +340,7 @@ function BidChatDrawer({
         onClick={onClose}
       />
 
-      <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl flex flex-col overflow-hidden">
+      <div className="absolute right-0 top-0 h-[100dvh] w-full sm:w-[460px] bg-white shadow-2xl flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0">
         <div className="flex-1 overflow-y-auto">
           <div className="border-b border-border/60 px-4 py-3">
             <div className="flex items-start justify-between gap-4">
