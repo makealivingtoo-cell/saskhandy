@@ -535,6 +535,18 @@ export default function JobDetails() {
     { enabled: !!jobId && !!job?.selectedBidId },
   );
 
+  const { data: workReview } = trpc.workReviews.getForJob.useQuery(
+    { jobId },
+    {
+      enabled:
+        !!jobId &&
+        !!job &&
+        job.status === "in_progress" &&
+        !!job.selectedHandymanId &&
+        (job.homeownerId === user?.id || user?.role === "admin"),
+    },
+  );
+
   const { data: dispute } = trpc.disputes.getByJob.useQuery(
     { jobId },
     { enabled: !!jobId && job?.status === "disputed" },
@@ -571,6 +583,18 @@ export default function JobDetails() {
       setShowCompleteConfirm(false);
       await utils.jobs.getById.invalidate({ jobId });
       await utils.payments.getByJob.invalidate({ jobId });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const requestChanges = trpc.workReviews.requestChanges.useMutation({
+    onSuccess: async () => {
+      toast.success(
+        "Changes requested. Add the details in chat so your handyman knows what to adjust.",
+      );
+      setShowCompleteConfirm(false);
+      await utils.workReviews.getForJob.invalidate({ jobId });
+      await utils.messages.getForJob.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -667,12 +691,14 @@ export default function JobDetails() {
   const isAwaitingPayment = job.status === "awaiting_payment";
   const isInProgress = job.status === "in_progress";
   const isCompleted = job.status === "completed";
+  const isWorkReady = workReview?.status === "ready";
+  const changesRequested = workReview?.status === "changes_requested";
   const canRetryPayment = isAwaitingPayment && !!acceptedBid;
 
   const workflowSteps = [
     { label: "Handyman selected", done: !!job.selectedHandymanId },
     { label: "Payment secured", done: isInProgress || isCompleted },
-    { label: "Work underway", done: isCompleted },
+    { label: "Ready for review", done: isWorkReady || isCompleted },
     { label: "Complete", done: isCompleted },
   ];
 
@@ -1104,25 +1130,81 @@ export default function JobDetails() {
         {job.status === "in_progress" && isOwner && (
           <div className="bg-white rounded-2xl border border-border/60 p-5 mb-6 shadow-sm">
             {!showCompleteConfirm ? (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Is the work finished?
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Only mark the job complete after you have checked the work
-                    and are satisfied.
-                  </p>
-                </div>
+              <>
+                {isWorkReady ? (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-emerald-950">
+                          Work ready for your review
+                        </p>
+                        <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                          Your handyman says the agreed work is finished. Check
+                          the work before approving it and releasing payment.
+                        </p>
+                      </div>
+                    </div>
 
-                <Button
-                  onClick={() => setShowCompleteConfirm(true)}
-                  className="sm:shrink-0"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Finish Job
-                </Button>
-              </div>
+                    <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                      <Button
+                        className="flex-1"
+                        onClick={() => setShowCompleteConfirm(true)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Approve Work
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 bg-white"
+                        onClick={() => requestChanges.mutate({ jobId })}
+                        disabled={requestChanges.isPending}
+                      >
+                        {requestChanges.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <XCircle className="w-4 h-4 mr-2" />
+                        )}
+                        Needs Changes
+                      </Button>
+                    </div>
+                  </div>
+                ) : changesRequested ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-5 h-5 text-amber-700 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-amber-950">
+                          Changes requested
+                        </p>
+                        <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                          Add the specific changes in chat. When the handyman is
+                          finished adjusting the work, they can submit it for
+                          your review again.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-foreground">
+                          Work in progress
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                          Keep coordinating in chat. When the handyman is
+                          finished, they’ll submit the work for your review
+                          before you release payment.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <div className="flex items-start gap-3">
@@ -1132,9 +1214,9 @@ export default function JobDetails() {
                       Confirm completion and release payment
                     </p>
                     <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
-                      By confirming, you’re saying the agreed work is complete
-                      and SaskHandy can release the held payment to{" "}
-                      {acceptedBid?.handymanName ?? "the handyman"}.
+                      By confirming, you’re saying you checked the agreed work,
+                      it is complete, and SaskHandy can release the held payment
+                      to {acceptedBid?.handymanName ?? "the handyman"}.
                     </p>
                   </div>
                 </div>
@@ -1156,7 +1238,7 @@ export default function JobDetails() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 bg-white"
                     onClick={() => setShowCompleteConfirm(false)}
                     disabled={markComplete.isPending}
                   >

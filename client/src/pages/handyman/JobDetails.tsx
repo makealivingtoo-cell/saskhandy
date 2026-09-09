@@ -100,6 +100,8 @@ export default function HandymanJobDetails() {
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
 
+  const [showReadyConfirm, setShowReadyConfirm] = useState(false);
+
   const { data: job, isLoading } = trpc.jobs.getById.useQuery(
     { jobId },
     { enabled: !!jobId },
@@ -129,6 +131,17 @@ export default function HandymanJobDetails() {
   const totalBidCount = bidSummary?.totalBidCount ?? 0;
 
   const isAssignedHandyman = job?.selectedHandymanId === user?.id;
+
+  const { data: workReview } = trpc.workReviews.getForJob.useQuery(
+    { jobId },
+    {
+      enabled:
+        !!jobId &&
+        !!job &&
+        job.status === "in_progress" &&
+        (!!isAssignedHandyman || user?.role === "admin"),
+    },
+  );
 
   const { data: dispute } = trpc.disputes.getByJob.useQuery(
     { jobId },
@@ -185,6 +198,16 @@ export default function HandymanJobDetails() {
       setShowDisputeForm(false);
       await utils.jobs.getById.invalidate({ jobId });
       await utils.disputes.getByJob.invalidate({ jobId });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const markWorkReady = trpc.workReviews.markReady.useMutation({
+    onSuccess: async () => {
+      toast.success("Work submitted for homeowner review.");
+      setShowReadyConfirm(false);
+      await utils.workReviews.getForJob.invalidate({ jobId });
+      await utils.messages.getForJob.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -326,22 +349,112 @@ export default function HandymanJobDetails() {
         )}
 
         {isAssignedHandyman && job.status === "in_progress" && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-6 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <CheckCircle className="w-5 h-5" />
+          <div
+            className={`rounded-2xl border p-5 mb-6 shadow-sm ${
+              workReview?.status === "ready"
+                ? "bg-sky-50 border-sky-200"
+                : workReview?.status === "changes_requested"
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-emerald-50 border-emerald-200"
+            }`}
+          >
+            {workReview?.status === "ready" ? (
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sky-950">
+                    Submitted for homeowner review
+                  </p>
+                  <p className="text-sm text-sky-800 mt-1 leading-relaxed">
+                    The homeowner has been notified. Wait for them to inspect
+                    the work. They can approve it or request changes.
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-emerald-950">
-                  Payment secured — you can proceed
+            ) : showReadyConfirm ? (
+              <div className="rounded-xl border border-white/70 bg-white/70 p-4">
+                <p className="font-semibold text-foreground">
+                  {workReview?.status === "changes_requested"
+                    ? "Resubmit the work for review?"
+                    : "Submit the work for review?"}
                 </p>
-                <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
-                  Confirm the arrival time, access, materials, and any final
-                  scope details with {job.homeownerName ?? "the homeowner"} in
-                  the job chat.
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  Only continue when the agreed work is finished and ready for
+                  the homeowner to inspect.
                 </p>
+                <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => markWorkReady.mutate({ jobId })}
+                    disabled={markWorkReady.isPending}
+                  >
+                    {markWorkReady.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    {workReview?.status === "changes_requested"
+                      ? "Resubmit for Review"
+                      : "Submit for Review"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 bg-white"
+                    onClick={() => setShowReadyConfirm(false)}
+                    disabled={markWorkReady.isPending}
+                  >
+                    Not Yet
+                  </Button>
+                </div>
               </div>
-            </div>
+            ) : workReview?.status === "changes_requested" ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Clock className="w-5 h-5 text-amber-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-amber-950">
+                      Homeowner requested changes
+                    </p>
+                    <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                      Check the chat for what needs adjusting. When those
+                      changes are finished, submit the work for review again.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  className="sm:shrink-0"
+                  onClick={() => setShowReadyConfirm(true)}
+                >
+                  Resubmit Work
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-emerald-950">
+                      Payment secured — you can proceed
+                    </p>
+                    <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                      Coordinate the job in chat. When the agreed work is
+                      finished, submit it for homeowner review before payment
+                      can be released.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  className="sm:shrink-0"
+                  onClick={() => setShowReadyConfirm(true)}
+                >
+                  Work Finished
+                </Button>
+              </div>
+            )}
           </div>
         )}
 

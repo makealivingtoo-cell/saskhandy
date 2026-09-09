@@ -10,6 +10,11 @@ import {
   getUnreadCountForBid,
 } from "./db-messages";
 import {
+  getJobWorkReview,
+  markJobChangesRequested,
+  markJobWorkReady,
+} from "./db-work-reviews";
+import {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendNewBidEmail,
@@ -1342,6 +1347,25 @@ const jobsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
+      if (input.status === "completed") {
+        if (job.status !== "in_progress") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Only an in-progress job can be marked complete.",
+          });
+        }
+
+        const workReview = await getJobWorkReview(input.jobId);
+
+        if (!workReview || workReview.status !== "ready") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "The handyman must submit the work for homeowner review before the job can be completed.",
+          });
+        }
+      }
+
       if (input.status === "completed" && job.selectedHandymanId) {
         await releasePaymentToHandyman({
           jobId: input.jobId,
@@ -1380,6 +1404,152 @@ const jobsRouter = router({
   }),
 
   categories: publicProcedure.query(() => JOB_CATEGORIES),
+});
+
+const workReviewsRouter = router({
+  getForJob: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+      }
+
+      const isHomeowner = job.homeownerId === ctx.user.id;
+      const isAssignedHandyman = job.selectedHandymanId === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin";
+
+      if (!isHomeowner && !isAssignedHandyman && !isAdmin) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      return getJobWorkReview(input.jobId);
+    }),
+
+  markReady: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+      }
+
+      const isAssignedHandyman = job.selectedHandymanId === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin";
+
+      if (!isAssignedHandyman && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Only the handyman assigned to this job can submit the work for review.",
+        });
+      }
+
+      if (job.status !== "in_progress") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Work can only be submitted for review after payment is secured and the job is in progress.",
+        });
+      }
+
+      if (!job.selectedHandymanId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No handyman is assigned to this job.",
+        });
+      }
+
+      const existing = await getJobWorkReview(input.jobId);
+
+      if (existing?.status === "ready") {
+        return existing;
+      }
+
+      const review = await markJobWorkReady({
+        jobId: input.jobId,
+        handymanId: job.selectedHandymanId,
+      });
+
+      await createMessage({
+        jobId: input.jobId,
+        bidId: job.selectedBidId ?? undefined,
+        senderId: ctx.user.id,
+        content:
+          existing?.status === "changes_requested"
+            ? "I’ve made the requested changes. The work is ready for you to review again."
+            : "The work is finished and ready for you to review.",
+      });
+
+      await notifyUser({
+        userId: job.homeownerId,
+        type: "system",
+        title: "Work ready to review",
+        message: `${ctx.user.name ?? "Your handyman"} marked "${job.title}" ready for your review.`,
+        link: `/jobs/${job.id}`,
+      });
+
+      return review;
+    }),
+
+  requestChanges: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+      }
+
+      const isHomeowner = job.homeownerId === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin";
+
+      if (!isHomeowner && !isAdmin) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      if (job.status !== "in_progress") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only an in-progress job can have changes requested.",
+        });
+      }
+
+      if (!job.selectedHandymanId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No handyman is assigned to this job.",
+        });
+      }
+
+      const existing = await getJobWorkReview(input.jobId);
+
+      if (!existing || existing.status !== "ready") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This job is not currently waiting for homeowner review.",
+        });
+      }
+
+      const review = await markJobChangesRequested(input.jobId);
+
+      await createMessage({
+        jobId: input.jobId,
+        bidId: job.selectedBidId ?? undefined,
+        senderId: ctx.user.id,
+        content:
+          "I need a few changes before I can approve the job. I’ll add the details here in the chat.",
+      });
+
+      await notifyUser({
+        userId: job.selectedHandymanId,
+        type: "system",
+        title: "Changes requested",
+        message: `${ctx.user.name ?? "The homeowner"} requested changes on "${job.title}" before completion.`,
+        link: `/handyman/jobs/${job.id}`,
+      });
+
+      return review;
+    }),
 });
 
 const bidsRouter = router({
@@ -3123,6 +3293,7 @@ export const appRouter = router({
   auth: authRouter,
   handymanProfiles: handymanProfilesRouter,
   jobs: jobsRouter,
+  workReviews: workReviewsRouter,
   bids: bidsRouter,
   payments: paymentsRouter,
   reviews: reviewsRouter,
