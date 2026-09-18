@@ -146,6 +146,19 @@ const JOB_CATEGORIES = [
 const TERMS_VERSION = "2026-04-11";
 const PRIVACY_VERSION = "2026-04-11";
 
+const OPEN_JOB_STALE_DAYS = 28;
+const SYSTEM_EXPIRED_REASON = "system_expired";
+
+function getFreshJobExpiryDate(days = OPEN_JOB_STALE_DAYS) {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + days);
+  return expiresAt;
+}
+
+function isSystemExpiredJob(job: { status?: string | null; cancelReason?: string | null } | null | undefined) {
+  return job?.status === "cancelled" && job?.cancelReason === SYSTEM_EXPIRED_REASON;
+}
+
 const restrictedContactPattern =
   /(\+?\d[\d\s().-]{7,}\d)|([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})|(whatsapp|text me|call me|phone number|phone #|email me|e-transfer|etransfer|cash only|pay cash|outside saskhandy)/i;
 
@@ -1129,8 +1142,7 @@ const jobsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Only homeowners can post jobs" });
       }
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      const expiresAt = getFreshJobExpiryDate();
 
       const jobId = await createJob({
         homeownerId: ctx.user.id,
@@ -1217,9 +1229,33 @@ const jobsRouter = router({
         photos: input.photos ?? [],
         budgetMin: input.budgetMin.toFixed(2),
         budgetMax: input.budgetMax.toFixed(2),
+        expiresAt: getFreshJobExpiryDate(),
       });
 
       return { success: true };
+    }),
+
+  keepOpen: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
+      if (job.homeownerId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      if (job.status !== "open") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only open jobs can be kept open.",
+        });
+      }
+
+      const expiresAt = getFreshJobExpiryDate();
+      await updateJob(input.jobId, { expiresAt });
+
+      return { success: true, expiresAt };
     }),
 
   remove: protectedProcedure
@@ -1302,16 +1338,23 @@ const jobsRouter = router({
     }),
 
   getByHomeowner: protectedProcedure.query(async ({ ctx }) => {
-    return getJobsByHomeowner(ctx.user.id);
+    const homeownerJobs = await getJobsByHomeowner(ctx.user.id);
+    return homeownerJobs.filter((job) => !isSystemExpiredJob(job));
   }),
 
-  getById: publicProcedure.input(z.object({ jobId: z.number() })).query(async ({ input }) => {
-    const job = await getJobById(input.jobId);
-    if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+  getById: publicProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-    const homeowner = await safeGetUserById(job.homeownerId);
-    return { ...job, homeownerName: homeowner?.name };
-  }),
+      if (isSystemExpiredJob(job) && ctx.user?.role !== "admin") {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+      }
+
+      const homeowner = await safeGetUserById(job.homeownerId);
+      return { ...job, homeownerName: homeowner?.name };
+    }),
 
   getOpen: publicProcedure
     .input(
@@ -1322,6 +1365,9 @@ const jobsRouter = router({
       })
     )
     .query(async ({ input }) => {
+      // expiresAt is the maintenance deadline, not the visibility state.
+      // The job remains live until the stale-job maintenance loop explicitly
+      // archives it as system_expired. This preserves the legacy 7-day grace period.
       return getOpenJobs(input.limit, input.offset, input.category);
     }),
 
@@ -1659,6 +1705,10 @@ const bidsRouter = router({
       });
     }
 
+    if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+    }
+
     const bidList = await getBidsForJob(input.jobId);
 
     const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
@@ -1695,6 +1745,10 @@ const bidsRouter = router({
         });
       }
 
+      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+      }
+
       const bidList = await getBidsForJob(input.jobId);
 
       const canViewAllBids = ctx.user.role === "admin" || job.homeownerId === ctx.user.id;
@@ -1726,18 +1780,23 @@ const bidsRouter = router({
 
   getForHandyman: protectedProcedure.query(async ({ ctx }) => {
     const bidList = await getBidsForHandyman(ctx.user.id);
+    const enriched = [];
 
-    const enriched = await Promise.all(
-      bidList.map(async (bid) => {
-        const job = await getJobById(bid.jobId);
-        return {
-          ...bid,
-          jobTitle: job?.title,
-          jobStatus: job?.status,
-          jobLocation: job?.location,
-        };
-      })
-    );
+    for (const bid of bidList) {
+      const job = await getJobById(bid.jobId);
+
+      // system_expired jobs are retained for Admin history only.
+      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+        continue;
+      }
+
+      enriched.push({
+        ...bid,
+        jobTitle: job?.title,
+        jobStatus: job?.status,
+        jobLocation: job?.location,
+      });
+    }
 
     return enriched;
   }),
@@ -1823,6 +1882,11 @@ const bidsRouter = router({
     }
 
     await updateBidStatus(input.bidId, "rejected");
+
+    if (job.status === "open") {
+      await updateJob(job.id, { expiresAt: getFreshJobExpiryDate() });
+    }
+
     return { success: true };
   }),
 });
@@ -2282,9 +2346,11 @@ const messagesRouter = router({
       ? await getJobsForHandyman(ctx.user.id)
       : await getJobsByHomeowner(ctx.user.id);
 
+    const visibleJobs = allJobs.filter((job) => !isSystemExpiredJob(job));
+
     const conversationJobs = isHandyman
-      ? allJobs
-      : allJobs.filter((job) => !!job.selectedHandymanId);
+      ? visibleJobs
+      : visibleJobs.filter((job) => !!job.selectedHandymanId);
 
     const conversations = await Promise.all(
       conversationJobs.map(async (job) => {
@@ -2354,6 +2420,10 @@ const messagesRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
+      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+      }
+
       if (containsRestrictedContactInfo(input.content)) {
         throwRestrictedContactError();
       }
@@ -2396,6 +2466,10 @@ const messagesRouter = router({
         }
 
         recipientUserId = isHomeowner ? job.selectedHandymanId : job.homeownerId;
+      }
+
+      if (job.status === "open" && job.homeownerId === ctx.user.id) {
+        await updateJob(job.id, { expiresAt: getFreshJobExpiryDate() });
       }
 
       const msg = await createMessage({
@@ -2450,6 +2524,10 @@ const messagesRouter = router({
     .query(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
+      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
+      }
 
       let jobMessages;
 

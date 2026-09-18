@@ -231,6 +231,22 @@ export default function AdminPanel() {
     [jobs]
   );
 
+  const expiredJobs = useMemo(
+    () =>
+      jobsByCreatedDate.filter(
+        (job) => job.status === "cancelled" && (job as any).cancelReason === "system_expired"
+      ),
+    [jobsByCreatedDate]
+  );
+
+  const nonExpiredJobs = useMemo(
+    () =>
+      jobsByCreatedDate.filter(
+        (job) => !(job.status === "cancelled" && (job as any).cancelReason === "system_expired")
+      ),
+    [jobsByCreatedDate]
+  );
+
   if (!user || user.role !== "admin") {
     return (
       <AppLayout>
@@ -1697,7 +1713,8 @@ Insurance Reviewed
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground">
-              Jobs <span className="text-muted-foreground font-normal">({jobs?.length ?? 0})</span>
+              Jobs{" "}
+              <span className="text-muted-foreground font-normal">({nonExpiredJobs.length})</span>
             </h2>
             <Button variant="outline" size="sm" onClick={() => refetchJobs()}>
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
@@ -1709,10 +1726,10 @@ Insurance Reviewed
             <div className="flex justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
-          ) : !jobs || jobs.length === 0 ? (
+          ) : nonExpiredJobs.length === 0 ? (
             <div className="bg-white rounded-xl border border-border/60 p-10 text-center">
               <Briefcase className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No jobs found.</p>
+              <p className="text-sm text-muted-foreground">No active or closed jobs found.</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-border/60 overflow-hidden">
@@ -1744,7 +1761,7 @@ Insurance Reviewed
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40">
-                    {jobsByCreatedDate.map((job) => (
+                    {nonExpiredJobs.map((job) => (
                       <tr key={job.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3">
                           <div>
@@ -1803,6 +1820,147 @@ Insurance Reviewed
                               onClick={() => {
                                 const confirmed = window.confirm(
                                   `Delete job "${job.title}"? This will permanently remove the job and related records.`
+                                );
+
+                                if (!confirmed) return;
+
+                                setDeletingJobId(job.id);
+                                deleteJob.mutate({ jobId: job.id });
+                              }}
+                              disabled={deleteJob.isPending}
+                            >
+                              {deleteJob.isPending && deletingJobId === job.id ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                Expired Jobs{" "}
+                <span className="text-muted-foreground font-normal">({expiredJobs.length})</span>
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Admin-only archive. These jobs are no longer visible to homeowners or handymen.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetchJobs()}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </Button>
+          </div>
+
+          {jobsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : expiredJobs.length === 0 ? (
+            <div className="bg-white rounded-xl border border-border/60 p-8 text-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No system-expired jobs yet.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-amber-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-amber-200 bg-amber-50/60">
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Title
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Homeowner
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Category
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Status
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Posted
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Expired
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Bids
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-amber-900">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {expiredJobs.map((job) => (
+                      <tr key={`expired-${job.id}`} className="hover:bg-amber-50/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="font-medium text-foreground">{job.title}</p>
+                            <p className="text-xs text-muted-foreground">{job.location}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="text-foreground text-sm">{job.homeownerName ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {job.homeownerEmail ?? "—"}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{job.category}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            Expired
+                          </span>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            System inactivity
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                          {format(new Date(job.createdAt), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                          {(job as any).cancelledAt
+                            ? format(new Date((job as any).cancelledAt), "MMM d, yyyy")
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium border bg-secondary text-secondary-foreground">
+                            {(job as any).bidCount ?? 0} bid
+                            {((job as any).bidCount ?? 0) === 1 ? "" : "s"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2 flex-wrap">
+                            <Button asChild size="sm" variant="outline">
+                              <a href={`/jobs/${job.id}`} target="_blank" rel="noreferrer">
+                                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                View
+                              </a>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                              onClick={() => {
+                                const confirmed = window.confirm(
+                                  `Permanently delete expired job "${job.title}" and its related records?`
                                 );
 
                                 if (!confirmed) return;

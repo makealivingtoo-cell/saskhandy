@@ -515,3 +515,71 @@ export async function sendNewJobPostedEmail(params: {
     ctaUrl,
   });
 }
+
+// ─── Stale Job Lifecycle Emails ───────────────────────────────────────────────
+
+export async function sendStaleJobWarningEmail(params: {
+  to: string;
+  homeownerName?: string | null;
+  jobTitle: string;
+  jobId: number;
+  daysRemaining: number;
+  pendingBidCount?: number;
+}) {
+  const ctaUrl = `${APP_URL}/jobs/${params.jobId}`;
+  const daysRemaining = Math.max(1, Math.ceil(params.daysRemaining));
+  const dayText = `${daysRemaining} day${daysRemaining === 1 ? "" : "s"}`;
+  const pendingBidCount = Math.max(0, params.pendingBidCount ?? 0);
+  const bidSentence =
+    pendingBidCount > 0
+      ? ` You currently have ${pendingBidCount} pending bid${pendingBidCount === 1 ? "" : "s"} waiting for review.`
+      : "";
+  const isFinalWarning = daysRemaining <= 7;
+
+  await sendActionEmail({
+    to: params.to,
+    subject: isFinalWarning
+      ? `Action needed: "${params.jobTitle}" will be removed soon`
+      : `Your SaskHandy job "${params.jobTitle}" is still open`,
+    heading: isFinalWarning ? "Your job will be removed soon" : "Do you still need this job?",
+    intro: params.homeownerName ? `Hi ${params.homeownerName},` : undefined,
+    body: `Your job "${params.jobTitle}" is still open on SaskHandy.${bidSentence}\n\nIf you still need help, open the job and take action — respond to a bid, message a handyman, edit the job, or choose Keep Job Open. If there is no homeowner activity, the listing will be removed from the active marketplace in ${dayText}.`,
+    ctaLabel: "Review Job",
+    ctaUrl,
+    footerNote:
+      "If the listing is removed and you still need the work later, you can post a new job on SaskHandy.",
+  });
+}
+
+export async function sendJobArchivedAfterInactivityEmail(params: {
+  to: string;
+  homeownerName?: string | null;
+  jobTitle: string;
+}) {
+  await sendActionEmail({
+    to: params.to,
+    subject: `Your SaskHandy job was removed after inactivity`,
+    heading: "Your job is no longer active",
+    intro: params.homeownerName ? `Hi ${params.homeownerName},` : undefined,
+    body: `We removed "${params.jobTitle}" from the active SaskHandy marketplace because there was no homeowner activity before the deadline. The listing is no longer visible to handymen and cannot receive new bids.\n\nIf you still need the work done, you can post a new job whenever you are ready.`,
+    ctaLabel: "Post a New Job",
+    ctaUrl: `${APP_URL}/post-job`,
+  });
+}
+
+export async function sendExpiredJobBidClosedEmail(params: {
+  to: string;
+  handymanName?: string | null;
+  jobTitle: string;
+}) {
+  await sendActionEmail({
+    to: params.to,
+    subject: `Job no longer available: "${params.jobTitle}"`,
+    heading: "This job is no longer active",
+    intro: params.handymanName ? `Hi ${params.handymanName},` : undefined,
+    body: `The homeowner did not keep "${params.jobTitle}" active, so the listing was removed from the SaskHandy marketplace. Your pending bid was closed because the listing expired — it was not rejected by the homeowner.`,
+    ctaLabel: "Browse Open Jobs",
+    ctaUrl: `${APP_URL}/handyman/browse`,
+  });
+}
+

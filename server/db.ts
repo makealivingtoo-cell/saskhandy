@@ -943,6 +943,9 @@ export async function getAllJobsForAdmin() {
       status: jobs.status,
       selectedHandymanId: jobs.selectedHandymanId,
       selectedBidId: jobs.selectedBidId,
+      cancelReason: jobs.cancelReason,
+      cancelDetails: jobs.cancelDetails,
+      cancelledAt: jobs.cancelledAt,
       createdAt: jobs.createdAt,
       updatedAt: jobs.updatedAt,
       expiresAt: jobs.expiresAt,
@@ -1043,6 +1046,107 @@ export async function cancelJobWithReason(
       updatedAt: new Date(),
     } as any)
     .where(eq(jobs.id, jobId));
+}
+
+// ─── Stale Job Maintenance ─────────────────────────────────────────────────────
+// Stale jobs are soft-archived as cancelled/system_expired so all bid/message
+// history remains available to Admin. No job rows are deleted by this workflow.
+export async function getOpenJobsForStaleMaintenance() {
+  const db = await getDb();
+
+  const rows = await db
+    .select()
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.status, "open"),
+        isNull(jobs.selectedBidId),
+        isNull(jobs.selectedHandymanId)
+      )
+    )
+    .orderBy(desc(jobs.createdAt));
+
+  return rows.map(normalizeJob);
+}
+
+export async function archiveJobAsSystemExpired(jobId: number) {
+  const db = await getDb();
+  const now = new Date();
+
+  const currentRows = await db
+    .select({
+      id: jobs.id,
+      status: jobs.status,
+      selectedBidId: jobs.selectedBidId,
+      selectedHandymanId: jobs.selectedHandymanId,
+    })
+    .from(jobs)
+    .where(eq(jobs.id, jobId))
+    .limit(1);
+
+  const current = currentRows[0] ?? null;
+
+  if (
+    !current ||
+    current.status !== "open" ||
+    current.selectedBidId ||
+    current.selectedHandymanId
+  ) {
+    return { archived: false };
+  }
+
+  await db.transaction(async (tx) => {
+    // A stale-job archive is not a handyman rejection. Cancel pending bids so
+    // they remain in history without being treated as lost bids.
+    await tx
+      .update(bids)
+      .set({
+        status: "cancelled",
+        updatedAt: now,
+      })
+      .where(and(eq(bids.jobId, jobId), eq(bids.status, "pending")));
+
+    await tx
+      .update(jobs)
+      .set({
+        status: "cancelled",
+        cancelReason: "system_expired",
+        cancelDetails: "Automatically archived after the homeowner did not keep the job active.",
+        cancelledAt: now,
+        updatedAt: now,
+      } as any)
+      .where(and(eq(jobs.id, jobId), eq(jobs.status, "open")));
+  });
+
+  return { archived: true, archivedAt: now };
+}
+
+export async function hasJobSystemNotification(params: {
+  userId: number;
+  jobId: number;
+  title: string;
+  since?: Date | null;
+}) {
+  const db = await getDb();
+
+  const conditions = [
+    eq(notifications.userId, params.userId),
+    eq(notifications.type, "system"),
+    eq(notifications.link, `/jobs/${params.jobId}`),
+    eq(notifications.title, params.title),
+  ];
+
+  if (params.since) {
+    conditions.push(gt(notifications.createdAt, params.since));
+  }
+
+  const rows = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(and(...conditions))
+    .limit(1);
+
+  return rows.length > 0;
 }
 
 type BidReminderNumber = 1 | 2 | 3;
