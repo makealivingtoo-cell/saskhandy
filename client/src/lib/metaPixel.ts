@@ -2,24 +2,39 @@ declare global {
   interface Window {
     fbq?: (...args: any[]) => void;
     _fbq?: (...args: any[]) => void;
-    requestIdleCallback?: (
-      callback: IdleRequestCallback,
-      options?: IdleRequestOptions
-    ) => number;
   }
 }
 
-const META_PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID || "1016886836651819";
+type RegistrationUserType = "homeowner" | "handyman";
+
+const META_PIXEL_ID =
+  import.meta.env.VITE_META_PIXEL_ID || "1016886836651819";
 
 let pixelLoaded = false;
 let pixelLoading = false;
+let pixelInitialized = false;
+
+function initializePixel() {
+  if (typeof window === "undefined") return;
+  if (!META_PIXEL_ID) return;
+  if (typeof window.fbq !== "function") return;
+  if (pixelInitialized) return;
+
+  /*
+   * Queue initialization immediately.
+   *
+   * This mirrors Meta's normal Pixel behavior: init is placed in the fbq
+   * queue before any conversion event, even if fbevents.js is still loading.
+   */
+  window.fbq("init", META_PIXEL_ID);
+  window.fbq("track", "PageView");
+
+  pixelInitialized = true;
+}
 
 function loadMetaPixel() {
   if (typeof window === "undefined") return;
   if (!META_PIXEL_ID) return;
-  if (pixelLoaded || pixelLoading) return;
-
-  pixelLoading = true;
 
   if (!window.fbq) {
     const fbq = function (...args: any[]) {
@@ -39,6 +54,13 @@ function loadMetaPixel() {
     window._fbq = fbq;
   }
 
+  // Make sure init is queued BEFORE any registration/lead event.
+  initializePixel();
+
+  if (pixelLoaded || pixelLoading) return;
+
+  pixelLoading = true;
+
   const script = document.createElement("script");
   script.async = true;
   script.src = "https://connect.facebook.net/en_US/fbevents.js";
@@ -46,9 +68,6 @@ function loadMetaPixel() {
   script.onload = () => {
     pixelLoaded = true;
     pixelLoading = false;
-
-    window.fbq?.("init", META_PIXEL_ID);
-    window.fbq?.("track", "PageView");
   };
 
   script.onerror = () => {
@@ -63,7 +82,10 @@ export function initMetaPixel() {
 
   const load = () => loadMetaPixel();
 
-  if ("requestIdleCallback" in window && typeof window.requestIdleCallback === "function") {
+  if (
+    "requestIdleCallback" in window &&
+    typeof window.requestIdleCallback === "function"
+  ) {
     window.requestIdleCallback(load, { timeout: 3000 });
   } else {
     window.setTimeout(load, 3000);
@@ -73,26 +95,37 @@ export function initMetaPixel() {
 function ensurePixelThenTrack(callback: () => void) {
   if (typeof window === "undefined") return;
 
-  if (typeof window.fbq === "function") {
-    callback();
-    return;
+  /*
+   * loadMetaPixel creates the fbq queue and queues Pixel initialization
+   * synchronously, so conversion events can safely be queued immediately
+   * afterward even if the Meta script has not finished downloading yet.
+   */
+  if (!pixelInitialized || typeof window.fbq !== "function") {
+    loadMetaPixel();
   }
 
-  loadMetaPixel();
-
-  window.setTimeout(() => {
-    if (typeof window.fbq === "function") {
-      callback();
-    }
-  }, 1000);
+  if (typeof window.fbq === "function") {
+    callback();
+  }
 }
 
-export function trackCompleteRegistration(method: string = "website") {
+export function trackCompleteRegistration(
+  method: string = "website",
+  userType?: RegistrationUserType
+) {
   ensurePixelThenTrack(() => {
+    const contentName =
+      userType === "homeowner"
+        ? "Homeowner Signup"
+        : userType === "handyman"
+          ? "Handyman Signup"
+          : "SaskHandy Signup";
+
     window.fbq?.("track", "CompleteRegistration", {
-      content_name: "Handyman Signup",
+      content_name: contentName,
       status: "completed",
       registration_method: method,
+      user_type: userType ?? "unknown",
     });
   });
 }

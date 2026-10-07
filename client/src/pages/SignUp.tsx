@@ -24,7 +24,9 @@ const HANDYMAN_SKILLS = [
   "Cleaning",
   "Drywall",
   "Roofing",
-];
+] as const;
+
+type HandymanSkill = (typeof HANDYMAN_SKILLS)[number];
 
 
 export default function SignUp() {
@@ -35,7 +37,7 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [userType, setUserType] = useState<UserType>("homeowner");
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<HandymanSkill[]>([]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -54,7 +56,7 @@ export default function SignUp() {
     }
   }, [loading, isAuthenticated, navigate]);
 
-  const toggleSkill = (skill: string) => {
+  const toggleSkill = (skill: HandymanSkill) => {
     setSelectedSkills((prev) =>
       prev.includes(skill)
         ? prev.filter((item) => item !== skill)
@@ -64,7 +66,7 @@ export default function SignUp() {
 
   const signUp = trpc.auth.signUp.useMutation({
     onSuccess: (data: any) => {
-      trackCompleteRegistration("website");
+      trackCompleteRegistration("website", userType);
 
       if (data?.emailSent === false) {
         toast.warning(
@@ -312,7 +314,7 @@ export default function SignUp() {
                       id="skillSelect"
                       value=""
                       onChange={(e) => {
-                        const skill = e.target.value;
+                        const skill = e.target.value as HandymanSkill;
                         if (!skill) return;
 
                         setSelectedSkills((prev) =>
