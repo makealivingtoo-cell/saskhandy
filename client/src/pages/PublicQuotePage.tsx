@@ -9,7 +9,6 @@ import {
 } from "@stripe/react-stripe-js";
 import { CheckCircle2, CreditCard, Loader2, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 
@@ -175,7 +174,7 @@ export default function PublicQuotePage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:py-12">
         {isLoading ? (
           <div className="flex justify-center rounded-2xl border bg-white py-16">
@@ -309,6 +308,6 @@ export default function PublicQuotePage() {
           </div>
         )}
       </main>
-    </AppLayout>
+    </>
   );
 }
