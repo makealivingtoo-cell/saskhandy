@@ -284,6 +284,12 @@ export const quotes = mysqlTable("quotes", {
   terms: text("terms"),
 
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  // Separate provincial and federal taxes for new quotes; null preserves legacy quote display.
+  gstRate: decimal("gstRate", { precision: 5, scale: 2 }),
+  gstAmount: decimal("gstAmount", { precision: 10, scale: 2 }),
+  pstRate: decimal("pstRate", { precision: 5, scale: 2 }),
+  pstAmount: decimal("pstAmount", { precision: 10, scale: 2 }),
+  // Legacy combined fields remain for quotes created before the tax split.
   taxRate: decimal("taxRate", { precision: 5, scale: 2 }),
   taxAmount: decimal("taxAmount", { precision: 10, scale: 2 }).default("0.00").notNull(),
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),

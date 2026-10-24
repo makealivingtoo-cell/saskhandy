@@ -184,7 +184,9 @@ export default function HandymanDashboard() {
     title: "",
     scope: "",
     subtotal: "",
-    taxRate: "0",
+    gstRate: "5",
+    pstRate: "6",
+    chargeGst: false,
     smsPermissionConfirmed: false,
   });
   const [sendingQuoteId, setSendingQuoteId] = useState<number | null>(null);
@@ -202,10 +204,15 @@ export default function HandymanDashboard() {
     const referralJobId = quoteForm.referralJobId ? Number(quoteForm.referralJobId) : undefined;
     const selectedReferral = acceptedReferrals.find((job) => job.id === referralJobId);
     const subtotal = Number(quoteForm.subtotal);
-    const taxRate = Number(quoteForm.taxRate || "0");
+    const gstRate = quoteForm.chargeGst ? Number(quoteForm.gstRate || "0") : 0;
+    const pstRate = Number(quoteForm.pstRate || "0");
 
-    if (!Number.isFinite(subtotal) || subtotal <= 0 || !Number.isFinite(taxRate) || taxRate < 0) {
-      toast.error("Enter a valid subtotal and tax rate.");
+    if (
+      !Number.isFinite(subtotal) || subtotal <= 0 ||
+      !Number.isFinite(gstRate) || gstRate < 0 ||
+      !Number.isFinite(pstRate) || pstRate < 0
+    ) {
+      toast.error("Enter a valid subtotal, GST rate, and PST rate.");
       return;
     }
 
@@ -222,7 +229,8 @@ export default function HandymanDashboard() {
         title: quoteForm.title.trim(),
         scope: quoteForm.scope.trim(),
         subtotal,
-        taxRate,
+        gstRate,
+        pstRate,
       });
 
       if (quoteForm.smsPermissionConfirmed) {
@@ -244,7 +252,9 @@ export default function HandymanDashboard() {
         title: "",
         scope: "",
         subtotal: "",
-        taxRate: "0",
+        gstRate: "5",
+        pstRate: "6",
+        chargeGst: false,
         smsPermissionConfirmed: false,
       });
       await refetchQuotes();
@@ -743,7 +753,7 @@ export default function HandymanDashboard() {
                   placeholder="e.g. Bathroom faucet replacement"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-subtotal">
                     Subtotal (CAD)
@@ -761,19 +771,45 @@ export default function HandymanDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-tax-rate">
-                    Tax rate (%)
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-gst-rate">
+                    GST rate (%)
                   </label>
                   <input
-                    id="quote-tax-rate"
+                    id="quote-gst-rate"
                     type="number"
                     min="0"
                     max="100"
                     step="0.01"
-                    value={quoteForm.taxRate}
-                    onChange={(event) => setQuoteForm((current) => ({ ...current, taxRate: event.target.value }))}
+                    value={quoteForm.gstRate}
+                    disabled={!quoteForm.chargeGst}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, gstRate: event.target.value }))}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm disabled:bg-muted"
+                  />
+                  <label className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={quoteForm.chargeGst}
+                      onChange={(event) => setQuoteForm((current) => ({ ...current, chargeGst: event.target.checked }))}
+                      className="mt-0.5"
+                    />
+                    I’m registered or required to collect GST.
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-pst-rate">
+                    PST rate (%)
+                  </label>
+                  <input
+                    id="quote-pst-rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={quoteForm.pstRate}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, pstRate: event.target.value }))}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">Set to 0 if PST does not apply.</p>
                 </div>
               </div>
             </div>

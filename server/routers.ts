@@ -1600,7 +1600,10 @@ const quotesRouter = router({
         customerNote: z.string().trim().max(5000).optional(),
         terms: z.string().trim().max(5000).optional(),
         subtotal: z.number().positive().max(999999.99),
-        taxRate: z.number().min(0).max(100).default(0),
+        gstRate: z.number().min(0).max(100).optional(),
+        pstRate: z.number().min(0).max(100).optional(),
+        // Keep accepting old clients while they update.
+        taxRate: z.number().min(0).max(100).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1614,7 +1617,7 @@ const quotesRouter = router({
       let address = input.address?.trim() || null;
       let sourceType: "saskhandy_referral" | "handyman_customer" = "handyman_customer";
       let referralJobId: number | null = null;
-      let platformFeeRate = Number(process.env.HANDYMAN_CUSTOMER_PLATFORM_FEE_RATE ?? "0");
+      let platformFeeRate = Number(process.env.HANDYMAN_CUSTOMER_PLATFORM_FEE_RATE ?? "5");
 
       if (!Number.isFinite(platformFeeRate) || platformFeeRate < 0 || platformFeeRate > 100) {
         throw new TRPCError({
@@ -1656,8 +1659,21 @@ const quotesRouter = router({
       }
 
       const subtotal = Number(input.subtotal.toFixed(2));
-      const taxRate = Number(input.taxRate.toFixed(2));
-      const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
+      const usesSplitTaxes = input.gstRate !== undefined || input.pstRate !== undefined;
+      const gstRate = Number((input.gstRate ?? 0).toFixed(2));
+      const pstRate = Number((input.pstRate ?? 0).toFixed(2));
+      const gstAmount = usesSplitTaxes
+        ? Number(((subtotal * gstRate) / 100).toFixed(2))
+        : null;
+      const pstAmount = usesSplitTaxes
+        ? Number(((subtotal * pstRate) / 100).toFixed(2))
+        : null;
+      const taxRate = usesSplitTaxes
+        ? Number((gstRate + pstRate).toFixed(2))
+        : Number((input.taxRate ?? 0).toFixed(2));
+      const taxAmount = usesSplitTaxes
+        ? Number((gstAmount! + pstAmount!).toFixed(2))
+        : Number(((subtotal * taxRate) / 100).toFixed(2));
       const totalAmount = Number((subtotal + taxAmount).toFixed(2));
       const platformFeeAmount = Number(((subtotal * platformFeeRate) / 100).toFixed(2));
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -1676,6 +1692,11 @@ const quotesRouter = router({
         customerNote: input.customerNote?.trim() || null,
         terms: input.terms?.trim() || null,
         subtotal: subtotal.toFixed(2),
+        gstRate: usesSplitTaxes ? gstRate.toFixed(2) : null,
+        gstAmount: gstAmount?.toFixed(2) ?? null,
+        pstRate: usesSplitTaxes ? pstRate.toFixed(2) : null,
+        pstAmount: pstAmount?.toFixed(2) ?? null,
+        // Legacy combined values remain populated for older clients/records.
         taxRate: taxRate.toFixed(2),
         taxAmount: taxAmount.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
@@ -1756,6 +1777,10 @@ const quotesRouter = router({
         customerNote: quote.customerNote,
         terms: quote.terms,
         subtotal: quote.subtotal,
+        gstRate: quote.gstRate,
+        gstAmount: quote.gstAmount,
+        pstRate: quote.pstRate,
+        pstAmount: quote.pstAmount,
         taxRate: quote.taxRate,
         taxAmount: quote.taxAmount,
         totalAmount: quote.totalAmount,

@@ -226,10 +226,27 @@ export default function PublicQuotePage() {
 
               <div className="mt-6 space-y-2 border-t border-border/60 pt-5 text-sm">
                 <div className="flex justify-between"><span>Subtotal</span><span>${Number(quote.subtotal).toFixed(2)} CAD</span></div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Tax ({Number(quote.taxRate ?? 0).toFixed(2)}%)</span>
-                  <span>${Number(quote.taxAmount).toFixed(2)} CAD</span>
-                </div>
+                {quote.gstAmount != null || quote.pstAmount != null ? (
+                  <>
+                    {Number(quote.gstRate ?? 0) > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>GST ({Number(quote.gstRate).toFixed(2)}%)</span>
+                        <span>${Number(quote.gstAmount ?? 0).toFixed(2)} CAD</span>
+                      </div>
+                    )}
+                    {Number(quote.pstRate ?? 0) > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>PST ({Number(quote.pstRate).toFixed(2)}%)</span>
+                        <span>${Number(quote.pstAmount ?? 0).toFixed(2)} CAD</span>
+                      </div>
+                    )}
+                  </>
+                ) : Number(quote.taxAmount ?? 0) > 0 ? (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Tax ({Number(quote.taxRate ?? 0).toFixed(2)}%)</span>
+                    <span>${Number(quote.taxAmount).toFixed(2)} CAD</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between border-t border-border/60 pt-3 text-base font-semibold">
                   <span>Total</span><span>${Number(quote.totalAmount).toFixed(2)} CAD</span>
                 </div>
