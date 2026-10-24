@@ -191,12 +191,12 @@ export default function PublicQuotePage() {
         ) : (
           <div className="space-y-5">
             <section className="rounded-2xl border border-border/60 bg-white p-6 sm:p-8">
-              <p className="text-sm font-medium text-primary">SaskHandy Quick Quote</p>
+              <p className="text-sm font-medium text-primary">Quote from SaskHandy</p>
               <h1 className="mt-2 text-2xl font-semibold text-foreground">{quote.title}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Prepared by {quote.handymanName}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Quote from {quote.handymanName}</p>
 
               <div className="mt-6 border-t border-border/60 pt-5">
-                <h2 className="text-sm font-semibold text-foreground">Work included</h2>
+                <h2 className="text-sm font-semibold text-foreground">Work details</h2>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{quote.scope}</p>
               </div>
 
@@ -235,7 +235,7 @@ export default function PublicQuotePage() {
                 </div>
                 {quote.expiresAt && (
                   <p className="pt-2 text-xs text-muted-foreground">
-                    Expires {new Date(quote.expiresAt).toLocaleDateString()}
+                    Valid until {new Date(quote.expiresAt).toLocaleDateString()}
                   </p>
                 )}
               </div>
@@ -277,9 +277,9 @@ export default function PublicQuotePage() {
                 </div>
               ) : ["approved", "payment_pending", "payment_failed"].includes(quote.status) ? (
                 <div>
-                  <h2 className="text-lg font-semibold">Pay securely</h2>
+                  <h2 className="text-lg font-semibold">Complete payment</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {quote.status === "payment_failed" ? "The previous payment did not complete. You can try again." : "Your quote is approved. Complete payment to finish."}
+                    {quote.status === "payment_failed" ? "Your previous payment did not go through. You can try again." : "You approved this quote. Complete payment securely to confirm the work."}
                   </p>
                   {clientSecret && stripePromise && paymentOptions ? (
                     <div className="mt-5">
