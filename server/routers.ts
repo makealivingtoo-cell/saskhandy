@@ -55,6 +55,7 @@ import {
   createPasswordResetToken,
   createPayment,
   createQuote,
+  deleteQuote,
   createPayoutRequest,
   createReview,
   createTwoFactorCode,
@@ -1576,6 +1577,51 @@ const quotesRouter = router({
     }
     return getQuotesForHandyman(ctx.user.id);
   }),
+
+  deleteDraft: protectedProcedure
+    .input(z.object({ quoteId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+      }
+
+      const quote = await getQuoteById(input.quoteId);
+      if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
+      if (quote.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (quote.status !== "draft" || quote.sentAt || quote.stripePaymentIntentId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only unsent draft quotes can be deleted.",
+        });
+      }
+
+      await deleteQuote(quote.id);
+      return { success: true };
+    }),
+
+  cancelSent: protectedProcedure
+    .input(z.object({ quoteId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+      }
+
+      const quote = await getQuoteById(input.quoteId);
+      if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
+      if (quote.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (!["sent", "viewed"].includes(quote.status) || quote.stripePaymentIntentId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only a sent or viewed quote with no payment in progress can be withdrawn.",
+        });
+      }
+
+      await updateQuoteStatus(quote.id, "cancelled");
+      if (quote.referralJobId) {
+        await updateReferralJobStatus(quote.referralJobId, "accepted");
+      }
+      return { success: true };
+    }),
 
   create: protectedProcedure
     .input(

@@ -958,27 +958,19 @@ export async function createQuote(
   const db = await getDb();
   // 32 random bytes produce a 256-bit, URL-safe-as-hex customer access token.
   const publicToken = randomBytes(32).toString("hex");
-  await db.insert(quotes).values({ ...data, publicToken });
-
-  // Resolve the inserted row by its unique token instead of relying on the
-  // driver-specific insert result shape (which can leave insertId undefined).
-  const [createdQuote] = await db
-    .select({ id: quotes.id })
-    .from(quotes)
-    .where(eq(quotes.publicToken, publicToken))
-    .limit(1);
-
-  if (!createdQuote || !Number.isSafeInteger(createdQuote.id) || createdQuote.id <= 0) {
-    throw new Error("Quote was inserted but its ID could not be read back.");
-  }
-
-  return { id: createdQuote.id, publicToken };
+  const result = await db.insert(quotes).values({ ...data, publicToken });
+  return { id: Number((result as any).insertId), publicToken };
 }
 
 export async function getQuoteById(id: number) {
   const db = await getDb();
   const rows = await db.select().from(quotes).where(eq(quotes.id, id)).limit(1);
   return rows[0] ?? null;
+}
+
+export async function deleteQuote(id: number) {
+  const db = await getDb();
+  await db.delete(quotes).where(eq(quotes.id, id));
 }
 
 export async function getQuoteByPublicToken(publicToken: string) {
@@ -1664,12 +1656,24 @@ export async function updatePayoutRequest(
 
 export async function getHandymanPayoutSummary(handymanId: number) {
   const completedPayments = await getPaymentsByHandyman(handymanId);
+  const handymanQuotes = await getQuotesForHandyman(handymanId);
+  const completedQuotes = handymanQuotes.filter((quote) => quote.status === "completed");
   const requests = await getPayoutRequestsByHandyman(handymanId);
 
-  const completedEarnings = completedPayments.reduce((sum, payment) => {
+  const paymentEarnings = completedPayments.reduce((sum, payment) => {
     if (payment.status !== "completed") return sum;
     return sum + parseFloat(payment.handymanPayout);
   }, 0);
+
+  // Quote payments become withdrawable only after the work is marked complete.
+  // The handyman receives the customer total less SaskHandy's saved platform fee.
+  const quoteEarnings = completedQuotes.reduce((sum, quote) => {
+    const totalAmount = Number.parseFloat(quote.totalAmount);
+    const platformFeeAmount = Number.parseFloat(quote.platformFeeAmount);
+    return sum + Math.max(totalAmount - platformFeeAmount, 0);
+  }, 0);
+
+  const completedEarnings = paymentEarnings + quoteEarnings;
 
   const pendingPayouts = requests.reduce((sum, request) => {
     if (request.status !== "pending") return sum;
@@ -1690,6 +1694,8 @@ export async function getHandymanPayoutSummary(handymanId: number) {
     availableBalance: availableBalance.toFixed(2),
     payoutRequests: requests,
     completedPayments,
+    completedQuotes,
+    quoteEarnings: quoteEarnings.toFixed(2),
   };
 }
 

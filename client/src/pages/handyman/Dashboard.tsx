@@ -19,6 +19,8 @@ import {
   Shield,
   Star,
   TrendingUp,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -190,10 +192,14 @@ export default function HandymanDashboard() {
     smsPermissionConfirmed: false,
   });
   const [sendingQuoteId, setSendingQuoteId] = useState<number | null>(null);
+  const [deletingQuoteId, setDeletingQuoteId] = useState<number | null>(null);
+  const [cancellingQuoteId, setCancellingQuoteId] = useState<number | null>(null);
   const [completingQuoteId, setCompletingQuoteId] = useState<number | null>(null);
 
   const createQuote = trpc.quotes.create.useMutation();
   const sendQuote = trpc.quotes.send.useMutation();
+  const deleteDraftQuote = trpc.quotes.deleteDraft.useMutation();
+  const cancelSentQuote = trpc.quotes.cancelSent.useMutation();
   const completeQuote = trpc.quotes.complete.useMutation();
 
   const acceptedReferrals = referralJobs?.filter((job) => job.status === "accepted") ?? [];
@@ -279,6 +285,40 @@ export default function HandymanDashboard() {
       toast.error(error.message ?? "Could not send the quote.");
     } finally {
       setSendingQuoteId(null);
+    }
+  };
+
+  const handleDeleteDraftQuote = async (quoteId: number) => {
+    const confirmed = window.confirm("Delete this unsent draft quote? This cannot be undone.");
+    if (!confirmed) return;
+
+    setDeletingQuoteId(quoteId);
+    try {
+      await deleteDraftQuote.mutateAsync({ quoteId });
+      toast.success("Draft quote deleted.");
+      await refetchQuotes();
+    } catch (error: any) {
+      toast.error(error.message ?? "Could not delete the draft quote.");
+    } finally {
+      setDeletingQuoteId(null);
+    }
+  };
+
+  const handleCancelSentQuote = async (quoteId: number) => {
+    const confirmed = window.confirm(
+      "Withdraw this quote? The customer link will stop working. The quote record will remain in your history."
+    );
+    if (!confirmed) return;
+
+    setCancellingQuoteId(quoteId);
+    try {
+      await cancelSentQuote.mutateAsync({ quoteId });
+      toast.success("Quote withdrawn. The customer link is no longer active.");
+      await Promise.all([refetchQuotes(), refetchReferralJobs()]);
+    } catch (error: any) {
+      toast.error(error.message ?? "Could not withdraw the quote.");
+    } finally {
+      setCancellingQuoteId(null);
     }
   };
 
@@ -912,6 +952,36 @@ export default function HandymanDashboard() {
                             <Send className="w-4 h-4 mr-1.5" />
                           )}
                           Text quote link
+                        </Button>
+                      )}
+                      {quote.status === "draft" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={deletingQuoteId === quote.id || sendingQuoteId === quote.id}
+                          onClick={() => void handleDeleteDraftQuote(quote.id)}
+                        >
+                          {deletingQuoteId === quote.id ? (
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4 mr-1.5" />
+                          )}
+                          Delete draft
+                        </Button>
+                      )}
+                      {["sent", "viewed"].includes(quote.status) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={cancellingQuoteId === quote.id}
+                          onClick={() => void handleCancelSentQuote(quote.id)}
+                        >
+                          {cancellingQuoteId === quote.id ? (
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                          ) : (
+                            <XCircle className="w-4 h-4 mr-1.5" />
+                          )}
+                          Withdraw quote
                         </Button>
                       )}
                       {quote.status === "paid" && (
