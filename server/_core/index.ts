@@ -34,8 +34,8 @@ import {
   markPaymentReminderSent,
   updateJob,
 } from "../db";
-import { payments, jobs } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { payments, jobs, quotes } from "../../drizzle/schema";
+import { and, eq, isNull, ne, or } from "drizzle-orm";
 import { storagePut } from "../storage";
 import multer from "multer";
 import { nanoid } from "nanoid";
@@ -73,7 +73,79 @@ function getJobIdFromPaymentIntent(intent: any) {
   return jobId;
 }
 
+function getQuoteIdFromPaymentIntent(intent: any) {
+  const rawQuoteId = intent?.metadata?.quoteId;
+  const quoteId = Number.parseInt(rawQuoteId ?? "0", 10);
+
+  if (!Number.isFinite(quoteId) || quoteId <= 0) {
+    return null;
+  }
+
+  return quoteId;
+}
+
+async function updateQuoteFromPaymentIntent(
+  intent: any,
+  status: "paid" | "payment_failed"
+) {
+  const quoteId = getQuoteIdFromPaymentIntent(intent);
+  if (!quoteId) return false;
+
+  const db = await getDb();
+  const rows = await db
+    .select({
+      totalAmount: quotes.totalAmount,
+      stripePaymentIntentId: quotes.stripePaymentIntentId,
+    })
+    .from(quotes)
+    .where(eq(quotes.id, quoteId))
+    .limit(1);
+  const quote = rows[0];
+
+  if (!quote) {
+    console.warn(`[Webhook] Quote ${quoteId} from payment intent ${intent.id} was not found.`);
+    return true;
+  }
+  if (quote.stripePaymentIntentId && quote.stripePaymentIntentId !== intent.id) {
+    console.warn(`[Webhook] Ignored stale payment intent ${intent.id} for quote ${quoteId}.`);
+    return true;
+  }
+
+  if (status === "paid") {
+    const paidAmount = Number(intent.amount_received ?? intent.amount);
+    const expectedAmount = Math.round(Number(quote.totalAmount) * 100);
+    if (!Number.isFinite(paidAmount) || paidAmount !== expectedAmount) {
+      console.error(
+        `[Webhook] Amount mismatch for quote ${quoteId}: expected ${expectedAmount}, received ${paidAmount}.`
+      );
+      return true;
+    }
+  }
+
+  const now = new Date();
+  await db
+    .update(quotes)
+    .set({
+      stripePaymentIntentId: intent.id,
+      status,
+      ...(status === "paid" ? { paidAt: now } : {}),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(quotes.id, quoteId),
+        or(isNull(quotes.stripePaymentIntentId), eq(quotes.stripePaymentIntentId, intent.id)),
+        ...(status === "payment_failed" ? [ne(quotes.status, "paid")] : [])
+      )
+    );
+
+  console.log(`[Webhook] Quote ${quoteId} payment ${status}.`);
+  return true;
+}
+
 async function markPaymentSucceeded(intent: any) {
+  if (await updateQuoteFromPaymentIntent(intent, "paid")) return;
+
   const jobId = getJobIdFromPaymentIntent(intent);
 
   if (!jobId) {
@@ -104,6 +176,8 @@ async function markPaymentSucceeded(intent: any) {
 }
 
 async function markPaymentFailed(intent: any) {
+  if (await updateQuoteFromPaymentIntent(intent, "payment_failed")) return;
+
   const jobId = getJobIdFromPaymentIntent(intent);
 
   if (!jobId) {
@@ -138,6 +212,8 @@ async function markPaymentFailed(intent: any) {
 }
 
 async function markPaymentCanceled(intent: any) {
+  if (await updateQuoteFromPaymentIntent(intent, "payment_failed")) return;
+
   const jobId = getJobIdFromPaymentIntent(intent);
 
   if (!jobId) {

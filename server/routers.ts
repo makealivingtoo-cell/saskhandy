@@ -36,12 +36,14 @@ import {
   sendNewMessageSms,
   sendPaymentNeededSms,
   sendPaymentReceivedSms,
+  sendTransactionalSms,
 } from "./sms";
 import { z } from "zod";
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "crypto";
 import {
   adminDeleteJobById,
   cancelJobWithReason,
+  createReferralJob,
   createBid,
   createDispute,
   createEmailVerificationToken,
@@ -52,6 +54,7 @@ import {
   createReport,
   createPasswordResetToken,
   createPayment,
+  createQuote,
   createPayoutRequest,
   createReview,
   createTwoFactorCode,
@@ -68,6 +71,7 @@ import {
   getAllJobsForAdmin,
   getAllPayoutRequests,
   getAllReports,
+  getAllReferralJobsForAdmin,
   getAllUsers,
   getBidById,
   getBidsForHandyman,
@@ -77,11 +81,16 @@ import {
   getHandymanProfile,
   getHandymanProfilesForAdmin,
   getJobById,
+  getReferralJobById,
+  getReferralJobsForHandyman,
   getJobsByHomeowner,
   getJobsForHandyman,
   getNotificationsForUser,
   getOpenJobs,
   getPaymentByJob,
+  getQuoteById,
+  getQuoteByPublicToken,
+  getQuotesForHandyman,
   getPayoutRequestById,
   getPayoutRequestsByHandyman,
   getReviewForJob,
@@ -109,6 +118,8 @@ import {
   updateHandymanProfile,
   updateJob,
   updateJobStatus,
+  updateReferralJobStatus,
+  updateQuoteStatus,
   updatePayment,
   updatePayoutRequest,
   updateUserPassword,
@@ -1452,6 +1463,371 @@ const jobsRouter = router({
   categories: publicProcedure.query(() => JOB_CATEGORIES),
 });
 
+const referralJobsRouter = router({
+  getMine: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.userType !== "handyman") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+    }
+
+    const referrals = await getReferralJobsForHandyman(ctx.user.id);
+    return referrals.map((referralJob) =>
+      referralJob.status === "sent" || referralJob.status === "declined"
+        ? {
+            ...referralJob,
+            homeownerName: "Homeowner",
+            homeownerEmail: null,
+            homeownerPhone: null,
+            address: null,
+          }
+        : referralJob
+    );
+  }),
+
+  getById: protectedProcedure
+    .input(z.object({ referralJobId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const referralJob = await getReferralJobById(input.referralJobId);
+      if (!referralJob) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const isAssignedHandyman = referralJob.handymanId === ctx.user.id;
+      if (!isAssignedHandyman && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      if (
+        isAssignedHandyman &&
+        (referralJob.status === "sent" || referralJob.status === "declined")
+      ) {
+        return {
+          ...referralJob,
+          homeownerName: "Homeowner",
+          homeownerEmail: null,
+          homeownerPhone: null,
+          address: null,
+        };
+      }
+
+      return referralJob;
+    }),
+
+  accept: protectedProcedure
+    .input(z.object({ referralJobId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+      }
+
+      const referralJob = await getReferralJobById(input.referralJobId);
+      if (!referralJob) throw new TRPCError({ code: "NOT_FOUND" });
+      if (referralJob.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (referralJob.status !== "sent") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This referral is no longer waiting for a response.",
+        });
+      }
+
+      await updateReferralJobStatus(referralJob.id, "accepted");
+      await notifyUser({
+        userId: referralJob.createdByAdminId,
+        type: "system",
+        title: "Handyman accepted referral",
+        message: `${ctx.user.name ?? "The assigned handyman"} accepted "${referralJob.title}".`,
+        link: "/admin",
+      });
+
+      return { success: true };
+    }),
+
+  decline: protectedProcedure
+    .input(z.object({ referralJobId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+      }
+
+      const referralJob = await getReferralJobById(input.referralJobId);
+      if (!referralJob) throw new TRPCError({ code: "NOT_FOUND" });
+      if (referralJob.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (referralJob.status !== "sent") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This referral is no longer waiting for a response.",
+        });
+      }
+
+      await updateReferralJobStatus(referralJob.id, "declined");
+      await notifyUser({
+        userId: referralJob.createdByAdminId,
+        type: "system",
+        title: "Handyman declined referral",
+        message: `${ctx.user.name ?? "The assigned handyman"} declined "${referralJob.title}".`,
+        link: "/admin",
+      });
+
+      return { success: true };
+    }),
+});
+
+const quotesRouter = router({
+  getMine: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.userType !== "handyman") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+    }
+    return getQuotesForHandyman(ctx.user.id);
+  }),
+
+  create: protectedProcedure
+    .input(
+      z.object({
+        referralJobId: z.number().int().positive().optional(),
+        homeownerName: z.string().trim().min(1).max(255).optional(),
+        homeownerEmail: z.union([z.string().trim().email().max(320), z.literal("")]).optional(),
+        homeownerPhone: z.string().trim().max(30).optional(),
+        address: z.string().trim().max(500).optional(),
+        title: z.string().trim().min(3).max(255),
+        scope: z.string().trim().min(1).max(10000),
+        lineItems: z
+          .array(
+            z.object({
+              description: z.string().trim().min(1).max(255),
+              quantity: z.number().positive().max(10000),
+              unitPrice: z.number().nonnegative().max(999999.99),
+            })
+          )
+          .max(100)
+          .optional(),
+        customerNote: z.string().trim().max(5000).optional(),
+        terms: z.string().trim().max(5000).optional(),
+        subtotal: z.number().positive().max(999999.99),
+        taxRate: z.number().min(0).max(100).default(0),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+      }
+
+      let homeownerName = input.homeownerName?.trim() || "";
+      let homeownerEmail = input.homeownerEmail?.trim() || null;
+      let homeownerPhone = input.homeownerPhone?.trim() || null;
+      let address = input.address?.trim() || null;
+      let sourceType: "saskhandy_referral" | "handyman_customer" = "handyman_customer";
+      let referralJobId: number | null = null;
+      let platformFeeRate = Number(process.env.HANDYMAN_CUSTOMER_PLATFORM_FEE_RATE ?? "0");
+
+      if (!Number.isFinite(platformFeeRate) || platformFeeRate < 0 || platformFeeRate > 100) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "The handyman customer quote fee is not configured correctly.",
+        });
+      }
+
+      if (input.referralJobId) {
+        const referralJob = await getReferralJobById(input.referralJobId);
+        if (!referralJob) throw new TRPCError({ code: "NOT_FOUND", message: "Referral not found." });
+        if (referralJob.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        if (referralJob.status !== "accepted") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Accept the referral before creating its quote.",
+          });
+        }
+
+        sourceType = "saskhandy_referral";
+        referralJobId = referralJob.id;
+        homeownerName = referralJob.homeownerName;
+        homeownerEmail = referralJob.homeownerEmail;
+        homeownerPhone = referralJob.homeownerPhone;
+        address = referralJob.address;
+        platformFeeRate = Number(referralJob.commissionRate);
+      } else if (!homeownerName) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Enter the customer's name for a quote that is not linked to a SaskHandy referral.",
+        });
+      }
+
+      if (!homeownerPhone || !normalizePhoneNumber(homeownerPhone)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A valid customer phone number is required to send the quote by text.",
+        });
+      }
+
+      const subtotal = Number(input.subtotal.toFixed(2));
+      const taxRate = Number(input.taxRate.toFixed(2));
+      const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
+      const totalAmount = Number((subtotal + taxAmount).toFixed(2));
+      const platformFeeAmount = Number(((subtotal * platformFeeRate) / 100).toFixed(2));
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      const quote = await createQuote({
+        handymanId: ctx.user.id,
+        referralJobId,
+        sourceType,
+        homeownerName,
+        homeownerEmail,
+        homeownerPhone: normalizePhoneNumber(homeownerPhone),
+        address,
+        title: input.title,
+        scope: input.scope,
+        lineItems: input.lineItems ? JSON.stringify(input.lineItems) : null,
+        customerNote: input.customerNote?.trim() || null,
+        terms: input.terms?.trim() || null,
+        subtotal: subtotal.toFixed(2),
+        taxRate: taxRate.toFixed(2),
+        taxAmount: taxAmount.toFixed(2),
+        totalAmount: totalAmount.toFixed(2),
+        platformFeeRate: platformFeeRate.toFixed(2),
+        platformFeeAmount: platformFeeAmount.toFixed(2),
+        status: "draft",
+        stripePaymentIntentId: null,
+        expiresAt,
+        sentAt: null,
+        viewedAt: null,
+        approvedAt: null,
+        declinedAt: null,
+        paidAt: null,
+        completedAt: null,
+      });
+
+      return { quoteId: quote.id, publicToken: quote.publicToken };
+    }),
+
+  send: protectedProcedure
+    .input(
+      z.object({
+        quoteId: z.number().int().positive(),
+        confirmSmsPermission: z.literal(true),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+      }
+      const quote = await getQuoteById(input.quoteId);
+      if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
+      if (quote.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (quote.status !== "draft") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only draft quotes can be sent." });
+      }
+      if (!quote.homeownerPhone) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "The quote has no customer phone number." });
+      }
+
+      const appUrl = (
+        process.env.APP_URL ||
+        process.env.RENDER_EXTERNAL_URL ||
+        "https://saskhandy.com"
+      ).replace(/\/$/, "");
+      const quoteUrl = `${appUrl}/quote/${quote.publicToken}`;
+      await sendTransactionalSms({
+        label: "quote link",
+        user: { phoneNumber: quote.homeownerPhone, smsConsent: true },
+        body: `SaskHandy: ${ctx.user.name ?? "Your handyman"} sent you a quote for "${quote.title}". Review it here: ${quoteUrl}`,
+      });
+      await updateQuoteStatus(quote.id, "sent");
+      if (quote.referralJobId) {
+        await updateReferralJobStatus(quote.referralJobId, "quote_sent");
+      }
+
+      return { success: true, quoteUrl };
+    }),
+
+  getPublic: publicProcedure
+    .input(z.object({ token: z.string().min(64).max(128) }))
+    .query(async ({ input }) => {
+      const quote = await getQuoteByPublicToken(input.token);
+      if (!quote || quote.status === "draft" || quote.status === "cancelled") {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
+      }
+      if (quote.expiresAt && quote.expiresAt.getTime() < Date.now() && quote.status !== "paid") {
+        if (quote.status !== "expired") await updateQuoteStatus(quote.id, "expired");
+        throw new TRPCError({ code: "NOT_FOUND", message: "This quote has expired." });
+      }
+      if (quote.status === "sent") await updateQuoteStatus(quote.id, "viewed");
+      const handyman = await safeGetUserById(quote.handymanId);
+
+      return {
+        title: quote.title,
+        scope: quote.scope,
+        lineItems: quote.lineItems,
+        customerNote: quote.customerNote,
+        terms: quote.terms,
+        subtotal: quote.subtotal,
+        taxRate: quote.taxRate,
+        taxAmount: quote.taxAmount,
+        totalAmount: quote.totalAmount,
+        status: quote.status === "sent" ? "viewed" : quote.status,
+        expiresAt: quote.expiresAt,
+        handymanName: handyman?.name ?? "Your handyman",
+      };
+    }),
+
+  respond: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(64).max(128),
+        decision: z.enum(["approved", "declined"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const quote = await getQuoteByPublicToken(input.token);
+      if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
+      if (quote.expiresAt && quote.expiresAt.getTime() < Date.now()) {
+        if (quote.status !== "expired") await updateQuoteStatus(quote.id, "expired");
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This quote has expired." });
+      }
+      if (quote.status !== "sent" && quote.status !== "viewed") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This quote can no longer be approved or declined.",
+        });
+      }
+
+      await updateQuoteStatus(quote.id, input.decision);
+      return { success: true, status: input.decision };
+    }),
+
+  complete: protectedProcedure
+    .input(z.object({ quoteId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
+      }
+
+      const quote = await getQuoteById(input.quoteId);
+      if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
+      if (quote.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (quote.status === "completed") return { success: true, alreadyCompleted: true };
+      if (quote.status !== "paid") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A quote can be marked complete after the customer’s payment is confirmed.",
+        });
+      }
+
+      await updateQuoteStatus(quote.id, "completed");
+
+      if (quote.referralJobId) {
+        const referralJob = await getReferralJobById(quote.referralJobId);
+        await updateReferralJobStatus(quote.referralJobId, "completed");
+        if (referralJob) {
+          await notifyUser({
+            userId: referralJob.createdByAdminId,
+            type: "system",
+            title: "Referred quote completed",
+            message: `${ctx.user.name ?? "The assigned handyman"} marked "${quote.title}" complete. The handyman’s quote earnings are now available for payout.`,
+            link: "/admin",
+          });
+        }
+      }
+
+      return { success: true, alreadyCompleted: false };
+    }),
+});
+
 const workReviewsRouter = router({
   getForJob: protectedProcedure
     .input(z.object({ jobId: z.number() }))
@@ -1912,6 +2288,8 @@ const paymentsRouter = router({
 
     return {
       payments: summary.completedPayments,
+      completedQuotes: summary.completedQuotes,
+      quoteEarnings: summary.quoteEarnings,
       payoutRequests: summary.payoutRequests,
       completedEarnings: summary.completedEarnings,
       pendingPayouts: summary.pendingPayouts,
@@ -2758,6 +3136,59 @@ const notificationsRouter = router({
 });
 
 const adminRouter = router({
+  getReferralJobs: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+    return getAllReferralJobsForAdmin();
+  }),
+
+  createReferralJob: protectedProcedure
+    .input(
+      z.object({
+        handymanId: z.number().int().positive(),
+        homeownerName: z.string().trim().min(1).max(255),
+        homeownerEmail: z.union([z.string().trim().email().max(320), z.literal("")]).optional(),
+        homeownerPhone: z.string().trim().max(30).optional(),
+        address: z.string().trim().max(500).optional(),
+        title: z.string().trim().min(3).max(255),
+        description: z.string().trim().min(10).max(10000),
+        category: z.string().trim().min(1).max(100),
+        photos: z.array(z.string().url()).max(8).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      const handyman = await safeGetUserById(input.handymanId);
+      if (!handyman || handyman.userType !== "handyman") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Select a valid handyman account.",
+        });
+      }
+
+      const referralJobId = await createReferralJob({
+        createdByAdminId: ctx.user.id,
+        handymanId: handyman.id,
+        homeownerName: input.homeownerName,
+        homeownerEmail: input.homeownerEmail?.trim() || null,
+        homeownerPhone: input.homeownerPhone?.trim() || null,
+        address: input.address?.trim() || null,
+        title: input.title,
+        description: input.description,
+        category: input.category,
+        photos: input.photos ?? [],
+      });
+
+      await notifyUser({
+        userId: handyman.id,
+        type: "system",
+        title: "New SaskHandy referral",
+        message: `You have been assigned a new referral: "${input.title}". Review it in your dashboard.`,
+        link: "/handyman/dashboard",
+      });
+
+      return { referralJobId };
+    }),
   getUsers: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     return getAllUsers();
@@ -3371,6 +3802,8 @@ export const appRouter = router({
   auth: authRouter,
   handymanProfiles: handymanProfilesRouter,
   jobs: jobsRouter,
+  referralJobs: referralJobsRouter,
+  quotes: quotesRouter,
   workReviews: workReviewsRouter,
   bids: bidsRouter,
   payments: paymentsRouter,

@@ -67,6 +67,7 @@ export default function HandymanEarnings() {
   }
 
   const completedPayments = earningsData?.payments.filter((p) => p.status === "completed") ?? [];
+  const completedQuotes = earningsData?.completedQuotes ?? [];
   const payoutRequests = earningsData?.payoutRequests ?? [];
 
   const completedEarnings = parseFloat(earningsData?.completedEarnings ?? "0");
@@ -143,7 +144,7 @@ export default function HandymanEarnings() {
               ${completedEarnings.toFixed(2)}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {completedPayments.length} completed jobs
+              {completedPayments.length + completedQuotes.length} completed jobs and quotes
             </p>
           </div>
 
@@ -184,8 +185,8 @@ export default function HandymanEarnings() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700 leading-relaxed">
-                  You do not have any available balance to request right now. Completed job payouts
-                  will appear here once the homeowner marks the job complete.
+                  You do not have any available balance to request right now. Completed job and quote
+                  payouts appear here once the work is marked complete.
                 </p>
               </div>
             </div>
@@ -265,9 +266,10 @@ export default function HandymanEarnings() {
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-5">
           <h3 className="font-semibold text-primary text-sm mb-2">How Earnings Work</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            For every job, you receive <strong className="text-foreground">80%</strong> of the
-            agreed bid amount. The remaining 20% is SaskHandy&apos;s platform fee. After the
-            homeowner marks the job complete, your earnings become available to request. Payouts are
+            Marketplace jobs pay the handyman 80% of the accepted bid. Quick Quote payouts are the
+            customer total minus the platform fee saved on that quote: SaskHandy referrals use the
+            referral commission, while any own-customer fee is set by SaskHandy. Quote earnings
+            become available to request after the handyman marks the work complete. Payouts are
             reviewed weekly and processed manually on Saturday.
           </p>
         </div>
@@ -337,14 +339,14 @@ export default function HandymanEarnings() {
 
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-border/40">
-            <h3 className="font-semibold text-foreground">Completed Job Earnings</h3>
+            <h3 className="font-semibold text-foreground">Completed Earnings</h3>
           </div>
 
-          {completedPayments.length === 0 ? (
+          {completedPayments.length === 0 && completedQuotes.length === 0 ? (
             <div className="p-12 text-center">
               <DollarSign className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
-                No completed job earnings yet. Complete jobs to start earning.
+                No completed job or quote earnings yet. Mark work complete to make earnings available.
               </p>
             </div>
           ) : (
@@ -372,6 +374,33 @@ export default function HandymanEarnings() {
                   </div>
                 </div>
               ))}
+              {completedQuotes.map((quote) => {
+                const total = Number.parseFloat(quote.totalAmount);
+                const platformFee = Number.parseFloat(quote.platformFeeAmount);
+                const handymanPayout = Math.max(total - platformFee, 0);
+
+                return (
+                  <div key={`quote-${quote.id}`} className="px-6 py-4 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-medium text-foreground">{quote.title}</p>
+                        <StatusBadge status={quote.status} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {quote.sourceType === "saskhandy_referral" ? "SaskHandy referral quote" : "Own-customer quote"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Completed {format(new Date(quote.completedAt ?? quote.updatedAt), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-foreground">${handymanPayout.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">of ${total.toFixed(2)} total</p>
+                      <p className="text-xs text-muted-foreground">${platformFee.toFixed(2)} platform fee</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

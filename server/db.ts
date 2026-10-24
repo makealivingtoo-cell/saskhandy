@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { randomBytes } from "crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql, { type Pool } from "mysql2/promise";
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
@@ -15,6 +16,8 @@ import {
   payoutRequests,
   reviews,
   reports,
+  referralJobs,
+  quotes,
   supportTicketMessages,
   supportTickets,
   twoFactorCodes,
@@ -29,6 +32,8 @@ import {
   type InsertPayment,
   type InsertPayoutRequest,
   type InsertReport,
+  type InsertReferralJob,
+  type InsertQuote,
   type InsertReview,
   type InsertTwoFactorCode,
   type InsertUser,
@@ -113,6 +118,13 @@ function parsePhotos(value: string | null | undefined): string[] {
 }
 
 function normalizeJob<T extends { photos?: string | null }>(job: T) {
+  return {
+    ...job,
+    photos: parsePhotos(job.photos),
+  };
+}
+
+function normalizeReferralJob<T extends { photos?: string | null }>(job: T) {
   return {
     ...job,
     photos: parsePhotos(job.photos),
@@ -862,6 +874,177 @@ export async function recalculateHandymanRating(userId: number) {
     .where(eq(handymanProfiles.userId, userId));
 }
 
+// ─── SaskHandy-referred jobs ──────────────────────────────────────────────────
+export async function createReferralJob(
+  data: Omit<
+    InsertReferralJob,
+    | "photos"
+    | "sourceType"
+    | "commissionRate"
+    | "status"
+    | "acceptedAt"
+    | "declinedAt"
+    | "quoteSentAt"
+    | "completedAt"
+    | "createdAt"
+    | "updatedAt"
+  > & { photos?: string[] | null }
+) {
+  const db = await getDb();
+  const result = await db.insert(referralJobs).values({
+    ...data,
+    photos: stringifyPhotos(data.photos),
+    // Attribution and commission are fixed by the server for admin referrals.
+    sourceType: "saskhandy_referral",
+    commissionRate: "20.00",
+    status: "sent",
+  });
+  return Number((result as any).insertId);
+}
+
+export async function getReferralJobById(id: number) {
+  const db = await getDb();
+  const rows = await db.select().from(referralJobs).where(eq(referralJobs.id, id)).limit(1);
+  return rows[0] ? normalizeReferralJob(rows[0]) : null;
+}
+
+export async function getReferralJobsForHandyman(handymanId: number) {
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(referralJobs)
+    .where(eq(referralJobs.handymanId, handymanId))
+    .orderBy(desc(referralJobs.updatedAt));
+
+  return rows.map(normalizeReferralJob);
+}
+
+export async function getAllReferralJobsForAdmin() {
+  const db = await getDb();
+  const rows = await db.select().from(referralJobs).orderBy(desc(referralJobs.updatedAt));
+  return rows.map(normalizeReferralJob);
+}
+
+export async function updateReferralJobStatus(
+  id: number,
+  status:
+    | "accepted"
+    | "declined"
+    | "quote_sent"
+    | "awaiting_payment"
+    | "in_progress"
+    | "completed"
+    | "cancelled"
+) {
+  const db = await getDb();
+  const now = new Date();
+  await db
+    .update(referralJobs)
+    .set({
+      status,
+      ...(status === "accepted" ? { acceptedAt: now } : {}),
+      ...(status === "declined" ? { declinedAt: now } : {}),
+      ...(status === "quote_sent" ? { quoteSentAt: now } : {}),
+      ...(status === "completed" ? { completedAt: now } : {}),
+      updatedAt: now,
+    })
+    .where(eq(referralJobs.id, id));
+}
+
+// ─── Quotes ──────────────────────────────────────────────────────────────────
+export async function createQuote(
+  data: Omit<InsertQuote, "id" | "publicToken" | "createdAt" | "updatedAt">
+) {
+  const db = await getDb();
+  // 32 random bytes produce a 256-bit, URL-safe-as-hex customer access token.
+  const publicToken = randomBytes(32).toString("hex");
+  const result = await db.insert(quotes).values({ ...data, publicToken });
+  return { id: Number((result as any).insertId), publicToken };
+}
+
+export async function getQuoteById(id: number) {
+  const db = await getDb();
+  const rows = await db.select().from(quotes).where(eq(quotes.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getQuoteByPublicToken(publicToken: string) {
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(quotes)
+    .where(eq(quotes.publicToken, publicToken))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getQuotesForHandyman(handymanId: number) {
+  const db = await getDb();
+  return db
+    .select()
+    .from(quotes)
+    .where(eq(quotes.handymanId, handymanId))
+    .orderBy(desc(quotes.updatedAt));
+}
+
+type EditableQuoteFields = Pick<
+  InsertQuote,
+  | "homeownerName"
+  | "homeownerEmail"
+  | "homeownerPhone"
+  | "address"
+  | "title"
+  | "scope"
+  | "lineItems"
+  | "customerNote"
+  | "terms"
+  | "subtotal"
+  | "taxRate"
+  | "taxAmount"
+  | "totalAmount"
+  | "stripePaymentIntentId"
+  | "expiresAt"
+>;
+
+export async function updateQuote(id: number, data: Partial<EditableQuoteFields>) {
+  const db = await getDb();
+  await db
+    .update(quotes)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(quotes.id, id));
+}
+
+export type QuoteStatus =
+  | "draft"
+  | "sent"
+  | "viewed"
+  | "approved"
+  | "declined"
+  | "expired"
+  | "payment_pending"
+  | "paid"
+  | "completed"
+  | "cancelled"
+  | "payment_failed";
+
+export async function updateQuoteStatus(id: number, status: QuoteStatus) {
+  const db = await getDb();
+  const now = new Date();
+  await db
+    .update(quotes)
+    .set({
+      status,
+      ...(status === "sent" ? { sentAt: now } : {}),
+      ...(status === "viewed" ? { viewedAt: now } : {}),
+      ...(status === "approved" ? { approvedAt: now } : {}),
+      ...(status === "declined" ? { declinedAt: now } : {}),
+      ...(status === "paid" ? { paidAt: now } : {}),
+      ...(status === "completed" ? { completedAt: now } : {}),
+      updatedAt: now,
+    })
+    .where(eq(quotes.id, id));
+}
+
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
 export async function createJob(data: Omit<InsertJob, "photos"> & { photos?: string[] | null }) {
   const db = await getDb();
@@ -1468,12 +1651,24 @@ export async function updatePayoutRequest(
 
 export async function getHandymanPayoutSummary(handymanId: number) {
   const completedPayments = await getPaymentsByHandyman(handymanId);
+  const handymanQuotes = await getQuotesForHandyman(handymanId);
+  const completedQuotes = handymanQuotes.filter((quote) => quote.status === "completed");
   const requests = await getPayoutRequestsByHandyman(handymanId);
 
-  const completedEarnings = completedPayments.reduce((sum, payment) => {
+  const paymentEarnings = completedPayments.reduce((sum, payment) => {
     if (payment.status !== "completed") return sum;
     return sum + parseFloat(payment.handymanPayout);
   }, 0);
+
+  // Quote payments become withdrawable only after the work is marked complete.
+  // The handyman receives the customer total less SaskHandy's saved platform fee.
+  const quoteEarnings = completedQuotes.reduce((sum, quote) => {
+    const totalAmount = Number.parseFloat(quote.totalAmount);
+    const platformFeeAmount = Number.parseFloat(quote.platformFeeAmount);
+    return sum + Math.max(totalAmount - platformFeeAmount, 0);
+  }, 0);
+
+  const completedEarnings = paymentEarnings + quoteEarnings;
 
   const pendingPayouts = requests.reduce((sum, request) => {
     if (request.status !== "pending") return sum;
@@ -1494,6 +1689,8 @@ export async function getHandymanPayoutSummary(handymanId: number) {
     availableBalance: availableBalance.toFixed(2),
     payoutRequests: requests,
     completedPayments,
+    completedQuotes,
+    quoteEarnings: quoteEarnings.toFixed(2),
   };
 }
 

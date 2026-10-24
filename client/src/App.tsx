@@ -81,6 +81,7 @@ import AdminSupportPage from "./pages/AdminSupport";
 import TermsPage from "./pages/Terms";
 import PrivacyPage from "./pages/Privacy";
 import OpenJobsSaskatoonPage from "./pages/OpenJobsSaskatoon";
+import PublicQuotePage from "./pages/PublicQuotePage";
 
 // Homeowner
 import HomeownerDashboard from "./pages/homeowner/Dashboard";
@@ -152,6 +153,7 @@ function Router() {
       <Route path="/blog" component={BlogPage} />
       <Route path="/blog/:slug" component={BlogArticlePage} />
       <Route path="/open-jobs-saskatoon" component={OpenJobsSaskatoonPage} />
+      <Route path="/quote/:token" component={PublicQuotePage} />
 
       <Route path="/saskatchewan-handyman-services" component={SaskatchewanHandymanServicesPage} />
       <Route path="/saskatoon-handyman-services" component={SaskatoonHandymanServicesPage} />

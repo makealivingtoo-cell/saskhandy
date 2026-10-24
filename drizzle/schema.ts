@@ -209,6 +209,124 @@ export const jobs = mysqlTable("jobs", {
 export type Job = typeof jobs.$inferSelect;
 export type InsertJob = typeof jobs.$inferInsert;
 
+// ─── SaskHandy-referred jobs ─────────────────────────────────────────────────
+// Admin-created leads do not require a homeowner account. The homeowner can
+// review and pay a quote from a secure public link later in the flow.
+export const referralJobs = mysqlTable("referral_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  createdByAdminId: int("createdByAdminId").notNull(),
+  handymanId: int("handymanId").notNull(),
+
+  homeownerName: varchar("homeownerName", { length: 255 }).notNull(),
+  homeownerEmail: varchar("homeownerEmail", { length: 320 }),
+  homeownerPhone: varchar("homeownerPhone", { length: 30 }),
+  address: varchar("address", { length: 500 }),
+
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  photos: text("photos"),
+
+  // The referral source and 20% commission are fixed when the admin creates it.
+  // The commission amount is calculated from the accepted quote.
+  sourceType: mysqlEnum("sourceType", ["saskhandy_referral"])
+    .default("saskhandy_referral")
+    .notNull(),
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 2 })
+    .default("20.00")
+    .notNull(),
+
+  status: mysqlEnum("status", [
+    "sent",
+    "accepted",
+    "declined",
+    "quote_sent",
+    "awaiting_payment",
+    "in_progress",
+    "completed",
+    "cancelled",
+  ])
+    .default("sent")
+    .notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  declinedAt: timestamp("declinedAt"),
+  quoteSentAt: timestamp("quoteSentAt"),
+  completedAt: timestamp("completedAt"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ReferralJob = typeof referralJobs.$inferSelect;
+export type InsertReferralJob = typeof referralJobs.$inferInsert;
+
+
+// ─── Quick quotes ─────────────────────────────────────────────────────────────
+// One quote flow serves SaskHandy referrals and a handyman's own customers.
+// Source and fee values are assigned by the server, never by the public customer.
+export const quotes = mysqlTable("quotes", {
+  id: int("id").autoincrement().primaryKey(),
+  handymanId: int("handymanId").notNull(),
+  referralJobId: int("referralJobId"),
+
+  sourceType: mysqlEnum("sourceType", ["saskhandy_referral", "handyman_customer"]).notNull(),
+
+  homeownerName: varchar("homeownerName", { length: 255 }).notNull(),
+  homeownerEmail: varchar("homeownerEmail", { length: 320 }),
+  homeownerPhone: varchar("homeownerPhone", { length: 30 }),
+  address: varchar("address", { length: 500 }),
+
+  title: varchar("title", { length: 255 }).notNull(),
+  scope: text("scope").notNull(),
+  // JSON string containing optional quote line items.
+  lineItems: text("lineItems"),
+  customerNote: text("customerNote"),
+  terms: text("terms"),
+
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxRate: decimal("taxRate", { precision: 5, scale: 2 }),
+  taxAmount: decimal("taxAmount", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+
+  // Set and locked by the server according to sourceType and the linked referral job.
+  platformFeeRate: decimal("platformFeeRate", { precision: 5, scale: 2 }).notNull(),
+  platformFeeAmount: decimal("platformFeeAmount", { precision: 10, scale: 2 }).notNull(),
+
+  status: mysqlEnum("status", [
+    "draft",
+    "sent",
+    "viewed",
+    "approved",
+    "declined",
+    "expired",
+    "payment_pending",
+    "paid",
+    "completed",
+    "cancelled",
+    "payment_failed",
+  ])
+    .default("draft")
+    .notNull(),
+
+  // Random, unguessable token used by the customer without signing in.
+  publicToken: varchar("publicToken", { length: 128 }).notNull().unique(),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
+
+  expiresAt: timestamp("expiresAt"),
+  sentAt: timestamp("sentAt"),
+  viewedAt: timestamp("viewedAt"),
+  approvedAt: timestamp("approvedAt"),
+  declinedAt: timestamp("declinedAt"),
+  paidAt: timestamp("paidAt"),
+  completedAt: timestamp("completedAt"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = typeof quotes.$inferInsert;
+
 // ─── Bids ─────────────────────────────────────────────────────────────────────
 export const bids = mysqlTable("bids", {
   id: int("id").autoincrement().primaryKey(),

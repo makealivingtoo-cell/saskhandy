@@ -65,6 +65,14 @@ export default function AdminPanel() {
   });
 
   const {
+    data: referralJobs,
+    refetch: refetchReferralJobs,
+    isLoading: referralJobsLoading,
+  } = trpc.admin.getReferralJobs.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+  });
+
+  const {
     data: insuranceQueue,
     isLoading: insuranceLoading,
     refetch: refetchInsurance,
@@ -107,6 +115,21 @@ export default function AdminPanel() {
   const [updatingReportId, setUpdatingReportId] = useState<number | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
+  const [referralForm, setReferralForm] = useState({
+    handymanId: "",
+    homeownerName: "",
+    homeownerEmail: "",
+    homeownerPhone: "",
+    address: "",
+    title: "",
+    description: "",
+    category: "",
+    photos: "",
+  });
+
+  const updateReferralForm = (field: keyof typeof referralForm, value: string) => {
+    setReferralForm((current) => ({ ...current, [field]: value }));
+  };
 
   const resolveDispute = trpc.disputes.resolve.useMutation({
     onSuccess: () => {
@@ -215,6 +238,25 @@ export default function AdminPanel() {
       toast.error(err.message);
       setDeletingJobId(null);
     },
+  });
+
+  const createReferralJob = trpc.admin.createReferralJob.useMutation({
+    onSuccess: async () => {
+      toast.success("Referral sent to the handyman.");
+      setReferralForm({
+        handymanId: "",
+        homeownerName: "",
+        homeownerEmail: "",
+        homeownerPhone: "",
+        address: "",
+        title: "",
+        description: "",
+        category: "",
+        photos: "",
+      });
+      await refetchReferralJobs();
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const allHandymen = useMemo(
@@ -369,6 +411,213 @@ export default function AdminPanel() {
             </div>
           </div>
         </div>
+
+        <section className="bg-white rounded-xl border border-border/60 p-5 space-y-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">SaskHandy referrals</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Send a qualified lead to a handyman. The job is tagged as a SaskHandy referral and
+                carries the 20% commission automatically.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetchReferralJobs()}
+              disabled={referralJobsLoading}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${referralJobsLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
+
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const handymanId = Number(referralForm.handymanId);
+              if (!Number.isInteger(handymanId) || handymanId <= 0) {
+                toast.error("Choose a handyman for this referral.");
+                return;
+              }
+              const photos = referralForm.photos
+                .split(/[\n,]+/)
+                .map((photo) => photo.trim())
+                .filter(Boolean);
+              createReferralJob.mutate({
+                handymanId,
+                homeownerName: referralForm.homeownerName.trim(),
+                homeownerEmail: referralForm.homeownerEmail.trim(),
+                homeownerPhone: referralForm.homeownerPhone.trim(),
+                address: referralForm.address.trim(),
+                title: referralForm.title.trim(),
+                description: referralForm.description.trim(),
+                category: referralForm.category.trim(),
+                photos,
+              });
+            }}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Assign to handyman *</span>
+                <select
+                  required
+                  value={referralForm.handymanId}
+                  onChange={(event) => updateReferralForm("handymanId", event.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Choose a handyman</option>
+                  {allHandymen.map((handyman) => (
+                    <option key={handyman.userId} value={handyman.userId}>
+                      {handyman.userName ?? handyman.userEmail ?? `Handyman #${handyman.userId}`}
+                      {handyman.serviceArea ? ` · ${handyman.serviceArea}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {allHandymen.length === 0 && (
+                  <span className="block text-xs text-amber-700">
+                    No handyman profiles are available to assign.
+                  </span>
+                )}
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Job title *</span>
+                <input
+                  required
+                  minLength={3}
+                  maxLength={255}
+                  value={referralForm.title}
+                  onChange={(event) => updateReferralForm("title", event.target.value)}
+                  placeholder="e.g. Vent cleaning"
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Homeowner name *</span>
+                <input
+                  required
+                  maxLength={255}
+                  value={referralForm.homeownerName}
+                  onChange={(event) => updateReferralForm("homeownerName", event.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Category *</span>
+                <input
+                  required
+                  maxLength={100}
+                  value={referralForm.category}
+                  onChange={(event) => updateReferralForm("category", event.target.value)}
+                  placeholder="e.g. HVAC"
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Homeowner email</span>
+                <input
+                  type="email"
+                  maxLength={320}
+                  value={referralForm.homeownerEmail}
+                  onChange={(event) => updateReferralForm("homeownerEmail", event.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Homeowner phone</span>
+                <input
+                  type="tel"
+                  maxLength={30}
+                  value={referralForm.homeownerPhone}
+                  onChange={(event) => updateReferralForm("homeownerPhone", event.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm md:col-span-2">
+                <span className="font-medium">Job address</span>
+                <input
+                  maxLength={500}
+                  value={referralForm.address}
+                  onChange={(event) => updateReferralForm("address", event.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm md:col-span-2">
+                <span className="font-medium">Work description *</span>
+                <Textarea
+                  required
+                  minLength={10}
+                  maxLength={10000}
+                  rows={4}
+                  value={referralForm.description}
+                  onChange={(event) => updateReferralForm("description", event.target.value)}
+                  placeholder="Describe the work requested and any important details."
+                />
+              </label>
+              <label className="space-y-1.5 text-sm md:col-span-2">
+                <span className="font-medium">Photo URLs</span>
+                <Textarea
+                  rows={2}
+                  value={referralForm.photos}
+                  onChange={(event) => updateReferralForm("photos", event.target.value)}
+                  placeholder="Paste one photo URL per line."
+                />
+                <span className="block text-xs text-muted-foreground">
+                  Leave blank if there are no photos. Each URL must be publicly accessible.
+                </span>
+              </label>
+            </div>
+            <Button
+              type="submit"
+              disabled={createReferralJob.isPending || allHandymen.length === 0}
+            >
+              {createReferralJob.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Briefcase className="w-4 h-4 mr-2" />
+              )}
+              Send referral
+            </Button>
+          </form>
+
+          <div className="border-t border-border/60 pt-5">
+            <h3 className="font-semibold text-sm mb-3">Recent referrals</h3>
+            {referralJobsLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              </div>
+            ) : !referralJobs?.length ? (
+              <p className="text-sm text-muted-foreground py-3">No referrals yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {referralJobs.map((referral) => {
+                  const handyman = allHandymen.find((profile) => profile.userId === referral.handymanId);
+                  return (
+                    <div
+                      key={referral.id}
+                      className="rounded-lg border border-border/60 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm">{referral.title}</p>
+                          <StatusBadge status={referral.status} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {referral.homeownerName} · {referral.category} · Assigned to {handyman?.userName ?? `handyman #${referral.handymanId}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Created {format(new Date(referral.createdAt), "MMM d, yyyy h:mm a")} · SaskHandy referral · 20% commission
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
 
         <div>
           <div className="flex items-center justify-between mb-4">

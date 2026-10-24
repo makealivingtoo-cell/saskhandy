@@ -1,0 +1,32 @@
+CREATE TABLE `referral_jobs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `createdByAdminId` int NOT NULL,
+  `handymanId` int NOT NULL,
+  `homeownerName` varchar(255) NOT NULL,
+  `homeownerEmail` varchar(320),
+  `homeownerPhone` varchar(30),
+  `address` varchar(500),
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `category` varchar(100) NOT NULL,
+  `photos` text,
+  `sourceType` enum('saskhandy_referral') NOT NULL DEFAULT 'saskhandy_referral',
+  `commissionRate` decimal(5,2) NOT NULL DEFAULT '20.00',
+  `status` enum(
+    'sent',
+    'accepted',
+    'declined',
+    'quote_sent',
+    'awaiting_payment',
+    'in_progress',
+    'completed',
+    'cancelled'
+  ) NOT NULL DEFAULT 'sent',
+  `acceptedAt` timestamp NULL,
+  `declinedAt` timestamp NULL,
+  `quoteSentAt` timestamp NULL,
+  `completedAt` timestamp NULL,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `referral_jobs_id` PRIMARY KEY (`id`)
+);

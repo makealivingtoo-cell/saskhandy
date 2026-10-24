@@ -8,17 +8,21 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Briefcase,
   CheckCircle,
+  Copy,
   DollarSign,
   ExternalLink,
+  FileText,
   Loader2,
   MapPin,
   Search,
+  Send,
   Shield,
   Star,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { toast } from "sonner";
 
 function StatCard({
   label,
@@ -147,8 +151,174 @@ export default function HandymanDashboard() {
     enabled: isAuthenticated,
   });
 
-  const { data: earnings } = trpc.payments.getHandymanEarnings.useQuery(undefined, {
+  const {
+    data: referralJobs,
+    isLoading: referralJobsLoading,
+    refetch: refetchReferralJobs,
+  } = trpc.referralJobs.getMine.useQuery(undefined, {
+    enabled: isAuthenticated && user?.userType === "handyman",
+  });
+
+  const {
+    data: quotes,
+    isLoading: quotesLoading,
+    refetch: refetchQuotes,
+  } = trpc.quotes.getMine.useQuery(undefined, {
+    enabled: isAuthenticated && user?.userType === "handyman",
+  });
+
+  const { data: earnings, refetch: refetchEarnings } = trpc.payments.getHandymanEarnings.useQuery(undefined, {
     enabled: isAuthenticated,
+  });
+
+  const [quoteForm, setQuoteForm] = useState({
+    referralJobId: "",
+    homeownerName: "",
+    homeownerPhone: "",
+    homeownerEmail: "",
+    address: "",
+    title: "",
+    scope: "",
+    subtotal: "",
+    taxRate: "0",
+    smsPermissionConfirmed: false,
+  });
+  const [sendingQuoteId, setSendingQuoteId] = useState<number | null>(null);
+  const [completingQuoteId, setCompletingQuoteId] = useState<number | null>(null);
+
+  const createQuote = trpc.quotes.create.useMutation();
+  const sendQuote = trpc.quotes.send.useMutation();
+  const completeQuote = trpc.quotes.complete.useMutation();
+
+  const acceptedReferrals = referralJobs?.filter((job) => job.status === "accepted") ?? [];
+
+  const handleCreateQuote = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const referralJobId = quoteForm.referralJobId ? Number(quoteForm.referralJobId) : undefined;
+    const selectedReferral = acceptedReferrals.find((job) => job.id === referralJobId);
+    const subtotal = Number(quoteForm.subtotal);
+    const taxRate = Number(quoteForm.taxRate || "0");
+
+    if (!Number.isFinite(subtotal) || subtotal <= 0 || !Number.isFinite(taxRate) || taxRate < 0) {
+      toast.error("Enter a valid subtotal and tax rate.");
+      return;
+    }
+
+    try {
+      const draft = await createQuote.mutateAsync({
+        ...(selectedReferral
+          ? { referralJobId: selectedReferral.id }
+          : {
+              homeownerName: quoteForm.homeownerName.trim(),
+              homeownerPhone: quoteForm.homeownerPhone.trim(),
+              homeownerEmail: quoteForm.homeownerEmail.trim(),
+              address: quoteForm.address.trim(),
+            }),
+        title: quoteForm.title.trim(),
+        scope: quoteForm.scope.trim(),
+        subtotal,
+        taxRate,
+      });
+
+      if (quoteForm.smsPermissionConfirmed) {
+        await sendQuote.mutateAsync({
+          quoteId: draft.quoteId,
+          confirmSmsPermission: true,
+        });
+        toast.success("Quote created and texted to the customer.");
+      } else {
+        toast.success("Quote saved as a draft. You can send it from the quote list after confirming text permission.");
+      }
+
+      setQuoteForm({
+        referralJobId: "",
+        homeownerName: "",
+        homeownerPhone: "",
+        homeownerEmail: "",
+        address: "",
+        title: "",
+        scope: "",
+        subtotal: "",
+        taxRate: "0",
+        smsPermissionConfirmed: false,
+      });
+      await refetchQuotes();
+    } catch (error: any) {
+      toast.error(error.message ?? "Could not create the quote.");
+      await refetchQuotes();
+    }
+  };
+
+  const handleSendQuote = async (quoteId: number) => {
+    const confirmed = window.confirm(
+      "Confirm that the customer agreed to receive this quote link by text. Send it now?"
+    );
+    if (!confirmed) return;
+
+    setSendingQuoteId(quoteId);
+    try {
+      await sendQuote.mutateAsync({ quoteId, confirmSmsPermission: true });
+      toast.success("Quote link sent by text.");
+      await refetchQuotes();
+    } catch (error: any) {
+      toast.error(error.message ?? "Could not send the quote.");
+    } finally {
+      setSendingQuoteId(null);
+    }
+  };
+
+  const handleCopyQuoteLink = async (publicToken: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/quote/${publicToken}`);
+      toast.success("Quote link copied.");
+    } catch {
+      toast.error("Could not copy the quote link.");
+    }
+  };
+
+  const handleCompleteQuote = async (quoteId: number) => {
+    const confirmed = window.confirm(
+      "Confirm that the quoted work is complete. This will make the handyman earnings available for payout."
+    );
+    if (!confirmed) return;
+
+    setCompletingQuoteId(quoteId);
+    try {
+      await completeQuote.mutateAsync({ quoteId });
+      toast.success("Quote marked complete. Earnings are now included in your payout balance.");
+      await Promise.all([refetchQuotes(), refetchEarnings()]);
+    } catch (error: any) {
+      toast.error(error.message ?? "Could not mark the quote complete.");
+    } finally {
+      setCompletingQuoteId(null);
+    }
+  };
+
+  const [referralActionId, setReferralActionId] = useState<number | null>(null);
+
+  const acceptReferral = trpc.referralJobs.accept.useMutation({
+    onSuccess: async () => {
+      toast.success("Referral accepted. You can now contact the homeowner and prepare a quote.");
+      setReferralActionId(null);
+      await refetchReferralJobs();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+      setReferralActionId(null);
+    },
+  });
+
+  const declineReferral = trpc.referralJobs.decline.useMutation({
+    onSuccess: async () => {
+      toast.success("Referral declined.");
+      setReferralActionId(null);
+      await refetchReferralJobs();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+      setReferralActionId(null);
+    },
   });
 
   useEffect(() => {
@@ -317,6 +487,418 @@ export default function HandymanDashboard() {
             </div>
           </div>
         </div>
+
+        {/* SaskHandy referrals */}
+        <section className="bg-white rounded-2xl border border-border/60 p-6">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">SaskHandy referrals</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Leads personally matched and sent to you by SaskHandy.
+              </p>
+            </div>
+            <span className="text-xs bg-primary/10 text-primary rounded-full px-2.5 py-1 font-medium">
+              {referralJobs?.filter((job) => job.status === "sent").length ?? 0} awaiting response
+            </span>
+          </div>
+
+          {referralJobsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : !referralJobs?.length ? (
+            <div className="rounded-xl border border-dashed border-border p-7 text-center">
+              <Briefcase className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground">No referrals assigned yet</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                SaskHandy referrals will appear here when one is matched to you.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {referralJobs.map((referral) => {
+                const isPending = referral.status === "sent";
+                const isActing = referralActionId === referral.id;
+                return (
+                  <article
+                    key={referral.id}
+                    className="rounded-xl border border-border/60 p-4 sm:p-5"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-foreground">{referral.title}</h3>
+                          <StatusBadge status={referral.status} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {referral.category} · Sent {formatDistanceToNow(new Date(referral.createdAt), { addSuffix: true })}
+                        </p>
+                        <p className="text-sm text-foreground/90 mt-3 whitespace-pre-wrap">
+                          {referral.description}
+                        </p>
+                        {referral.photos?.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {referral.photos.map((photo, index) => (
+                              <a
+                                key={`${referral.id}-photo-${index}`}
+                                href={photo}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                View photo {index + 1} <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {isPending && (
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setReferralActionId(referral.id);
+                              acceptReferral.mutate({ referralJobId: referral.id });
+                            }}
+                            disabled={isActing}
+                          >
+                            {isActing && acceptReferral.isPending ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 mr-1.5" />
+                            )}
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setReferralActionId(referral.id);
+                              declineReferral.mutate({ referralJobId: referral.id });
+                            }}
+                            disabled={isActing}
+                          >
+                            {isActing && declineReferral.isPending ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : null}
+                            Decline
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {referral.status === "accepted" ? (
+                      <div className="mt-4 pt-4 border-t border-border/50 grid gap-2 sm:grid-cols-2 text-sm">
+                        <p><span className="text-muted-foreground">Homeowner:</span> {referral.homeownerName}</p>
+                        {referral.homeownerPhone && (
+                          <p><span className="text-muted-foreground">Phone:</span> {referral.homeownerPhone}</p>
+                        )}
+                        {referral.homeownerEmail && (
+                          <p><span className="text-muted-foreground">Email:</span> {referral.homeownerEmail}</p>
+                        )}
+                        {referral.address && (
+                          <p className="inline-flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> {referral.address}
+                          </p>
+                        )}
+                        <p className="sm:col-span-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          This is a SaskHandy referral. The 20% commission is attached to this job and applies to the completed quote.
+                        </p>
+                      </div>
+                    ) : referral.status === "sent" ? (
+                      <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border/50">
+                        Accept the referral to access the homeowner’s contact details. The 20% SaskHandy referral commission applies to this job.
+                      </p>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Quick quotes */}
+        <section className="bg-white rounded-2xl border border-border/60 p-6 space-y-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">Quick quotes</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Create a quote for a SaskHandy referral or your own customer. The customer can review,
+              approve, and pay from a link without creating an account.
+            </p>
+          </div>
+
+          <form onSubmit={handleCreateQuote} className="rounded-xl border border-border/60 p-4 sm:p-5 space-y-4">
+            <h3 className="font-semibold text-foreground">Create a quote</h3>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-referral">
+                Customer source
+              </label>
+              <select
+                id="quote-referral"
+                value={quoteForm.referralJobId}
+                onChange={(event) => {
+                  const referralJobId = event.target.value;
+                  const referral = acceptedReferrals.find((job) => String(job.id) === referralJobId);
+                  setQuoteForm((current) => ({
+                    ...current,
+                    referralJobId,
+                    title: referral ? referral.title : current.title,
+                  }));
+                }}
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
+              >
+                <option value="">My own customer</option>
+                {acceptedReferrals.map((referral) => (
+                  <option key={referral.id} value={referral.id}>
+                    SaskHandy referral: {referral.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {!quoteForm.referralJobId && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-homeowner-name">
+                    Customer name
+                  </label>
+                  <input
+                    id="quote-homeowner-name"
+                    required
+                    maxLength={255}
+                    value={quoteForm.homeownerName}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, homeownerName: event.target.value }))}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-homeowner-phone">
+                    Customer phone
+                  </label>
+                  <input
+                    id="quote-homeowner-phone"
+                    required
+                    type="tel"
+                    maxLength={30}
+                    value={quoteForm.homeownerPhone}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, homeownerPhone: event.target.value }))}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-homeowner-email">
+                    Customer email (optional)
+                  </label>
+                  <input
+                    id="quote-homeowner-email"
+                    type="email"
+                    maxLength={320}
+                    value={quoteForm.homeownerEmail}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, homeownerEmail: event.target.value }))}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-address">
+                    Work address (optional)
+                  </label>
+                  <input
+                    id="quote-address"
+                    maxLength={500}
+                    value={quoteForm.address}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, address: event.target.value }))}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {quoteForm.referralJobId && (
+              <p className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                SaskHandy supplies the customer details and applies the referral commission to this quote.
+              </p>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-title">
+                  Quote title
+                </label>
+                <input
+                  id="quote-title"
+                  required
+                  minLength={3}
+                  maxLength={255}
+                  value={quoteForm.title}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, title: event.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                  placeholder="e.g. Bathroom faucet replacement"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-subtotal">
+                    Subtotal (CAD)
+                  </label>
+                  <input
+                    id="quote-subtotal"
+                    required
+                    type="number"
+                    min="0.01"
+                    max="999999.99"
+                    step="0.01"
+                    value={quoteForm.subtotal}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, subtotal: event.target.value }))}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-tax-rate">
+                    Tax rate (%)
+                  </label>
+                  <input
+                    id="quote-tax-rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={quoteForm.taxRate}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, taxRate: event.target.value }))}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-scope">
+                Work description
+              </label>
+              <textarea
+                id="quote-scope"
+                required
+                maxLength={10000}
+                rows={4}
+                value={quoteForm.scope}
+                onChange={(event) => setQuoteForm((current) => ({ ...current, scope: event.target.value }))}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                placeholder="Describe the work included in this quote."
+              />
+            </div>
+
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={quoteForm.smsPermissionConfirmed}
+                onChange={(event) => setQuoteForm((current) => ({ ...current, smsPermissionConfirmed: event.target.checked }))}
+                className="mt-0.5"
+              />
+              <span>I have the customer’s permission to text them this quote link.</span>
+            </label>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Quotes expire after 30 days. The customer can review and pay without signing in.
+              </p>
+              <Button type="submit" disabled={createQuote.isPending || sendQuote.isPending}>
+                {createQuote.isPending || sendQuote.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : quoteForm.smsPermissionConfirmed ? (
+                  <Send className="w-4 h-4 mr-2" />
+                ) : (
+                  <FileText className="w-4 h-4 mr-2" />
+                )}
+                {quoteForm.smsPermissionConfirmed ? "Create and text quote" : "Save quote draft"}
+              </Button>
+            </div>
+          </form>
+
+          <div>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <h3 className="font-semibold text-foreground">Your quotes</h3>
+                <p className="text-xs text-muted-foreground mt-1">Track drafts, approvals, and customer payments.</p>
+              </div>
+              <span className="text-xs text-muted-foreground">{quotes?.length ?? 0} total</span>
+            </div>
+
+            {quotesLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : !quotes?.length ? (
+              <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                Your quotes will appear here.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {quotes.map((quote) => (
+                  <article key={quote.id} className="rounded-xl border border-border/60 p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-medium text-foreground">{quote.title}</h4>
+                          <StatusBadge status={quote.status} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {quote.sourceType === "saskhandy_referral" ? "SaskHandy referral" : "Your customer"}
+                          {quote.homeownerName ? ` · ${quote.homeownerName}` : ""}
+                          {` · Updated ${formatDistanceToNow(new Date(quote.updatedAt), { addSuffix: true })}`}
+                        </p>
+                      </div>
+                      <p className="font-semibold text-foreground shrink-0">${Number(quote.totalAmount).toFixed(2)} CAD</p>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {quote.status === "draft" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={sendingQuoteId === quote.id}
+                          onClick={() => void handleSendQuote(quote.id)}
+                        >
+                          {sendingQuoteId === quote.id ? (
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4 mr-1.5" />
+                          )}
+                          Text quote link
+                        </Button>
+                      )}
+                      {quote.status === "paid" && (
+                        <Button
+                          size="sm"
+                          disabled={completingQuoteId === quote.id}
+                          onClick={() => void handleCompleteQuote(quote.id)}
+                        >
+                          {completingQuoteId === quote.id ? (
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 mr-1.5" />
+                          )}
+                          Mark work complete
+                        </Button>
+                      )}
+                      {quote.status !== "draft" && quote.status !== "cancelled" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleCopyQuoteLink(quote.publicToken)}
+                        >
+                          <Copy className="w-4 h-4 mr-1.5" />
+                          Copy customer link
+                        </Button>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Profile status */}
         <div className="bg-white rounded-2xl border border-border/60 p-6">
