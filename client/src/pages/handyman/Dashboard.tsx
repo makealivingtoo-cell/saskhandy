@@ -162,9 +162,13 @@ export default function HandymanDashboard() {
   const {
     data: quotes,
     isLoading: quotesLoading,
+    isError: quotesError,
     refetch: refetchQuotes,
   } = trpc.quotes.getMine.useQuery(undefined, {
     enabled: isAuthenticated && user?.userType === "handyman",
+    retry: 1,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: earnings, refetch: refetchEarnings } = trpc.payments.getHandymanEarnings.useQuery(undefined, {
@@ -827,8 +831,14 @@ export default function HandymanDashboard() {
             </div>
 
             {quotesLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <div className="space-y-3" aria-label="Loading quotes" aria-busy="true">
+                {[0, 1].map((item) => (
+                  <div key={item} className="rounded-xl border border-border/60 p-4">
+                    <div className="h-4 w-2/3 rounded bg-muted/70 animate-pulse" />
+                    <div className="mt-3 h-3 w-1/2 rounded bg-muted/60 animate-pulse" />
+                    <div className="mt-4 h-4 w-24 rounded bg-muted/70 animate-pulse" />
+                  </div>
+                ))}
               </div>
             ) : !quotes?.length ? (
               <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
