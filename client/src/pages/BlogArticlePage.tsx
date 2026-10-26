@@ -272,28 +272,129 @@ const articles: Record<string, BlogArticle> = {
 export default function BlogArticlePage() {
   const params = useParams();
   const slug = params.slug ?? "";
-  const article = articles[slug];
+  const article = Object.prototype.hasOwnProperty.call(articles, slug)
+    ? articles[slug]
+    : undefined;
 
   useEffect(() => {
-    if (!article) {
-      document.title = "Blog Article Not Found | SaskHandy";
-      return;
-    }
+    const siteUrl = "https://saskhandy.com";
+    const previousTitle = document.title;
+    const cleanups: (() => void)[] = [];
 
-    document.title = article.pageTitle;
+    const setMeta = (
+      attrName: "name" | "property",
+      attrValue: string,
+      content: string
+    ) => {
+      const selector = `meta[${attrName}="${attrValue}"]`;
+      const existing = document.head.querySelector<HTMLMetaElement>(selector);
+      const element = existing ?? document.createElement("meta");
+      const previousContent = existing?.getAttribute("content") ?? null;
 
-    const content = article.metaDescription;
-    let metaDescription = document.querySelector('meta[name="description"]');
+      if (!existing) {
+        element.setAttribute(attrName, attrValue);
+        document.head.appendChild(element);
+      }
 
-    if (metaDescription) {
-      metaDescription.setAttribute("content", content);
+      element.setAttribute("content", content);
+
+      cleanups.push(() => {
+        if (!existing) {
+          element.remove();
+        } else if (previousContent === null) {
+          element.removeAttribute("content");
+        } else {
+          element.setAttribute("content", previousContent);
+        }
+      });
+    };
+
+    const existingCanonical =
+      document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    const previousCanonicalHref =
+      existingCanonical?.getAttribute("href") ?? null;
+
+    const pageTitle = article?.pageTitle ?? "Blog Article Not Found | SaskHandy";
+    const description =
+      article?.metaDescription ??
+      "The requested SaskHandy article could not be found. Explore our blog for home repair and hiring guides.";
+
+    document.title = pageTitle;
+
+    setMeta("name", "description", description);
+    setMeta(
+      "name",
+      "robots",
+      article ? "index, follow, max-image-preview:large" : "noindex, follow"
+    );
+    setMeta("property", "og:title", pageTitle);
+    setMeta("property", "og:description", description);
+    setMeta("property", "og:type", article ? "article" : "website");
+    setMeta("property", "og:site_name", "SaskHandy");
+    setMeta("name", "twitter:title", pageTitle);
+    setMeta("name", "twitter:description", description);
+
+    if (article) {
+      const canonicalUrl = `${siteUrl}/blog/${encodeURIComponent(slug)}`;
+      const canonical = existingCanonical ?? document.createElement("link");
+
+      if (!existingCanonical) {
+        canonical.rel = "canonical";
+        document.head.appendChild(canonical);
+      }
+
+      canonical.setAttribute("href", canonicalUrl);
+      setMeta("property", "og:url", canonicalUrl);
+
+      cleanups.push(() => {
+        if (!existingCanonical) {
+          canonical.remove();
+        } else if (previousCanonicalHref === null) {
+          canonical.removeAttribute("href");
+        } else {
+          canonical.setAttribute("href", previousCanonicalHref);
+        }
+      });
     } else {
-      metaDescription = document.createElement("meta");
-      metaDescription.setAttribute("name", "description");
-      metaDescription.setAttribute("content", content);
-      document.head.appendChild(metaDescription);
+      // Do not inherit another page's canonical or social URL.
+      const canonicalParent = existingCanonical?.parentNode;
+      const canonicalNextSibling = existingCanonical?.nextSibling;
+      existingCanonical?.remove();
+
+      const existingOgUrl =
+        document.head.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+      const ogUrlParent = existingOgUrl?.parentNode;
+      const ogUrlNextSibling = existingOgUrl?.nextSibling;
+      existingOgUrl?.remove();
+
+      cleanups.push(() => {
+        if (existingCanonical && canonicalParent) {
+          canonicalParent.insertBefore(
+            existingCanonical,
+            canonicalNextSibling?.parentNode === canonicalParent
+              ? canonicalNextSibling
+              : null
+          );
+        }
+
+        if (existingOgUrl && ogUrlParent) {
+          ogUrlParent.insertBefore(
+            existingOgUrl,
+            ogUrlNextSibling?.parentNode === ogUrlParent
+              ? ogUrlNextSibling
+              : null
+          );
+        }
+      });
     }
-  }, [article]);
+
+    return () => {
+      for (const cleanup of cleanups.reverse()) {
+        cleanup();
+      }
+      document.title = previousTitle;
+    };
+  }, [article, slug]);
 
   if (!article) {
     return (
