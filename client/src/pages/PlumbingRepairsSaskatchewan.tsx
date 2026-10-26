@@ -3,6 +3,7 @@ import SeoLandingPage from "@/components/SeoLandingPage";
 export default function PlumbingRepairsSaskatchewanPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatchewan"
       title="Plumbing Repairs in Saskatchewan"
       pageTitle="Plumbing Repairs Saskatchewan | SaskHandy"
       metaDescription="Find plumbing repairs in Saskatchewan. Post small plumbing jobs for leaky faucets, toilet repairs, sink issues, fixture replacement, shower head replacement, drain help, and minor plumbing maintenance on SaskHandy."

@@ -3,6 +3,7 @@ import SeoLandingPage from "@/components/SeoLandingPage";
 export default function TvMountingSaskatchewanPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatchewan"
       title="TV Mounting in Saskatchewan"
       pageTitle="TV Mounting Saskatchewan | SaskHandy"
       metaDescription="Looking for TV mounting in Saskatchewan? Post TV wall mounting jobs for bracket installation, cable management, soundbar mounting, home theater setup, media wall setup, and living room TV installation on SaskHandy."

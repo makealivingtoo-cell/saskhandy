@@ -3,6 +3,7 @@ import SeoLandingPage from "@/components/SeoLandingPage";
 export default function SaskatchewanHandymanServicesPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatchewan"
       title="Saskatchewan Handyman Services"
       pageTitle="Saskatchewan Handyman Services | SaskHandy"
       metaDescription="Find Saskatchewan handyman services for furniture assembly, TV mounting, plumbing repairs, electrical help, yard work, drywall repair, painting, fence repair, gutter cleaning, and general home maintenance with SaskHandy."

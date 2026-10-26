@@ -5,6 +5,7 @@ export default function PrinceAlbertHandymanServicesPage() {
     <SeoLandingPage
       title="Handyman Services in Prince Albert"
       pageTitle="Handyman Services Prince Albert | SaskHandy"
+      locationName="Prince Albert"
       metaDescription="Find handyman services in Prince Albert. Post home repair jobs for furniture assembly, TV mounting, drywall repair, painting, leaky faucet repair, yard work, fence repair, and general home maintenance on SaskHandy."
       badge="Local handyman services in Prince Albert"
       intro="SaskHandy helps homeowners in Prince Albert find local handyman services for home repairs, maintenance tasks, furniture assembly, TV mounting, drywall patching, painting touch-ups, leaky faucet repair, yard work, fence repair, and everyday home projects."

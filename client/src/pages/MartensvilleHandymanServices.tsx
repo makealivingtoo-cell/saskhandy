@@ -5,6 +5,7 @@ export default function MartensvilleHandymanServicesPage() {
     <SeoLandingPage
       title="Handyman Services in Martensville"
       pageTitle="Handyman Services Martensville | SaskHandy"
+      locationName="Martensville"
       metaDescription="Find handyman services in Martensville. Post home repair jobs for furniture assembly, TV mounting, drywall repair, painting, minor plumbing help, yard work, seasonal maintenance, and general handyman services on SaskHandy."
       badge="Local handyman services in Martensville"
       intro="SaskHandy helps homeowners in Martensville find local handyman services for furniture assembly, TV mounting, small home repairs, interior painting, drywall patching, yard work, seasonal maintenance, and practical home improvement jobs."

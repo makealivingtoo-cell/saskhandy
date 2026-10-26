@@ -5,6 +5,7 @@ export default function ReginaHandymanServicesPage() {
     <SeoLandingPage
       title="Handyman Services in Regina"
       pageTitle="Handyman Services Regina | SaskHandy"
+      locationName="Regina"
       metaDescription="Find handyman services in Regina. Post home repair jobs for furniture assembly, TV mounting, plumbing repairs, electrical help, drywall repair, painting, gutter cleaning, yard work, and general handyman services on SaskHandy."
       badge="Local handyman services in Regina"
       intro="SaskHandy helps Regina homeowners find local handyman services for furniture assembly, TV wall mounting, leaky faucet repair, drywall patching, light fixture installation, painting touch-ups, fence repair, gutter work, yard work, and other home maintenance jobs."

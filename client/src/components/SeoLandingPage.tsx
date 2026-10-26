@@ -35,7 +35,7 @@ type SeoLandingPageProps = {
   metaDescription: string;
   canonicalPath?: string;
   serviceName?: string;
-  locationName?: string;
+  locationName: string;
   primaryCategory?: string;
   seoKeywords?: string[];
   faqItems?: FaqItem[];
@@ -67,7 +67,7 @@ export default function SeoLandingPage({
   metaDescription,
   canonicalPath,
   serviceName,
-  locationName = "Saskatoon",
+  locationName,
   primaryCategory = "Handyman Services",
   seoKeywords = [],
   faqItems = [],
@@ -99,6 +99,7 @@ export default function SeoLandingPage({
         : typeof window !== "undefined"
         ? `${siteUrl}${window.location.pathname}`
         : siteUrl;
+
     const locationHubPath: Record<string, string> = {
       Saskatoon: "/saskatoon-handyman-services",
       Regina: "/regina-handyman-services",
@@ -108,7 +109,10 @@ export default function SeoLandingPage({
       Warman: "/warman-handyman-services",
       Martensville: "/martensville-handyman-services",
     };
-    const locationHubUrl = `${siteUrl}${locationHubPath[locationName] ?? "/saskatchewan-handyman-services"}`;
+
+    const locationHubUrl = `${siteUrl}${
+      locationHubPath[locationName] ?? "/saskatchewan-handyman-services"
+    }`;
 
     const setMeta = (
       selector: string,
@@ -142,19 +146,55 @@ export default function SeoLandingPage({
 
     setMeta('meta[name="description"]', "name", "description", metaDescription);
     setMeta('meta[property="og:title"]', "property", "og:title", pageTitle);
-    setMeta('meta[property="og:description"]', "property", "og:description", metaDescription);
+    setMeta(
+      'meta[property="og:description"]',
+      "property",
+      "og:description",
+      metaDescription
+    );
     setMeta('meta[property="og:type"]', "property", "og:type", "website");
     setMeta('meta[property="og:url"]', "property", "og:url", canonicalUrl);
-    setMeta('meta[property="og:site_name"]', "property", "og:site_name", "SaskHandy");
-    setMeta('meta[property="og:image"]', "property", "og:image", `${siteUrl}${heroImage}`);
-    setMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+    setMeta(
+      'meta[property="og:site_name"]',
+      "property",
+      "og:site_name",
+      "SaskHandy"
+    );
+    setMeta(
+      'meta[property="og:image"]',
+      "property",
+      "og:image",
+      `${siteUrl}${heroImage}`
+    );
+    setMeta(
+      'meta[name="twitter:card"]',
+      "name",
+      "twitter:card",
+      "summary_large_image"
+    );
     setMeta('meta[name="twitter:title"]', "name", "twitter:title", pageTitle);
-    setMeta('meta[name="twitter:description"]', "name", "twitter:description", metaDescription);
-    setMeta('meta[name="twitter:image"]', "name", "twitter:image", `${siteUrl}${heroImage}`);
+    setMeta(
+      'meta[name="twitter:description"]',
+      "name",
+      "twitter:description",
+      metaDescription
+    );
+    setMeta(
+      'meta[name="twitter:image"]',
+      "name",
+      "twitter:image",
+      `${siteUrl}${heroImage}`
+    );
+    setMeta(
+      'meta[name="robots"]',
+      "name",
+      "robots",
+      "index, follow, max-image-preview:large"
+    );
 
-    setMeta('meta[name="robots"]', "name", "robots", "index, follow, max-image-preview:large");
-
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    let canonical = document.querySelector(
+      'link[rel="canonical"]'
+    ) as HTMLLinkElement | null;
 
     if (!canonical) {
       canonical = document.createElement("link");
@@ -172,12 +212,28 @@ export default function SeoLandingPage({
       serviceType: serviceName ?? primaryCategory,
       category: primaryCategory,
       description: metaDescription,
-      areaServed: {
-        "@type": "City",
-        name: locationName,
-        addressRegion: "SK",
-        addressCountry: "CA",
-      },
+      areaServed:
+        locationName === "Saskatchewan"
+          ? {
+              "@type": "AdministrativeArea",
+              name: "Saskatchewan",
+              containedInPlace: {
+                "@type": "Country",
+                name: "Canada",
+              },
+            }
+          : {
+              "@type": "City",
+              name: locationName,
+              containedInPlace: {
+                "@type": "AdministrativeArea",
+                name: "Saskatchewan",
+                containedInPlace: {
+                  "@type": "Country",
+                  name: "Canada",
+                },
+              },
+            },
       provider: {
         "@type": "Organization",
         "@id": `${siteUrl}/#organization`,
@@ -200,7 +256,7 @@ export default function SeoLandingPage({
         {
           "@type": "ListItem",
           position: 2,
-          name: locationName === "Saskatchewan" ? "Saskatchewan handyman services" : `${locationName} handyman services`,
+          name: `${locationName} handyman services`,
           item: locationHubUrl,
         },
         {
@@ -261,24 +317,39 @@ export default function SeoLandingPage({
             </div>
             <div>
               <div className="text-xl font-bold tracking-tight">SaskHandy</div>
-              <div className="text-sm text-slate-500">Local help for home jobs</div>
+              <div className="text-sm text-slate-500">
+                Local help for home jobs
+              </div>
             </div>
           </Link>
 
-          <Button asChild className="rounded-full bg-emerald-700 hover:bg-emerald-800">
+          <Button
+            asChild
+            className="rounded-full bg-emerald-700 hover:bg-emerald-800"
+          >
             <Link href="/sign-up">Post a Job</Link>
           </Button>
         </div>
       </header>
 
       <main>
-        <nav aria-label="Breadcrumb" className="border-b border-slate-200 bg-white">
+        <nav
+          aria-label="Breadcrumb"
+          className="border-b border-slate-200 bg-white"
+        >
           <div className="container py-3 text-sm text-slate-600">
-            <Link href="/" className="hover:text-emerald-800">Home</Link>
-            <span aria-hidden="true" className="mx-2">/</span>
-            <span aria-current="page">{serviceName ?? title} in {locationName}</span>
+            <Link href="/" className="hover:text-emerald-800">
+              Home
+            </Link>
+            <span aria-hidden="true" className="mx-2">
+              /
+            </span>
+            <span aria-current="page">
+              {serviceName ? `${serviceName} in ${locationName}` : title}
+            </span>
           </div>
         </nav>
+
         <section className="bg-[#f7faf8]">
           <div className="container py-16 md:py-20">
             <div className="grid items-center gap-10 lg:grid-cols-2">
@@ -292,14 +363,22 @@ export default function SeoLandingPage({
                   {title}
                 </h1>
 
-                <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{intro}</p>
+                <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
+                  {intro}
+                </p>
 
                 {secondaryIntro ? (
-                  <p className="mt-4 max-w-3xl text-slate-600 leading-8">{secondaryIntro}</p>
+                  <p className="mt-4 max-w-3xl text-slate-600 leading-8">
+                    {secondaryIntro}
+                  </p>
                 ) : null}
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                  <Button asChild size="lg" className="rounded-full bg-emerald-700 hover:bg-emerald-800">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="rounded-full bg-emerald-700 hover:bg-emerald-800"
+                  >
                     <Link href={primaryCtaHref}>
                       {primaryCtaText}
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -307,7 +386,12 @@ export default function SeoLandingPage({
                   </Button>
 
                   {secondaryCtaText && secondaryCtaHref ? (
-                    <Button asChild size="lg" variant="outline" className="rounded-full">
+                    <Button
+                      asChild
+                      size="lg"
+                      variant="outline"
+                      className="rounded-full"
+                    >
                       <Link href={secondaryCtaHref}>{secondaryCtaText}</Link>
                     </Button>
                   ) : null}
@@ -329,8 +413,12 @@ export default function SeoLandingPage({
 
         <section className="border-b border-slate-200 bg-white">
           <div className="container py-14">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-950">{sectionTitle}</h2>
-            <p className="mt-3 max-w-2xl text-slate-600 leading-7">{sectionDescription}</p>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+              {sectionTitle}
+            </h2>
+            <p className="mt-3 max-w-2xl text-slate-600 leading-7">
+              {sectionDescription}
+            </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {items.map((item) => (
@@ -359,18 +447,21 @@ export default function SeoLandingPage({
                 </h2>
 
                 <p className="mt-4 text-lg leading-8 text-slate-600">
-                  SaskHandy helps you compare more than price. Before accepting a bid, review the
-                  handyman’s profile photo, bio, skills, service area, reviews, external review
-                  links, and verification badges.
+                  SaskHandy helps you compare more than price. Before accepting a
+                  bid, review the handyman’s profile photo, bio, skills, service
+                  area, reviews, external review links, and verification badges.
                 </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-[24px] border border-emerald-200 bg-white p-5 shadow-sm">
                   <UserCheck className="mb-3 h-5 w-5 text-emerald-700" />
-                  <h3 className="font-semibold text-slate-900">ID Name Matched</h3>
+                  <h3 className="font-semibold text-slate-900">
+                    ID Name Matched
+                  </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Handymen need approved ID Name Matched status before they can send bids.
+                    Handymen need approved ID Name Matched status before they can
+                    send bids.
                   </p>
                 </div>
 
@@ -378,31 +469,38 @@ export default function SeoLandingPage({
                   <ShieldCheck className="mb-3 h-5 w-5 text-amber-700" />
                   <h3 className="font-semibold text-slate-900">Gold Shield</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Gold Shield means ID Name Matched plus Criminal Record Check Reviewed.
+                    Gold Shield means ID Name Matched plus Criminal Record Check
+                    Reviewed.
                   </p>
                 </div>
 
                 <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
                   <MessageSquare className="mb-3 h-5 w-5 text-emerald-700" />
-                  <h3 className="font-semibold text-slate-900">Message before choosing</h3>
+                  <h3 className="font-semibold text-slate-900">
+                    Message before choosing
+                  </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Ask about experience, availability, materials, service area, and past work.
+                    Ask about experience, availability, materials, service area,
+                    and past work.
                   </p>
                 </div>
 
                 <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
                   <CheckCircle2 className="mb-3 h-5 w-5 text-emerald-700" />
-                  <h3 className="font-semibold text-slate-900">Payment protection</h3>
+                  <h3 className="font-semibold text-slate-900">
+                    Payment protection
+                  </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Payment is held through SaskHandy and released after you mark the job complete.
+                    Payment is held through SaskHandy and released after you mark
+                    the job complete.
                   </p>
                 </div>
               </div>
             </div>
 
             <p className="mt-6 max-w-3xl text-xs leading-6 text-slate-500">
-              Verification badges help you review trust signals, but they do not guarantee safety
-              or replace your own judgment.
+              Verification badges help you review trust signals, but they do not
+              guarantee safety or replace your own judgment.
             </p>
           </div>
         </section>
@@ -411,7 +509,9 @@ export default function SeoLandingPage({
           <div className="container py-16">
             <div className="grid gap-10 lg:grid-cols-2">
               <div>
-                <h2 className="text-3xl font-bold tracking-tight text-slate-950">{whyTitle}</h2>
+                <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+                  {whyTitle}
+                </h2>
                 {whyParagraphs.map((paragraph) => (
                   <p key={paragraph} className="mt-4 text-slate-600 leading-8">
                     {paragraph}
@@ -422,25 +522,34 @@ export default function SeoLandingPage({
               <div className="space-y-5">
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <ShieldCheck className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Compare bids and profiles</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">
+                    Compare bids and profiles
+                  </h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    Post your job once, review local bids, compare profiles, and message before choosing.
+                    Post your job once, review local bids, compare profiles, and
+                    message before choosing.
                   </p>
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <Star className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Trust signals before you choose</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">
+                    Trust signals before you choose
+                  </h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    Review ID Name Matched, Gold Shield, service area, external review links, and SaskHandy reviews.
+                    Review ID Name Matched, Gold Shield, service area, external
+                    review links, and SaskHandy reviews.
                   </p>
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <Wrench className="h-8 w-8 text-emerald-700" />
-                  <h3 className="mt-4 text-xl font-semibold text-slate-900">Built for practical local jobs</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">
+                    Built for practical local jobs
+                  </h3>
                   <p className="mt-2 text-slate-600 leading-7">
-                    SaskHandy is focused on everyday repair, installation, mounting, assembly, yard, and maintenance jobs.
+                    SaskHandy is focused on everyday repair, installation,
+                    mounting, assembly, yard, and maintenance jobs.
                   </p>
                 </div>
               </div>
@@ -456,12 +565,13 @@ export default function SeoLandingPage({
                   Common local searches
                 </p>
                 <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-                  Looking for {serviceName ?? primaryCategory} near you in {locationName}?
+                  Looking for {serviceName ?? primaryCategory} near you in{" "}
+                  {locationName}?
                 </h2>
                 <p className="mt-3 text-slate-600 leading-7">
-                  SaskHandy helps homeowners looking for local help post a job, compare bids from
-                  {locationName}-area handymen, review profiles, message before choosing, and pay
-                  securely through the platform.
+                  SaskHandy helps homeowners looking for local help post a job,
+                  compare bids from handymen in {locationName}, review profiles,
+                  message before choosing, and pay securely through the platform.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -487,7 +597,7 @@ export default function SeoLandingPage({
                   SaskHandy Guide
                 </p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
-                  Helpful guide for Saskatoon homeowners
+                  Helpful guide for {locationName} homeowners
                 </h2>
               </div>
 
@@ -500,7 +610,10 @@ export default function SeoLandingPage({
 
                     <div className="mt-4 space-y-4">
                       {section.paragraphs.map((paragraph) => (
-                        <p key={paragraph} className="text-slate-600 leading-8">
+                        <p
+                          key={paragraph}
+                          className="text-slate-600 leading-8"
+                        >
                           {paragraph}
                         </p>
                       ))}
@@ -509,7 +622,10 @@ export default function SeoLandingPage({
                     {section.bullets && section.bullets.length > 0 ? (
                       <ul className="mt-5 space-y-3">
                         {section.bullets.map((bullet) => (
-                          <li key={bullet} className="flex gap-3 text-slate-600 leading-7">
+                          <li
+                            key={bullet}
+                            className="flex gap-3 text-slate-600 leading-7"
+                          >
                             <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-emerald-700" />
                             <span>{bullet}</span>
                           </li>
@@ -530,13 +646,19 @@ export default function SeoLandingPage({
                 FAQs
               </p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
-                Frequently asked questions about {serviceName ?? primaryCategory} in {locationName}
+                Frequently asked questions about {serviceName ?? primaryCategory}{" "}
+                in {locationName}
               </h2>
 
               <div className="mt-8 space-y-4">
                 {faqItems.map((faq) => (
-                  <div key={faq.question} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                    <h3 className="font-semibold text-slate-950">{faq.question}</h3>
+                  <div
+                    key={faq.question}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                  >
+                    <h3 className="font-semibold text-slate-950">
+                      {faq.question}
+                    </h3>
                     <p className="mt-2 text-slate-600 leading-7">{faq.answer}</p>
                   </div>
                 ))}
@@ -548,7 +670,9 @@ export default function SeoLandingPage({
         <section className="border-t border-slate-200 bg-[#f7faf8]">
           <div className="container py-16">
             <div className="max-w-3xl">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-950">{bottomTitle}</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+                {bottomTitle}
+              </h2>
               <p className="mt-4 text-slate-600 leading-8">{bottomParagraph}</p>
 
               <div className="mt-8 rounded-[28px] border border-emerald-200 bg-white p-6">
@@ -558,12 +682,15 @@ export default function SeoLandingPage({
                       Ready to compare local bids?
                     </p>
                     <p className="mt-2 text-slate-600 leading-7">
-                      Post your job, review handyman trust signals, message before choosing, and
-                      pay securely through SaskHandy.
+                      Post your job, review handyman trust signals, message
+                      before choosing, and pay securely through SaskHandy.
                     </p>
                   </div>
 
-                  <Button asChild className="rounded-full bg-emerald-700 hover:bg-emerald-800">
+                  <Button
+                    asChild
+                    className="rounded-full bg-emerald-700 hover:bg-emerald-800"
+                  >
                     <Link href={primaryCtaHref}>
                       {primaryCtaText}
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -587,7 +714,10 @@ export default function SeoLandingPage({
               ) : null}
 
               <div className="mt-8">
-                <Button asChild className="rounded-full bg-emerald-700 hover:bg-emerald-800">
+                <Button
+                  asChild
+                  className="rounded-full bg-emerald-700 hover:bg-emerald-800"
+                >
                   <Link href={primaryCtaHref}>
                     {primaryCtaText}
                     <ArrowRight className="ml-2 h-4 w-4" />

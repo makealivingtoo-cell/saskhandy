@@ -3,6 +3,7 @@ import SeoLandingPage from "@/components/SeoLandingPage";
 export default function ElectricalHelpSaskatchewanPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatchewan"
       title="Electrical Help in Saskatchewan"
       pageTitle="Electrical Help Saskatchewan | SaskHandy"
       metaDescription="Find electrical help in Saskatchewan. Post small electrical jobs like light fixture installation, outlet replacement, switch replacement, ceiling fan installation, bathroom fan swaps, and lighting updates on SaskHandy."

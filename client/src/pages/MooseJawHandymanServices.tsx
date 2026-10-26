@@ -5,6 +5,7 @@ export default function MooseJawHandymanServicesPage() {
     <SeoLandingPage
       title="Handyman Services in Moose Jaw"
       pageTitle="Handyman Services Moose Jaw | SaskHandy"
+      locationName="Moose Jaw"
       metaDescription="Find handyman services in Moose Jaw. Post home repair jobs for furniture assembly, TV mounting, minor plumbing help, painting, drywall repair, yard work, fence repair, and general handyman services on SaskHandy."
       badge="Local handyman services in Moose Jaw"
       intro="SaskHandy helps homeowners in Moose Jaw find local handyman services for home repairs, furniture assembly, TV mounting, minor plumbing help, drywall patching, painting touch-ups, yard work, fence repair, seasonal maintenance, and everyday home projects."

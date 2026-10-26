@@ -5,6 +5,7 @@ export default function WarmanHandymanServicesPage() {
     <SeoLandingPage
       title="Handyman Services in Warman"
       pageTitle="Handyman Services Warman | SaskHandy"
+      locationName="Warman"
       metaDescription="Find handyman services in Warman. Post home repair jobs for furniture assembly, TV mounting, painting, drywall repair, minor plumbing help, yard work, fence repair, and general handyman services on SaskHandy."
       badge="Local handyman services in Warman"
       intro="SaskHandy helps homeowners in Warman find local handyman services for furniture assembly, TV mounting, home repairs, drywall patching, painting touch-ups, yard work, fence repair, minor plumbing help, and other practical home maintenance jobs."

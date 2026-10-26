@@ -3,6 +3,7 @@ import SeoLandingPage from "@/components/SeoLandingPage";
 export default function DrywallPaintingSaskatchewanPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatchewan"
       title="Drywall Repair and Painting in Saskatchewan"
       pageTitle="Drywall Repair and Painting Saskatchewan | SaskHandy"
       metaDescription="Find drywall repair and painting in Saskatchewan. Post drywall patching, wall repair, interior painting, paint touch-up, trim painting, and small home finishing jobs on SaskHandy."

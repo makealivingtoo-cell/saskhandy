@@ -5,6 +5,7 @@ export default function SaskatoonHandymanServicesPage() {
     <SeoLandingPage
       title="Handyman Services in Saskatoon"
       pageTitle="Handyman Services Saskatoon | SaskHandy"
+      locationName="Saskatoon"
       metaDescription="Find handyman services in Saskatoon. Post home repair jobs for furniture assembly, TV mounting, plumbing repairs, electrical help, drywall repair, painting, yard work, fence repair, gutter cleaning, and general handyman services on SaskHandy."
       badge="Local handyman services in Saskatoon"
       intro="SaskHandy helps Saskatoon homeowners find local handyman services for furniture assembly, TV mounting, drywall patch repair, leaky faucet repair, light fixture installation, interior painting touch-ups, yard work, fence repair, gutter cleaning, and other everyday home repair jobs."

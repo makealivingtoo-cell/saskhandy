@@ -3,6 +3,7 @@ import SeoLandingPage from "@/components/SeoLandingPage";
 export default function FurnitureAssemblySaskatchewanPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatchewan"
       title="Furniture Assembly in Saskatchewan"
       pageTitle="Furniture Assembly Saskatchewan | SaskHandy"
       metaDescription="Find furniture assembly in Saskatchewan. Post furniture setup jobs for IKEA furniture, bed frames, desks, dressers, bookshelves, dining tables, TV stands, nursery furniture, and office furniture on SaskHandy."

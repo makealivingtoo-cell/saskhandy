@@ -3,6 +3,7 @@ import SeoLandingPage from "@/components/SeoLandingPage";
 export default function YardWorkSaskatchewanPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatchewan"
       title="Yard Work and Maintenance in Saskatchewan"
       pageTitle="Yard Work Saskatchewan | SaskHandy"
       metaDescription="Find yard work and maintenance in Saskatchewan. Post outdoor jobs for gutter cleaning, fence repair, spring cleanup, fall cleanup, yard maintenance, property tidy-up, deck maintenance, and seasonal exterior help on SaskHandy."
