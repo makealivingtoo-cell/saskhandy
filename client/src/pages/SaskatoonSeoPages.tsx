@@ -79,7 +79,7 @@ const professionalTvArticleSections = [
     paragraphs: [
       "SaskHandy is built for practical local jobs like TV mounting. Instead of calling around one by one, homeowners can post the job once, describe the TV size and wall type, and let local handymen respond with bids. This makes it easier to compare options before choosing who to hire.",
       "The chat-before-hiring flow is useful for TV mounting because many details affect the final price. The handyman may need to know whether the mount is already purchased, whether the wall is drywall or masonry, whether cable management is included, and whether the job includes extra setup.",
-      "For SaskHandy’s growth, TV mounting is also a strong SEO and ad category because the homeowner usually has a clear problem and immediate intent. A search like TV mounting Saskatoon or TV installation Saskatoon is closer to a booking decision than a vague handyman search."
+      "Before accepting a TV mounting bid, confirm whether it includes the mount, wall fasteners, cable management, and device setup. Share your TV model and photos of the wall so the installer can flag any extra materials or access requirements before the appointment."
     ],
     bullets: [
       "Post the TV size, mount type, wall type, and room details.",
@@ -139,7 +139,7 @@ const tvInstallArticleSections = [
     paragraphs: [
       "A local Saskatoon handyman may have experience with the types of homes, condos, apartments, and basement developments common in the area. That local context can matter when dealing with older walls, unusual framing, concrete surfaces, fireplace installs, or rental properties where the homeowner needs a clean and reversible solution.",
       "Local help also makes scheduling easier. A homeowner who needs a TV mounted after work or on the weekend may have better luck finding someone nearby than trying to coordinate with a large generic service.",
-      "For SaskHandy, this is the core positioning: local help for real home projects, with enough structure to make hiring easier."
+      "When comparing local installers, confirm that they serve your neighbourhood, have experience with your wall type, and can work within your preferred schedule. Agree on the installation details and total price before the visit."
     ],
     bullets: [
       "Local service area context matters.",
@@ -458,60 +458,55 @@ const diyDoorbellArticleSections = [
 
 const localSeoArticleSections = [
   {
-    heading: "Why local SEO matters for SaskHandy",
-    paragraphs: [
-      "SaskHandy’s long-term growth depends on being found when homeowners are already searching for help. A person searching TV mounting Saskatoon, Ring doorbell installation Saskatoon, furniture assembly Saskatoon, or handyman services Saskatoon usually has a specific job in mind. That search intent is valuable because the homeowner is closer to posting a job.",
-      "Local SEO helps SaskHandy build visibility without relying only on paid ads. Meta ads can create demand and remind homeowners the platform exists, while local search pages can capture demand from people actively looking for a solution.",
-      "The goal is not just to rank for one keyword. The goal is to build a network of service pages that make SaskHandy relevant for many practical home jobs across Saskatchewan."
+    "heading": "Choose the help that matches your project",
+    "paragraphs": [
+      "Start with the job you need completed. TV mounting, smart doorbell installation, furniture assembly, and general repairs each require different tools and experience. Describe the task clearly so local handymen can decide whether it matches their skills.",
+      "If you have several small tasks, list each one in the same job post. Ask the handyman which tasks they can complete and whether any part needs a specialist."
     ],
-    bullets: [
-      "Capture high-intent homeowner searches.",
-      "Support paid ads with organic landing pages.",
-      "Build topical authority around local handyman services.",
-      "Create pages for specific jobs, not just generic handyman terms."
+    "bullets": [
+      "List each task you want completed.",
+      "Include the product model or dimensions where relevant.",
+      "Mention any unusual wall types or access restrictions.",
+      "Explain whether you need installation only or help choosing materials."
     ]
   },
   {
-    heading: "Service pages should match real homeowner searches",
-    paragraphs: [
-      "A strong local SEO strategy starts with specific service pages. Instead of only having one general handyman page, SaskHandy should have pages for TV mounting, Ring doorbell installation, furniture assembly, small repairs, home maintenance, and property maintenance. Each page should answer the questions a homeowner has before posting a job.",
-      "The page should include the city, the service, examples of jobs, trust points, and a clear call to action. It should also internally link to related pages so Google understands the broader service cluster.",
-      "For example, a TV mounting page can link to professional TV mounting, TV installation service, and best TV wall mount. A doorbell page can link to smart doorbell installation, DIY vs professional installation, and home security doorbell installation."
+    "heading": "Share photos and practical details",
+    "paragraphs": [
+      "Photos help a handyman understand the job before visiting. For TV mounting, show the wall, nearby outlets, and the mount if you have one. For a doorbell installation, include the device model and photos of the existing doorbell.",
+      "Include your neighbourhood, preferred timing, and whether you have already purchased the materials. Mention stairs, limited parking, or building access arrangements that could affect the visit."
     ],
-    bullets: [
-      "Use city + service keywords naturally.",
-      "Answer practical homeowner questions.",
-      "Add related internal links.",
-      "Send visitors into the job-posting flow."
+    "bullets": [
+      "Photograph the work area and any existing damage.",
+      "Say which materials or products you already have.",
+      "Include your preferred appointment window.",
+      "Mention access or parking arrangements."
     ]
   },
   {
-    heading: "On-page SEO and technical basics",
-    paragraphs: [
-      "Each page should have a clear title tag, meta description, H1, H2 sections, internal links, and useful copy that matches the search intent. The page should load quickly, work well on mobile, and avoid thin duplicate content.",
-      "Schema markup can also help search engines understand the business and service context. SaskHandy can eventually add LocalBusiness, Service, FAQ, and Breadcrumb schema where appropriate. This should be done carefully and accurately.",
-      "The current React route approach gives SaskHandy a good starting point, but the pages should be included in the sitemap and discoverable through internal links from the website."
+    "heading": "Compare what each bid includes",
+    "paragraphs": [
+      "Two bids can cover different amounts of work. A TV mounting bid may include basic installation but exclude cable concealment or device setup. A doorbell bid may include mounting but exclude app setup or troubleshooting.",
+      "Ask each handyman to confirm the work, materials, cleanup, and total price included in their bid. Clarify how any additional work would be agreed before it begins."
     ],
-    bullets: [
-      "Unique page title and meta description.",
-      "Clear H1 and section headings.",
-      "Mobile-friendly layout.",
-      "Internal links and sitemap inclusion.",
-      "Schema markup when accurate."
+    "bullets": [
+      "Confirm labour and materials.",
+      "Ask whether setup and testing are included.",
+      "Check cleanup and packaging removal.",
+      "Agree on any additional costs before work starts."
     ]
   },
   {
-    heading: "Reviews, local trust, and content depth",
-    paragraphs: [
-      "Reviews and local trust signals matter for service businesses. As SaskHandy gets more completed jobs, the platform should collect homeowner reviews, handyman profile signals, job category examples, and local proof. These trust signals can improve conversion and support SEO over time.",
-      "Longer article-style pages can help build topical depth, but they should not feel like filler. Each page should explain real decisions homeowners face: which mount to choose, when to hire help, how smart doorbells connect, what makes Wi-Fi important, and why local handymen are useful.",
-      "The best SEO content for SaskHandy is practical, local, and tied to the job-posting flow."
+    "heading": "Review profiles before choosing",
+    "paragraphs": [
+      "Review the handyman's profile, relevant experience, available reviews, and verification badges before accepting a bid. Ask about similar jobs and discuss any concerns through chat.",
+      "For work involving electrical systems, gas, structural changes, or other specialist tasks, confirm that the person has the qualifications required for the job. A profile badge does not replace checking suitability for the specific work."
     ],
-    bullets: [
-      "Collect and display reviews where appropriate.",
-      "Use real service examples.",
-      "Avoid generic filler content.",
-      "Make every article lead back to posting a job."
+    "bullets": [
+      "Look for experience with similar projects.",
+      "Read available reviews and profile details.",
+      "Confirm availability before accepting.",
+      "Keep the agreed scope and price in writing."
     ]
   }
 ];
@@ -519,6 +514,7 @@ const localSeoArticleSections = [
 export function TvMountingSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="TV Mounting in Saskatoon"
       pageTitle="TV Mounting Saskatoon | Post Your Job & Get Local Bids | SaskHandy"
       metaDescription="Need TV mounting in Saskatoon? Post your job on SaskHandy and get bids from local handymen for wall mounting, cable management, and setup."
@@ -555,6 +551,7 @@ export function TvMountingSaskatoonPage() {
 export function ProfessionalTvMountingSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="Professional TV Mounting for Saskatoon Homes"
       pageTitle="Professional TV Mounting Saskatoon | SaskHandy"
       metaDescription="Find local help for professional TV mounting in Saskatoon. Post your job, compare bids, and get your TV mounted safely."
@@ -592,6 +589,7 @@ export function ProfessionalTvMountingSaskatoonPage() {
 export function TvInstallationServiceSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="TV Installation Service in Saskatoon"
       pageTitle="TV Installation Service Saskatoon | SaskHandy"
       metaDescription="Looking for a TV installation service in Saskatoon? Post your job on SaskHandy and get local bids for mounting, setup, and cable management."
@@ -629,6 +627,7 @@ export function TvInstallationServiceSaskatoonPage() {
 export function BestTvWallMountSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="Choosing the Best TV Wall Mount in Saskatoon"
       pageTitle="Best TV Wall Mount Saskatoon | Fixed, Tilting & Full-Motion Mounts | SaskHandy"
       metaDescription="Not sure which TV wall mount to choose? Learn about fixed, tilting, and full-motion mounts, then post your Saskatoon TV mounting job on SaskHandy."
@@ -666,6 +665,7 @@ export function BestTvWallMountSaskatoonPage() {
 export function RingDoorbellInstallationSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="Ring Doorbell Installation in Saskatoon"
       pageTitle="Ring Doorbell Installation Saskatoon | Post Your Job & Get Local Bids | SaskHandy"
       metaDescription="Need Ring doorbell installation in Saskatoon? Post your job on SaskHandy and connect with local handymen for smart doorbell setup."
@@ -702,6 +702,7 @@ export function RingDoorbellInstallationSaskatoonPage() {
 export function SmartDoorbellInstallationSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="Smart Doorbell Installation in Saskatoon"
       pageTitle="Smart Doorbell Installation Saskatoon | SaskHandy"
       metaDescription="Find local help for smart doorbell installation in Saskatoon. Post your job and get bids for wired or battery-powered video doorbell setup."
@@ -739,6 +740,7 @@ export function SmartDoorbellInstallationSaskatoonPage() {
 export function SmartHomeDoorbellIntegrationSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="Smart Home Doorbell Integration in Saskatoon"
       pageTitle="Smart Home Doorbell Integration Saskatoon | SaskHandy"
       metaDescription="Connect your smart doorbell with Alexa, Google Home, smart locks, lights, and displays. Post your Saskatoon smart home job on SaskHandy."
@@ -776,6 +778,7 @@ export function SmartHomeDoorbellIntegrationSaskatoonPage() {
 export function DoorbellSecuritySaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="Home Security Doorbell Installation in Saskatoon"
       pageTitle="Home Security Doorbell Installation Saskatoon | SaskHandy"
       metaDescription="Improve front-door visibility with smart doorbell installation in Saskatoon. Post your job on SaskHandy and get local bids."
@@ -813,6 +816,7 @@ export function DoorbellSecuritySaskatoonPage() {
 export function DiyVsProfessionalDoorbellInstallationSaskatoonPage() {
   return (
     <SeoLandingPage
+      locationName="Saskatoon"
       title="DIY vs Professional Doorbell Installation in Saskatoon"
       pageTitle="DIY vs Professional Doorbell Installation Saskatoon | SaskHandy"
       metaDescription="Should you install a smart doorbell yourself or hire help? Learn what to consider, then post your Saskatoon doorbell job on SaskHandy."
@@ -850,35 +854,36 @@ export function DiyVsProfessionalDoorbellInstallationSaskatoonPage() {
 export function LocalSeoSaskatoonServicesPage() {
   return (
     <SeoLandingPage
-      title="Local SEO for Saskatoon TV Mounting and Doorbell Installation"
-      pageTitle="Local SEO for TV Mounting and Doorbell Installation Saskatoon | SaskHandy"
-      metaDescription="SaskHandy is building local search visibility for Saskatoon services like TV mounting, Ring doorbell installation, and handyman jobs."
-      badge="Saskatoon local service search"
-      intro="SaskHandy is built to help Saskatchewan homeowners find local help for repairs, installs, and home projects."
-      secondaryIntro="Service pages for searches like TV mounting Saskatoon and Ring doorbell installation Saskatoon help homeowners find the exact help they need."
+      locationName="Saskatoon"
+      title="Planning TV Mounting and Doorbell Installation in Saskatoon"
+      pageTitle="Plan Your TV Mounting or Doorbell Installation | SaskHandy"
+      metaDescription="Plan your Saskatoon TV mounting or smart doorbell installation. Learn what details to share, how to compare bids, and what to confirm before hiring."
+      badge="Saskatoon homeowner project guide"
+      intro="Planning a TV mount, smart doorbell installation, or a few small home jobs? Prepare the details so local handymen can understand the work and send useful bids."
+      secondaryIntro="Use this guide to describe your project, compare what is included, and confirm the arrangements before choosing someone."
       heroImage="/images/saskatchewan.jpg"
       primaryCtaText={homeownerCta}
-      sectionTitle="Local search topics SaskHandy is building around"
-      sectionDescription="These pages help connect homeowner search intent with local handyman services."
+      sectionTitle="Projects you can describe in your job post"
+      sectionDescription="Include the products, work area, and setup help you need for each task."
       items={[
-        "TV mounting Saskatoon",
-        "Doorbell installation Saskatoon",
+        "TV wall mounting",
+        "Cable management",
         "Ring doorbell installation",
+        "Smart doorbell setup",
         "Furniture assembly",
-        "Home repairs",
-        "Smart home setup",
-        "Property maintenance",
-        "Handyman services",
+        "Small home repairs",
+        "Shelving installation",
+        "Home maintenance",
       ]}
-      whyTitle="Why local SEO matters for SaskHandy"
+      whyTitle="Prepare a clear job before comparing bids"
       whyParagraphs={[
-        "Homeowners often search for specific jobs when they are ready to hire, such as TV mounting, doorbell installation, furniture assembly, or repairs.",
-        "Dedicated local pages help SaskHandy show up for those high-intent searches and send people directly into the job-posting flow.",
-        "This supports the long-term goal of making SaskHandy the local repair infrastructure for Saskatchewan homeowners, property managers, and independent handymen.",
+        "A clear description helps handymen understand the work, identify materials, and estimate the time needed.",
+        "Photos, product models, wall details, and your preferred timing can reduce follow-up questions.",
+        "Compare the scope, experience, availability, and price of each bid before choosing who to hire.",
       ]}
       articleSections={localSeoArticleSections}
-      bottomTitle="Post a local home project"
-      bottomParagraph="Whether it is a TV mount, smart doorbell, furniture assembly, repair, or larger home project, SaskHandy helps you post the job and get local bids."
+      bottomTitle="Ready to post your home project?"
+      bottomParagraph="Describe your TV mounting, doorbell installation, or small home job, add useful photos, and compare local bids on SaskHandy."
       relatedLinks={[...tvRelatedLinks, ...doorbellRelatedLinks]}
     />
   );
