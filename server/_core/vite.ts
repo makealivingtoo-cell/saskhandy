@@ -21,6 +21,7 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
@@ -32,17 +33,20 @@ export async function setupVite(app: Express, server: Server) {
         "index.html"
       );
 
-      // always reload the index.html file from disk incase it changes
+      // Reload the template so development changes appear immediately.
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
+
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
+
       const page = await vite.transformIndexHtml(url, template);
+
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
+    } catch (error) {
+      vite.ssrFixStacktrace(error as Error);
+      next(error);
     }
   });
 }
@@ -52,16 +56,59 @@ export function serveStatic(app: Express) {
     process.env.NODE_ENV === "development"
       ? path.resolve(import.meta.dirname, "../..", "dist", "public")
       : path.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
+
+  const indexPath = path.join(distPath, "index.html");
+
+  // Generated pages live beside public, so they are served only
+  // through their matching routes rather than as downloadable assets.
+  const prerenderPath = path.resolve(distPath, "..", "prerender");
+
+  if (!fs.existsSync(indexPath)) {
+    throw new Error(
+      `Could not find ${indexPath}. Build the client before starting the server.`
     );
   }
 
-  app.use(express.static(distPath));
+  // Read the generated filenames once when the server starts.
+  const prerenderedFiles = new Set(
+    fs.existsSync(prerenderPath)
+      ? fs
+          .readdirSync(prerenderPath, { withFileTypes: true })
+          .filter(
+            (entry) =>
+              entry.isFile() && /^[a-f0-9]+\.html$/.test(entry.name)
+          )
+          .map((entry) => entry.name)
+      : []
+  );
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Serve assets without letting public/index.html intercept "/".
+  app.use(
+    express.static(distPath, {
+      index: false,
+      redirect: false,
+    })
+  );
+
+  app.get("*", (req, res, next) => {
+    // Query strings do not affect which HTML page is served.
+    const pathname = req.path;
+
+    // The generator uses the same encoding. Encoding the full route
+    // also prevents request paths from escaping the prerender directory.
+    const filename = `${Buffer.from(pathname, "utf8").toString("hex")}.html`;
+
+    const htmlPath = prerenderedFiles.has(filename)
+      ? path.join(prerenderPath, filename)
+      : indexPath;
+
+    // Revalidate HTML so visitors receive the current deployment.
+    res.setHeader("Cache-Control", "no-cache");
+
+    res.sendFile(htmlPath, (error) => {
+      if (error) {
+        next(error);
+      }
+    });
   });
 }
