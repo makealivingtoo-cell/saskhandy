@@ -69,7 +69,6 @@ export default function SeoLandingPage({
   serviceName,
   locationName,
   primaryCategory = "Handyman Services",
-  seoKeywords = [],
   faqItems = [],
   badge,
   intro,
@@ -298,13 +297,11 @@ export default function SeoLandingPage({
     serviceName,
     locationName,
     primaryCategory,
-    seoKeywords,
     faqItems,
     title,
   ]);
 
   const hasArticleContent = articleSections.length > 0;
-  const hasSeoKeywords = seoKeywords.length > 0;
   const hasFaqItems = faqItems.length > 0;
 
   return (
@@ -534,7 +531,7 @@ export default function SeoLandingPage({
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <Star className="h-8 w-8 text-emerald-700" />
                   <h3 className="mt-4 text-xl font-semibold text-slate-900">
-                    Trust signals before you choose
+                    Reviews and verification badges
                   </h3>
                   <p className="mt-2 text-slate-600 leading-7">
                     Review ID Name Matched, Gold Shield, service area, external
@@ -556,38 +553,6 @@ export default function SeoLandingPage({
             </div>
           </div>
         </section>
-
-        {hasSeoKeywords ? (
-          <section className="border-t border-slate-200 bg-white">
-            <div className="container py-12">
-              <div className="max-w-4xl">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  Common local searches
-                </p>
-                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-                  Looking for {serviceName ?? primaryCategory} near you in{" "}
-                  {locationName}?
-                </h2>
-                <p className="mt-3 text-slate-600 leading-7">
-                  SaskHandy helps homeowners looking for local help post a job,
-                  compare bids from handymen in {locationName}, review profiles,
-                  message before choosing, and pay securely through the platform.
-                </p>
-
-                <div className="mt-6 flex flex-wrap gap-3">
-                  {seoKeywords.map((keyword) => (
-                    <span
-                      key={keyword}
-                      className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         {hasArticleContent ? (
           <section className="border-t border-slate-200 bg-white">
@@ -682,7 +647,7 @@ export default function SeoLandingPage({
                       Ready to compare local bids?
                     </p>
                     <p className="mt-2 text-slate-600 leading-7">
-                      Post your job, review handyman trust signals, message
+                      Post your job, review handyman profiles, message
                       before choosing, and pay securely through SaskHandy.
                     </p>
                   </div>

@@ -58,7 +58,7 @@ export default function ReginaHandymanServicesPage() {
 
         "Landlords and property owners in Regina can also use SaskHandy for rental property maintenance and move-in preparation. Common rental-related jobs include drywall patching, paint touch-ups, minor plumbing repairs, fixture replacement, furniture assembly, yard cleanup, fence repairs, gutter cleaning, and general maintenance. Completing these smaller jobs before a tenant moves in can help the property feel cleaner, safer, and better cared for.",
 
-        "SaskHandy is building stronger local visibility for handyman services across Saskatchewan, including Regina, Saskatoon, Moose Jaw, Prince Albert, Warman, Martensville, and surrounding communities. The goal is to make it easier for homeowners to find practical local help for the home jobs they have been putting off. Whether you need one small repair, seasonal maintenance, or several tasks completed around the house, SaskHandy gives Regina homeowners a clearer way to post the job and connect with local handymen.",
+        "Post your Regina home project with photos and a description of what needs attention. Include your preferred timing and any materials you have purchased so local handymen can review the work and explain what their bids cover.",
       ]}
       bottomTitle="Looking for local handyman services in Regina?"
       bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, plumbing repairs, electrical help, drywall repair, painting, gutter cleaning, yard work, fence repair, seasonal maintenance, and general handyman services in Regina and nearby Saskatchewan communities."

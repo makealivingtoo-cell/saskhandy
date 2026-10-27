@@ -58,7 +58,7 @@ export default function TvMountingSaskatchewanPage() {
 
         "Some TV mounting jobs may require extra care depending on the wall surface or setup. Mounting into drywall with studs is different from mounting into brick, concrete, tile, or above a fireplace. Large TVs, full-motion mounts, and specialty walls can also require more planning. By posting these details upfront, homeowners can avoid confusion and help local handymen decide whether the job is appropriate for their experience and tools.",
 
-        "SaskHandy is building stronger local visibility for TV mounting services across Saskatchewan, including Saskatoon, Regina, Moose Jaw, Prince Albert, Warman, Martensville, and nearby communities. Instead of relying only on broad searches, scattered listings, or last-minute referrals, homeowners can use SaskHandy to post TV mounting, bracket installation, cable management, soundbar mounting, media wall setup, and home theater setup jobs in one place.",
+        "Post your TV mounting job with the TV model, wall photos, mount details, and your location in Saskatchewan. Mention soundbars, connected devices, and any cable management you want included so you can compare bids for the same scope of work.",
       ]}
       bottomTitle="Looking for TV wall mounting in Saskatoon, Regina, or nearby?"
       bottomParagraph="Post your TV mounting job on SaskHandy and connect with local help for TV wall mounting, bracket installation, cable management, soundbar mounting, living room TV setup, bedroom TV installation, media console setup, and simple home theater projects across Saskatchewan."
