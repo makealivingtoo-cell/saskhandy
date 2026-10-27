@@ -58,7 +58,7 @@ export default function PlumbingRepairsSaskatchewanPage() {
 
         "Homeowners in Saskatoon, Regina, Moose Jaw, Prince Albert, Warman, Martensville, and other Saskatchewan communities often want a simpler way to find help for plumbing repairs without starting from scratch every time something breaks. SaskHandy is built to make that process easier. Instead of relying only on broad search results, referrals, or scattered listings, homeowners can post a job with the details and give local handymen or qualified service providers a chance to respond.",
 
-        "SaskHandy is building better local visibility for home repair services across Saskatchewan, including plumbing repairs, fixture replacements, small bathroom repairs, kitchen sink help, and other practical maintenance jobs. The goal is to help homeowners get the everyday repairs done before they turn into bigger projects. Whether you need a leaky faucet repaired, a toilet issue checked, a sink fixture replaced, or a small plumbing task completed, SaskHandy gives you a clearer way to post the job and connect with local help.",
+        "Describe the plumbing issue, include photos, and mention any replacement parts you already have. Ask the provider to confirm whether the work fits their qualifications and what their bid includes before booking the repair.",
       ]}
       bottomTitle="Need leaky faucet or fixture repair in Saskatoon, Regina, or nearby?"
       bottomParagraph="Post your plumbing repair job on SaskHandy and connect with local help for leaky faucet repair, toilet repair, sink issues, shower head replacement, bathroom fixture installation, kitchen fixture swaps, drain issue help, and minor plumbing maintenance across Saskatchewan."

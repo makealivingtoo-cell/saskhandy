@@ -40,7 +40,7 @@ const saskatoonServiceGroups = [
   {
     title: "Drywall, painting, trim, and interior fixes",
     description:
-      "These pages help homeowners find help for walls, ceilings, trim, paint touch-ups, and finish work.",
+      "Find help with damaged walls, ceiling repairs, paint touch-ups, trim, and finishing work around your home.",
     links: [
       { href: "/drywall-repair-and-patching-saskatoon", label: "Drywall repair and patching" },
       {
@@ -69,7 +69,7 @@ const saskatoonServiceGroups = [
   {
     title: "Assembly, mounting, and installation",
     description:
-      "High-intent Saskatoon pages for homeowners who need items assembled, mounted, installed, or adjusted.",
+      "Get help assembling furniture, mounting a TV, hanging mirrors, or installing new fixtures in your Saskatoon home.",
     links: [
       { href: "/tv-mounting-saskatoon", label: "TV mounting in Saskatoon" },
       { href: "/ring-doorbell-installation-saskatoon", label: "Ring doorbell installation" },
@@ -269,8 +269,8 @@ export default function BlogPage() {
                 </h3>
 
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Start with a guide, then explore the related Saskatoon service page when you are
-                  ready to post a job.
+                  Learn how to plan your project, compare bids, and choose local help
+                  when you are ready to get started.
                 </p>
 
                 <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-700">
@@ -353,13 +353,12 @@ export default function BlogPage() {
               </div>
 
               <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                High-intent handyman services homeowners search for
+                Find help with your next home project
               </h2>
 
               <p className="mt-4 leading-8 text-slate-600">
-                These Saskatoon service pages help homeowners find specific help instead of landing
-                on one generic handyman page. Each page explains what to include in the job post,
-                what can affect the quote, and how SaskHandy helps homeowners compare local bids.
+                Choose the type of work you need help with. Learn what the job can involve,
+                which details to share, and what to confirm with a handyman before you hire.
               </p>
             </div>
 
@@ -429,7 +428,7 @@ export default function BlogPage() {
 
               <div className="rounded-[28px] border border-slate-200 bg-[#f7faf8] p-6 shadow-sm">
                 <h3 className="text-xl font-semibold text-slate-950">
-                  Core SaskHandy service pages
+                  Explore local home services
                 </h3>
 
                 <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-600">

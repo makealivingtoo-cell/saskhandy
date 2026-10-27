@@ -58,7 +58,7 @@ export default function MartensvilleHandymanServicesPage() {
 
         "For landlords and property owners in Martensville, SaskHandy can also help with rental maintenance and move-in preparation. Common rental-related jobs include drywall patching, paint touch-ups, furniture assembly, fixture replacement, yard cleanup, minor repairs, and general property maintenance. When a tenant moves out or a new tenant is preparing to move in, small repairs can make a major difference in how the property looks and feels.",
 
-        "SaskHandy is building stronger local visibility for handyman services across Saskatchewan, including communities like Martensville, Warman, Saskatoon, Regina, Moose Jaw, and Prince Albert. The goal is to make it easier for homeowners to find local help for the practical home jobs they have been putting off. Whether you need one small repair or several tasks completed around the house, SaskHandy gives Martensville homeowners a clearer way to post the job and connect with local handymen.",
+        "Post your Martensville home project with a list of repairs, installations, or maintenance tasks. Photos, product details, and access notes help a handyman understand the work. Confirm what is included in the price before hiring.",
       ]}
       bottomTitle="Need local handyman services in Martensville?"
       bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, drywall repair, painting, yard work, minor plumbing help, seasonal maintenance, and general handyman services in Martensville and nearby Saskatchewan communities."

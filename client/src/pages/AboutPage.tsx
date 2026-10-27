@@ -215,9 +215,8 @@ export default function AboutPage() {
               </h2>
 
               <p className="mt-4 text-slate-600 leading-8">
-                SaskHandy is building stronger local visibility for handyman services across
-                Saskatchewan. Explore city-specific service pages and common home repair categories
-                below.
+                Find help for home repairs, installations, and maintenance in your community.
+                Choose your city or the type of work you need below.
               </p>
             </div>
 

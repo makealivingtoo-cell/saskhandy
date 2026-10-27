@@ -58,7 +58,7 @@ export default function PrinceAlbertHandymanServicesPage() {
 
         "When posting a handyman job in Prince Albert, clear details can make a big difference. Homeowners should describe what needs to be done, where the job is located, whether materials have already been purchased, whether photos are available, whether tools are required, and when the job needs to be completed. A detailed post helps local handymen understand the scope of work, estimate the time involved, and decide whether the project matches their skills.",
 
-        "SaskHandy is building stronger local visibility for handyman services across Saskatchewan, including Prince Albert, Saskatoon, Regina, Moose Jaw, Warman, Martensville, and surrounding communities. The goal is to make it easier for homeowners to find practical local help for the home jobs they have been putting off. Whether you need one small fix, a seasonal maintenance task, or several repairs completed around the house, SaskHandy gives Prince Albert homeowners a clearer way to post the job and connect with local handymen.",
+        "Have a repair or maintenance project in Prince Albert? Add photos and explain what a completed job should include. Review available bids and ask about relevant experience, materials, and timing before making your choice.",
       ]}
       bottomTitle="Need a handyman in Prince Albert?"
       bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, drywall repair, painting touch-ups, leaky faucet repair, yard work, fence repair, seasonal maintenance, and general handyman services in Prince Albert and nearby Saskatchewan communities."

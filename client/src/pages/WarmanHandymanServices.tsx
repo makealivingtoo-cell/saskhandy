@@ -58,7 +58,7 @@ export default function WarmanHandymanServicesPage() {
 
         "Clear job details can make a big difference when hiring a handyman in Warman. Homeowners should include what needs to be done, where the job is located, whether materials have already been purchased, whether tools are required, how soon the job needs to be completed, and whether photos are available. The clearer the post, the easier it is for a handyman to estimate time, understand the work, and decide whether to respond. SaskHandy is designed to make that process more organized.",
 
-        "SaskHandy is building stronger local visibility for handyman services across Saskatchewan, including communities like Warman, Martensville, Saskatoon, Regina, Moose Jaw, and Prince Albert. The goal is to make it easier for homeowners to find local help for the practical home jobs they have been putting off. Whether you need one small repair or several tasks completed around the house, SaskHandy gives Warman homeowners a clearer way to post the job and connect with local handymen.",
+        "Turn your Warman home maintenance list into a clear job post. Describe each task, share photos, and mention your preferred schedule. Discuss the full scope with a handyman before accepting a bid, especially when combining several jobs.",
       ]}
       bottomTitle="Looking for a local handyman in Warman?"
       bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, painting touch-ups, drywall repair, minor plumbing help, yard work, fence repair, seasonal maintenance, and general handyman services in Warman and nearby Saskatchewan communities."

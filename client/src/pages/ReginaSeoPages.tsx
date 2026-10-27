@@ -45,7 +45,7 @@ function buildArticleSections(serviceName: string, bullets: string[]) {
       paragraphs: [
         `When Regina homeowners need help with ${serviceName.toLowerCase()}, clear details make the job easier to quote. Photos, measurements, timing, materials, access notes, and any existing damage can help local handymen understand the scope before sending a bid.`,
         `SaskHandy is a marketplace, not a single contractor. Homeowners can post a job, compare available bids, review profiles, message before choosing, and use SaskHandy's payment flow when hiring through the platform.`,
-        `As SaskHandy expands in Regina, these pages help homeowners describe real jobs and help local handymen understand what people are looking for.`
+        `Include what needs to be done, which materials you already have, and your preferred timing so a handyman can assess the work before responding.`
       ],
       bullets,
     },
@@ -126,7 +126,7 @@ export function LocalHandymanServicesReginaPage() {
       whyParagraphs={[
         "SaskHandy gives homeowners a simple way to post the job once instead of calling around one by one.",
         "The platform is designed around comparing bids, reviewing profiles, messaging before choosing, and keeping job communication organized.",
-        "Regina service pages help local handymen understand what homeowners are searching for as SaskHandy expands in the city.",
+        "Add photos and a list of tasks to your job post so local handymen can understand the work and explain what their bids include.",
       ]}
       articleSections={buildArticleSections("local handyman services", ["Repairs, installs, assembly, mounting, patching, painting, and maintenance.", "Add photos, budget range, timing, and location details.", "Use messaging to confirm scope before choosing."])}
       bottomTitle="Post a Regina handyman job"

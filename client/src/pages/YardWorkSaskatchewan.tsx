@@ -58,7 +58,7 @@ export default function YardWorkSaskatchewanPage() {
 
         "Yard work often connects with other handyman services. A homeowner preparing an outdoor space may also need fence repair, deck maintenance, outdoor furniture assembly, garage organization, exterior light replacement, or small repairs around the property. SaskHandy supports multiple home service categories, making it easier to group related outdoor jobs into one clear post when they are part of the same project.",
 
-        "SaskHandy is building stronger local visibility for yard work and maintenance services across Saskatchewan, including Saskatoon, Regina, Moose Jaw, Prince Albert, Warman, Martensville, and nearby communities. Instead of relying only on broad searches or last-minute referrals, homeowners can use SaskHandy to post seasonal cleanup, gutter cleaning, fence repair, yard maintenance, property tidy-up, and small outdoor jobs in one place.",
+        "Post your outdoor maintenance job with photos, an estimate of the area, and the tasks you want completed. Mention whether tools, materials, and waste removal are needed so you can compare bids and agree on the work before it begins.",
       ]}
       bottomTitle="Looking for gutter cleaning, fence repair, or yard work in Saskatchewan?"
       bottomParagraph="Post your yard work or outdoor maintenance job on SaskHandy and connect with local help for gutter cleaning, fence repair, spring cleanup, fall cleanup, deck maintenance, branch removal, property tidy-up, seasonal exterior help, and small outdoor repairs across Saskatchewan."

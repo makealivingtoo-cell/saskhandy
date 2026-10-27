@@ -58,7 +58,7 @@ export default function MooseJawHandymanServicesPage() {
 
         "When posting a handyman job in Moose Jaw, clear details can make a big difference. Homeowners should include what needs to be done, where the job is located, whether materials have already been purchased, whether tools are required, when the job needs to be completed, and whether photos are available. A detailed post helps local handymen understand the work, estimate the time involved, and decide whether the project matches their skills.",
 
-        "SaskHandy is building stronger local visibility for handyman services across Saskatchewan, including Moose Jaw, Saskatoon, Regina, Prince Albert, Warman, Martensville, and surrounding communities. The goal is to make it easier for homeowners to find practical local help for the home jobs they have been putting off. Whether you need one small fix, a seasonal maintenance task, or several repairs completed around the house, SaskHandy gives Moose Jaw homeowners a clearer way to post the job and connect with local handymen.",
+        "For your next home project in Moose Jaw, include photos, access details, and a list of the tasks you need completed. You can use SaskHandy to compare available bids and discuss materials, timing, and cleanup before hiring.",
       ]}
       bottomTitle="Looking for local handyman services in Moose Jaw?"
       bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, minor plumbing help, painting touch-ups, drywall repair, yard work, fence repair, seasonal maintenance, and general handyman services in Moose Jaw and nearby Saskatchewan communities."

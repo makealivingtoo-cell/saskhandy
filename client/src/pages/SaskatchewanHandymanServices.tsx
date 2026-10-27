@@ -60,7 +60,7 @@ export default function SaskatchewanHandymanServicesPage() {
 
         "When posting a handyman job on SaskHandy, clear details can make a big difference. Homeowners should include what needs to be done, where the job is located, whether materials have already been purchased, whether tools are required, when the job needs to be completed, and whether photos are available. A detailed post helps local handymen understand the work, estimate the time involved, and decide whether the project matches their skills.",
 
-        "SaskHandy is building stronger local visibility for handyman services across Saskatchewan, including Saskatoon, Regina, Prince Albert, Moose Jaw, Warman, Martensville, Yorkton, Swift Current, and nearby communities. The goal is to make it easier for homeowners to find practical local help for the home jobs they have been putting off. Whether you need one small fix, a seasonal maintenance task, or several repairs completed around the house, SaskHandy gives Saskatchewan homeowners a clearer way to post the job and connect with local handymen.",
+        "Post your home project with your city, photos, preferred timing, and a clear description of the work. Whether you need one repair or several tasks completed, you can compare available bids and confirm the details with a handyman before hiring.",
       ]}
       bottomTitle="Need handyman services in Saskatchewan?"
       bottomParagraph="Post your home repair or maintenance job on SaskHandy and connect with local help for furniture assembly, TV mounting, plumbing repairs, electrical help, drywall repair, painting, yard work, fence repair, gutter cleaning, seasonal maintenance, and general handyman services across Saskatchewan."

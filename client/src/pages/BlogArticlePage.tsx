@@ -515,7 +515,7 @@ export default function BlogArticlePage() {
               </h2>
 
               <p className="mt-4 text-slate-600 leading-8">
-                Explore related local handyman service pages and Saskatchewan home repair guides.
+                Explore related services and homeowner guides.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
