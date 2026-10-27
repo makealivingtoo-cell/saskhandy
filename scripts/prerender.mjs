@@ -14,24 +14,65 @@ const outputDirectory = path.join(projectRoot, "dist", "prerender");
 const stagingDirectory = path.join(projectRoot, "dist", "prerender-staging");
 const siteUrl = "https://saskhandy.com";
 
+// Explicit metadata for public pages outside the service/article templates.
+const publicPages = {
+  "/": {
+    title: "SaskHandy | Saskatoon Handyman Services",
+    description:
+      "Post home repair and maintenance jobs on SaskHandy. Compare bids, review handyman profiles, and connect with local help in Saskatoon and Saskatchewan.",
+  },
+  "/about": {
+    title: "About SaskHandy | Saskatchewan Home Services Marketplace",
+    description:
+      "Learn about SaskHandy, a Saskatchewan marketplace connecting homeowners with local service providers for repairs, installations, and home maintenance.",
+  },
+  "/blog": {
+    title: "SaskHandy Blog | Home Repair and Handyman Tips",
+    description:
+      "Explore practical home repair guides, handyman hiring tips, and project planning advice for homeowners in Saskatoon and across Saskatchewan.",
+  },
+  "/terms": {
+    title: "Terms and Conditions | SaskHandy",
+    description:
+      "Read the terms and conditions for using SaskHandy, including marketplace accounts, job posts, service providers, and payments.",
+  },
+  "/privacy": {
+    title: "Privacy Policy | SaskHandy",
+    description:
+      "Learn how SaskHandy collects, uses, and protects personal information when you use its home services marketplace.",
+  },
+};
+
 async function getRoutes() {
-  const appSource = await fs.readFile(
-    path.join(projectRoot, "client", "src", "App.tsx"),
-    "utf8"
-  );
+  const [appSource, blogSource] = await Promise.all([
+    fs.readFile(
+      path.join(projectRoot, "client", "src", "App.tsx"),
+      "utf8"
+    ),
+    fs.readFile(
+      path.join(projectRoot, "client", "src", "pages", "BlogArticlePage.tsx"),
+      "utf8"
+    ),
+  ]);
 
-  const blogSource = await fs.readFile(
-    path.join(projectRoot, "client", "src", "pages", "BlogArticlePage.tsx"),
-    "utf8"
-  );
-
-  // Select static service pages only.
-  // Exclude open jobs, profiles, quotes, accounts, and dashboards.
-  const serviceRoutes = [
+  const routeDefinitions = [
     ...appSource.matchAll(
       /<Route\s+path="([^"]+)"\s+component=\{(\w+)\}/g
     ),
-  ]
+  ];
+
+  const knownRoutes = new Set(
+    routeDefinitions.map(([, route]) => route)
+  );
+
+  for (const route of Object.keys(publicPages)) {
+    if (!knownRoutes.has(route)) {
+      throw new Error(`Public route is missing from App.tsx: ${route}`);
+    }
+  }
+
+  // Only static service pages belong in this group.
+  const serviceRoutes = routeDefinitions
     .filter(([, route, component]) => {
       return (
         !route.includes(":") &&
@@ -45,7 +86,7 @@ async function getRoutes() {
     .map(([, route]) => route);
 
   const blogRoutes = [
-    ...blogSource.matchAll(/^  "([a-z0-9-]+)": \{/gm),
+    ...blogSource.matchAll(/^ {2}"([a-z0-9-]+)": \{/gm),
   ].map(([, slug]) => `/blog/${slug}`);
 
   if (serviceRoutes.length === 0 || blogRoutes.length === 0) {
@@ -54,28 +95,30 @@ async function getRoutes() {
     );
   }
 
-  return [...new Set([...serviceRoutes, ...blogRoutes])].sort();
+  return {
+    routes: [
+      ...new Set([
+        ...Object.keys(publicPages),
+        ...serviceRoutes,
+        ...blogRoutes,
+      ]),
+    ].sort(),
+    serviceRoutes: new Set(serviceRoutes),
+  };
 }
 
 async function main() {
-  const routes = await getRoutes();
+  const { routes, serviceRoutes } = await getRoutes();
 
   const template = await fs.readFile(
     path.join(publicDirectory, "index.html"),
     "utf8"
   );
 
-  await fs.rm(stagingDirectory, {
-    recursive: true,
-    force: true,
-  });
+  await fs.rm(stagingDirectory, { recursive: true, force: true });
+  await fs.mkdir(stagingDirectory, { recursive: true });
 
-  await fs.mkdir(stagingDirectory, {
-    recursive: true,
-  });
-
-  // Serve only the built frontend during capture.
-  // The application server and database are not started.
+  // Capture only the built frontend. Do not start the database or API.
   const app = express();
 
   app.use("/api", (_req, res) => {
@@ -96,38 +139,32 @@ async function main() {
   });
 
   const server = app.listen(0, "127.0.0.1");
-
-  await new Promise((resolve, reject) => {
-    server.once("listening", resolve);
-    server.once("error", reject);
-  });
-
-  const address = server.address();
-
-  if (!address || typeof address === "string") {
-    throw new Error("Could not start the prerender server.");
-  }
-
-  const origin = `http://127.0.0.1:${address.port}`;
   let browser;
 
   try {
-    browser = await chromium.launch({
-      headless: true,
+    await new Promise((resolve, reject) => {
+      server.once("listening", resolve);
+      server.once("error", reject);
     });
+
+    const address = server.address();
+
+    if (!address || typeof address === "string") {
+      throw new Error("Could not start the prerender server.");
+    }
+
+    const origin = `http://127.0.0.1:${address.port}`;
+
+    browser = await chromium.launch({ headless: true });
 
     for (const route of routes) {
       const context = await browser.newContext({
-        viewport: {
-          width: 1440,
-          height: 1000,
-        },
+        viewport: { width: 1440, height: 1000 },
         serviceWorkers: "block",
       });
 
       try {
-        // Prevent analytics, third-party requests, and API calls
-        // from leaving the capture browser.
+        // Block analytics, third-party requests, and API access.
         await context.route("**/*", async (requestRoute) => {
           const requestUrl = new URL(requestRoute.request().url());
 
@@ -151,13 +188,8 @@ async function main() {
         const pageErrors = [];
 
         page.on("pageerror", (error) => {
-          // Stripe is intentionally blocked while capturing static
-          // service pages and articles, which have no payment forms.
-          // The live application and its payment flow are unchanged.
-          if (error.message === "Failed to load Stripe.js") {
-            return;
-          }
-
+          // Stripe is intentionally unavailable during static capture.
+          if (error.message === "Failed to load Stripe.js") return;
           pageErrors.push(error.message);
         });
 
@@ -171,96 +203,87 @@ async function main() {
         }
 
         const canonicalUrl = `${siteUrl}${route}`;
+        const publicMetadata = publicPages[route] ?? null;
 
-        // Wait for React content and page metadata effects.
+        // Public information pages receive explicit snapshot metadata.
+        // Services and articles must supply their own metadata.
         await page.waitForFunction(
-          (expectedCanonical) => {
+          ({ canonicalUrl, hasPublicMetadata }) => {
             const root = document.getElementById("root");
             const heading = root?.querySelector("h1");
 
-            const canonical = document.querySelector(
-              'link[rel="canonical"]'
-            );
+            if (
+              !root ||
+              root.textContent.trim().length <= 200 ||
+              !heading?.textContent.trim()
+            ) {
+              return false;
+            }
 
-            const description = document.querySelector(
-              'meta[name="description"]'
-            );
+            if (hasPublicMetadata) return true;
 
             return (
-              root &&
-              root.textContent.trim().length > 200 &&
-              heading?.textContent.trim() &&
-              canonical?.getAttribute("href") === expectedCanonical &&
-              description?.getAttribute("content")?.trim()
+              document
+                .querySelector('link[rel="canonical"]')
+                ?.getAttribute("href") === canonicalUrl &&
+              document
+                .querySelector('meta[name="description"]')
+                ?.getAttribute("content")
+                ?.trim()
             );
           },
-          canonicalUrl,
           {
-            timeout: 30000,
-          }
+            canonicalUrl,
+            hasPublicMetadata: Boolean(publicMetadata),
+          },
+          { timeout: 30000 }
         );
 
         if (new URL(page.url()).pathname !== route) {
-          throw new Error(
-            `Unexpected redirect while rendering ${route}`
-          );
-        }
-
-        if (pageErrors.length > 0) {
-          throw new Error(
-            `Browser errors on ${route}: ${pageErrors.join("; ")}`
-          );
+          throw new Error(`Unexpected redirect while rendering ${route}`);
         }
 
         const html = await page.evaluate(
-          ({ template, canonicalUrl, isArticle }) => {
+          ({ template, canonicalUrl, publicMetadata, isService }) => {
             const root = document.getElementById("root");
 
             if (!root || root.querySelectorAll("h1").length !== 1) {
               throw new Error("Expected exactly one page heading.");
             }
 
-            const canonicals = document.querySelectorAll(
-              'link[rel="canonical"]'
-            );
+            const robots = document.querySelector('meta[name="robots"]');
 
-            if (
-              canonicals.length !== 1 ||
-              canonicals[0].getAttribute("href") !== canonicalUrl
-            ) {
-              throw new Error("Invalid or duplicate canonical URL.");
-            }
-
-            const robots = document.querySelector(
-              'meta[name="robots"]'
-            );
-
-            if (
-              /\bnoindex\b/i.test(
-                robots?.getAttribute("content") ?? ""
-              )
-            ) {
+            if (/\bnoindex\b/i.test(robots?.getAttribute("content") ?? "")) {
               throw new Error("The page is marked noindex.");
             }
 
             if (
-              !isArticle &&
+              isService &&
               !document.getElementById("saskhandy-service-schema")
             ) {
               throw new Error("Service structured data is missing.");
             }
 
-            const schemas = document.querySelectorAll(
+            for (const schema of document.querySelectorAll(
               'script[type="application/ld+json"]'
-            );
-
-            for (const schema of schemas) {
+            )) {
               JSON.parse(schema.textContent ?? "");
             }
 
-            // Start with the original built template, preserving
-            // its asset URLs and analytics initialization.
-            // Do not copy dynamically injected tracking scripts.
+            if (!publicMetadata) {
+              const canonicals = document.querySelectorAll(
+                'link[rel="canonical"]'
+              );
+
+              if (
+                canonicals.length !== 1 ||
+                canonicals[0].getAttribute("href") !== canonicalUrl
+              ) {
+                throw new Error("Invalid or duplicate canonical URL.");
+              }
+            }
+
+            // Preserve the built asset URLs and original analytics setup.
             const output = new DOMParser().parseFromString(
               template,
               "text/html"
@@ -284,17 +307,101 @@ async function main() {
             document.head
               .querySelectorAll(metadataSelector)
               .forEach((element) => {
-                output.head.appendChild(
-                  output.importNode(element, true)
-                );
+                output.head.appendChild(output.importNode(element, true));
               });
+
+            function setMeta(attribute, key, value) {
+              const selector = `meta[${attribute}="${key}"]`;
+
+              output.head
+                .querySelectorAll(selector)
+                .forEach((element) => element.remove());
+
+              const meta = output.createElement("meta");
+              meta.setAttribute(attribute, key);
+              meta.setAttribute("content", value);
+              output.head.appendChild(meta);
+            }
+
+            if (publicMetadata) {
+              output.title = publicMetadata.title;
+
+              setMeta("name", "description", publicMetadata.description);
+
+              output.head
+                .querySelectorAll('link[rel="canonical"]')
+                .forEach((element) => element.remove());
+
+              const canonical = output.createElement("link");
+              canonical.setAttribute("rel", "canonical");
+              canonical.setAttribute("href", canonicalUrl);
+              output.head.appendChild(canonical);
+
+              setMeta("property", "og:type", "website");
+              setMeta("property", "og:title", publicMetadata.title);
+              setMeta(
+                "property",
+                "og:description",
+                publicMetadata.description
+              );
+              setMeta("property", "og:url", canonicalUrl);
+              setMeta("property", "og:site_name", "SaskHandy");
+              setMeta("name", "twitter:card", "summary");
+              setMeta("name", "twitter:title", publicMetadata.title);
+              setMeta(
+                "name",
+                "twitter:description",
+                publicMetadata.description
+              );
+            }
+
+            // Fill missing social metadata from the page's own title
+            // and description, without replacing existing values.
+            const title = output.title.trim();
+            const description = output.head
+              .querySelector('meta[name="description"]')
+              ?.getAttribute("content")
+              ?.trim();
+
+            if (!title || !description) {
+              throw new Error("Page title or description is missing.");
+            }
+
+            const defaults = [
+              ["property", "og:title", title],
+              ["property", "og:description", description],
+              ["property", "og:url", canonicalUrl],
+              ["property", "og:site_name", "SaskHandy"],
+              ["name", "twitter:card", "summary"],
+              ["name", "twitter:title", title],
+              ["name", "twitter:description", description],
+            ];
+
+            for (const [attribute, key, value] of defaults) {
+              const existing = output.head.querySelector(
+                `meta[${attribute}="${key}"]`
+              );
+
+              if (!existing?.getAttribute("content")?.trim()) {
+                setMeta(attribute, key, value);
+              }
+            }
+
+            const canonicals = output.head.querySelectorAll(
+              'link[rel="canonical"]'
+            );
+
+            if (
+              canonicals.length !== 1 ||
+              canonicals[0].getAttribute("href") !== canonicalUrl
+            ) {
+              throw new Error("Output canonical URL is invalid.");
+            }
 
             const outputRoot = output.getElementById("root");
 
             if (!outputRoot) {
-              throw new Error(
-                "The HTML template has no root element."
-              );
+              throw new Error("The HTML template has no root element.");
             }
 
             outputRoot.innerHTML = root.innerHTML;
@@ -304,11 +411,18 @@ async function main() {
           {
             template,
             canonicalUrl,
-            isArticle: route.startsWith("/blog/"),
+            publicMetadata,
+            isService: serviceRoutes.has(route),
           }
         );
 
-        // Match the filename encoding in server/_core/vite.ts.
+        if (pageErrors.length > 0) {
+          throw new Error(
+            `Browser errors on ${route}: ${pageErrors.join("; ")}`
+          );
+        }
+
+        // Matches the filename encoding in server/_core/vite.ts.
         const filename =
           Buffer.from(route, "utf8").toString("hex") + ".html";
 
@@ -319,42 +433,39 @@ async function main() {
         );
 
         console.log(`Prerendered: ${route}`);
+      } catch (error) {
+        throw new Error(`Failed to prerender ${route}: ${error.message}`, {
+          cause: error,
+        });
       } finally {
         await context.close();
       }
     }
 
-    // Publish generated pages only after every page succeeds.
-    await fs.rm(outputDirectory, {
-      recursive: true,
-      force: true,
-    });
-
+    // Publish only after every page succeeds.
+    await fs.rm(outputDirectory, { recursive: true, force: true });
     await fs.rename(stagingDirectory, outputDirectory);
 
-    console.log(
-      `\nSuccessfully prerendered ${routes.length} pages.`
-    );
+    console.log(`\nSuccessfully prerendered ${routes.length} pages.`);
   } finally {
     try {
-      if (browser) {
-        await browser.close();
-      }
+      if (browser) await browser.close();
     } finally {
-      await new Promise((resolve, reject) => {
-        server.close((error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
+      try {
+        if (server.listening) {
+          await new Promise((resolve, reject) => {
+            server.close((error) => {
+              if (error) reject(error);
+              else resolve();
+            });
+          });
+        }
+      } finally {
+        await fs.rm(stagingDirectory, {
+          recursive: true,
+          force: true,
         });
-      });
-
-      await fs.rm(stagingDirectory, {
-        recursive: true,
-        force: true,
-      });
+      }
     }
   }
 }
