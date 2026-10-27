@@ -6,8 +6,21 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
-// Existing application routes that still need the React app.
-// Public service pages and articles are recognized from prerendered files.
+const serviceRedirects = new Map<string, string>([
+  [
+    "/professional-tv-mounting-saskatoon",
+    "/tv-mounting-saskatoon",
+  ],
+  [
+    "/tv-installation-service-saskatoon",
+    "/tv-mounting-saskatoon",
+  ],
+  [
+    "/home-security-doorbell-installation-saskatoon",
+    "/smart-doorbell-installation-saskatoon",
+  ],
+]);
+
 const applicationRoutes = new Set([
   "/",
   "/about",
@@ -36,8 +49,7 @@ const applicationRoutes = new Set([
   "/admin/support",
 ]);
 
-// These routes load their individual records through the application.
-// This checks the route shape, not whether a database record exists.
+// These patterns recognize app routes, not database record existence.
 const dynamicApplicationRoutes = [
   /^\/quote\/[^/]+$/,
   /^\/jobs\/[^/]+$/,
@@ -46,6 +58,41 @@ const dynamicApplicationRoutes = [
   /^\/handyman\/jobs\/[^/]+$/,
   /^\/profile\/[^/]+$/,
 ];
+
+function normalizeTrailingSlash(pathname: string) {
+  return pathname.length > 1
+    ? pathname.replace(/\/+$/, "")
+    : pathname;
+}
+
+function getQueryString(originalUrl: string) {
+  const queryIndex = originalUrl.indexOf("?");
+  return queryIndex >= 0 ? originalUrl.slice(queryIndex) : "";
+}
+
+// Register before static files and the HTML fallback.
+function registerServiceRedirects(app: Express) {
+  app.use((req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      next();
+      return;
+    }
+
+    const pathname = normalizeTrailingSlash(req.path);
+    const destination = serviceRedirects.get(pathname);
+
+    if (!destination) {
+      next();
+      return;
+    }
+
+    res.setHeader("Cache-Control", "no-cache");
+    res.redirect(
+      301,
+      `${destination}${getQueryString(req.originalUrl)}`
+    );
+  });
+}
 
 const notFoundHtml = `<!doctype html>
 <html lang="en">
@@ -137,6 +184,7 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  registerServiceRedirects(app);
   app.use(vite.middlewares);
 
   app.use("*", async (req, res, next) => {
@@ -201,13 +249,21 @@ export function serveStatic(app: Express) {
     return `${Buffer.from(pathname, "utf8").toString("hex")}.html`;
   }
 
-  function isKnownRoute(pathname: string) {
+  function isApplicationRoute(pathname: string) {
     return (
-      prerenderedFiles.has(getPrerenderedFilename(pathname)) ||
       applicationRoutes.has(pathname) ||
       dynamicApplicationRoutes.some((pattern) => pattern.test(pathname))
     );
   }
+
+  function isKnownRoute(pathname: string) {
+    return (
+      prerenderedFiles.has(getPrerenderedFilename(pathname)) ||
+      isApplicationRoute(pathname)
+    );
+  }
+
+  registerServiceRedirects(app);
 
   app.use(
     express.static(distPath, {
@@ -221,10 +277,7 @@ export function serveStatic(app: Express) {
 
     res.setHeader("Cache-Control", "no-cache");
 
-    // Normalize trailing slashes only for recognized routes.
-    // Preserve any query string, including tracking parameters.
-    const normalizedPath =
-      pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+    const normalizedPath = normalizeTrailingSlash(pathname);
 
     if (
       normalizedPath !== pathname &&
@@ -232,11 +285,10 @@ export function serveStatic(app: Express) {
       !normalizedPath.startsWith("//") &&
       isKnownRoute(normalizedPath)
     ) {
-      const queryIndex = req.originalUrl.indexOf("?");
-      const query =
-        queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : "";
-
-      res.redirect(301, `${normalizedPath}${query}`);
+      res.redirect(
+        301,
+        `${normalizedPath}${getQueryString(req.originalUrl)}`
+      );
       return;
     }
 
@@ -249,10 +301,7 @@ export function serveStatic(app: Express) {
       return;
     }
 
-    if (
-      applicationRoutes.has(pathname) ||
-      dynamicApplicationRoutes.some((pattern) => pattern.test(pathname))
-    ) {
+    if (isApplicationRoute(pathname)) {
       res.sendFile(indexPath, (error) => {
         if (error) next(error);
       });

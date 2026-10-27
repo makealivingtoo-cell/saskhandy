@@ -35,7 +35,6 @@ import {
   DeadboltAndDoorLockReplacementSaskatoonPage,
   DeckRepairSaskatoonPage,
   DiyVsProfessionalDoorbellInstallationSaskatoonPage,
-  DoorbellSecuritySaskatoonPage,
   DrywallRepairAndPatchingSaskatoonPage,
   FaucetRepairAndInstallationSaskatoonPage,
   FencePostReplacementSaskatoonPage,
@@ -48,11 +47,9 @@ import {
   LocalSeoSaskatoonServicesPage,
   MinorPlumbingHandymanSaskatoonPage,
   ProfessionalDeckStainingSaskatoonPage,
-  ProfessionalTvMountingSaskatoonPage,
   RingDoorbellInstallationSaskatoonPage,
   SmartDoorbellInstallationSaskatoonPage,
   SmartHomeDoorbellIntegrationSaskatoonPage,
-  TvInstallationServiceSaskatoonPage,
   TvMountingSaskatoonPage,
   WallHangingMirrorAndArtInstallationSaskatoonPage,
   WayfairFurnitureAssemblerSaskatoonPage,
@@ -102,6 +99,25 @@ import HandymanEarnings from "./pages/handyman/Earnings";
 import PublicProfile from "./pages/PublicProfile";
 import AdminPanel from "./pages/AdminPanel";
 
+// Handles old links followed inside the React application.
+// Server-side 301 redirects handle direct requests separately.
+function LegacyServiceRedirect({ to }: { to: string }) {
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    const destination = `${to}${window.location.search}${window.location.hash}`;
+    navigate(destination, { replace: true });
+  }, [navigate, to]);
+
+  return (
+    <main className="mx-auto max-w-3xl px-6 py-16">
+      <p role="status">Taking you to the updated service page…</p>
+      <a className="mt-4 inline-block underline" href={to}>
+        Continue to the service page
+      </a>
+    </main>
+  );
+}
 
 function MetaPixelPageViewTracker() {
   const [location] = useLocation();
@@ -158,6 +174,7 @@ function Router() {
       <Route path="/saskatchewan-handyman-services" component={SaskatchewanHandymanServicesPage} />
       <Route path="/saskatoon-handyman-services" component={SaskatoonHandymanServicesPage} />
       <Route path="/regina-handyman-services" component={ReginaHandymanServicesPage} />
+
       {/* Regina SEO pages */}
       <Route path="/local-handyman-services-regina" component={LocalHandymanServicesReginaPage} />
       <Route path="/tv-mounting-regina" component={TvMountingReginaPage} />
@@ -168,7 +185,6 @@ function Router() {
       <Route path="/minor-plumbing-handyman-regina" component={MinorPlumbingHandymanReginaPage} />
       <Route path="/interior-painting-handyman-regina" component={InteriorPaintingHandymanReginaPage} />
       <Route path="/ring-doorbell-installation-regina" component={RingDoorbellInstallationReginaPage} />
-
 
       <Route path="/furniture-assembly-saskatchewan" component={FurnitureAssemblySaskatchewanPage} />
       <Route path="/tv-mounting-saskatchewan" component={TvMountingSaskatchewanPage} />
@@ -182,15 +198,25 @@ function Router() {
       <Route path="/warman-handyman-services" component={WarmanHandymanServicesPage} />
       <Route path="/martensville-handyman-services" component={MartensvilleHandymanServicesPage} />
 
+      {/* Consolidated legacy routes */}
+      <Route path="/professional-tv-mounting-saskatoon">
+        <LegacyServiceRedirect to="/tv-mounting-saskatoon" />
+      </Route>
+
+      <Route path="/tv-installation-service-saskatoon">
+        <LegacyServiceRedirect to="/tv-mounting-saskatoon" />
+      </Route>
+
+      <Route path="/home-security-doorbell-installation-saskatoon">
+        <LegacyServiceRedirect to="/smart-doorbell-installation-saskatoon" />
+      </Route>
+
       {/* Saskatoon SEO pages */}
       <Route path="/tv-mounting-saskatoon" component={TvMountingSaskatoonPage} />
-      <Route path="/professional-tv-mounting-saskatoon" component={ProfessionalTvMountingSaskatoonPage} />
-      <Route path="/tv-installation-service-saskatoon" component={TvInstallationServiceSaskatoonPage} />
       <Route path="/best-tv-wall-mount-saskatoon" component={BestTvWallMountSaskatoonPage} />
       <Route path="/ring-doorbell-installation-saskatoon" component={RingDoorbellInstallationSaskatoonPage} />
       <Route path="/smart-doorbell-installation-saskatoon" component={SmartDoorbellInstallationSaskatoonPage} />
       <Route path="/smart-home-doorbell-integration-saskatoon" component={SmartHomeDoorbellIntegrationSaskatoonPage} />
-      <Route path="/home-security-doorbell-installation-saskatoon" component={DoorbellSecuritySaskatoonPage} />
       <Route path="/diy-vs-professional-doorbell-installation-saskatoon" component={DiyVsProfessionalDoorbellInstallationSaskatoonPage} />
       <Route path="/local-seo-tv-mounting-doorbell-installation-saskatoon" component={LocalSeoSaskatoonServicesPage} />
 

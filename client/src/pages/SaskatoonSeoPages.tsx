@@ -4,8 +4,6 @@ const homeownerCta = "Post Your Job";
 
 const tvRelatedLinks = [
   { href: "/tv-mounting-saskatoon", label: "TV Mounting Saskatoon" },
-  { href: "/professional-tv-mounting-saskatoon", label: "Professional TV Mounting" },
-  { href: "/tv-installation-service-saskatoon", label: "TV Installation Service" },
   { href: "/best-tv-wall-mount-saskatoon", label: "Best TV Wall Mount" },
 ];
 
@@ -13,7 +11,6 @@ const doorbellRelatedLinks = [
   { href: "/ring-doorbell-installation-saskatoon", label: "Ring Doorbell Installation" },
   { href: "/smart-doorbell-installation-saskatoon", label: "Smart Doorbell Installation" },
   { href: "/smart-home-doorbell-integration-saskatoon", label: "Smart Home Integration" },
-  { href: "/home-security-doorbell-installation-saskatoon", label: "Doorbell Security" },
   { href: "/diy-vs-professional-doorbell-installation-saskatoon", label: "DIY vs Professional Install" },
 ];
 
@@ -541,84 +538,18 @@ export function TvMountingSaskatoonPage() {
         "With SaskHandy, homeowners can describe the job, upload details, chat with local handymen, and compare bids before choosing who to hire.",
         "It is built for real home projects in Saskatchewan, from quick installs to larger repair and setup work.",
       ]}
+      articleSections={[
+        ...professionalTvArticleSections,
+        ...tvInstallArticleSections.filter((section) =>
+          [
+            "What a complete TV installation service should include",
+            "Choosing the right installer",
+            "Insurance, warranty, and peace of mind",
+          ].includes(section.heading)
+        ),
+      ]}
       bottomTitle="Post your TV mounting job today"
       bottomParagraph="Tell local handymen what size TV you have, what wall it is going on, whether you already have a mount, and whether you want cable management included."
-      relatedLinks={tvRelatedLinks}
-    />
-  );
-}
-
-export function ProfessionalTvMountingSaskatoonPage() {
-  return (
-    <SeoLandingPage
-      locationName="Saskatoon"
-      title="Professional TV Mounting for Saskatoon Homes"
-      pageTitle="Professional TV Mounting Saskatoon | SaskHandy"
-      metaDescription="Find local help for professional TV mounting in Saskatoon. Post your job, compare bids, and get your TV mounted safely."
-      badge="Professional TV mounting"
-      intro="A professionally mounted TV can make your space look cleaner, safer, and more comfortable to use."
-      secondaryIntro="SaskHandy connects homeowners with local handymen who can help with mount selection, secure installation, cable cleanup, and practical setup details."
-      heroImage="/images/hero-handyman.jpg"
-      primaryCtaText={homeownerCta}
-      sectionTitle="What professional TV mounting can include"
-      sectionDescription="A good TV mounting job is about more than hanging a screen. It should account for safety, comfort, and the finished look of your room."
-      items={[
-        "Stud finding",
-        "Secure fastening",
-        "Mount selection",
-        "Viewing height",
-        "Glare reduction",
-        "Cable concealment",
-        "Soundbar placement",
-        "Device setup",
-      ]}
-      whyTitle="Why professional mounting matters"
-      whyParagraphs={[
-        "A poorly mounted TV can damage the wall, damage the television, or create a safety risk. Professional help reduces that risk by matching the mount and hardware to the wall type and TV size.",
-        "A better install can also improve the viewing experience by placing the screen at a comfortable height and reducing glare from windows or lights.",
-        "For homeowners who want a cleaner look, cable management and component placement make a major difference.",
-      ]}
-      articleSections={professionalTvArticleSections}
-      bottomTitle="Get local bids for professional TV mounting"
-      bottomParagraph="Post your Saskatoon TV mounting job on SaskHandy and compare bids from local handymen before you choose who to hire."
-      relatedLinks={tvRelatedLinks}
-    />
-  );
-}
-
-export function TvInstallationServiceSaskatoonPage() {
-  return (
-    <SeoLandingPage
-      locationName="Saskatoon"
-      title="TV Installation Service in Saskatoon"
-      pageTitle="TV Installation Service Saskatoon | SaskHandy"
-      metaDescription="Looking for a TV installation service in Saskatoon? Post your job on SaskHandy and get local bids for mounting, setup, and cable management."
-      badge="TV installation service"
-      intro="Choosing the right TV installation help can save time, reduce stress, and help protect your TV and walls."
-      secondaryIntro="Use SaskHandy to post your TV installation job and connect with local handymen who can handle the practical details."
-      heroImage="/images/saskatchewan.jpg"
-      primaryCtaText={homeownerCta}
-      sectionTitle="TV installation services homeowners often need"
-      sectionDescription="From basic mounting to full entertainment setup, homeowners can describe the job and let local handymen bid."
-      items={[
-        "TV wall mounting",
-        "Mount recommendations",
-        "Cable cleanup",
-        "Streaming device setup",
-        "Gaming console setup",
-        "Soundbar install",
-        "Smart TV setup",
-        "Post-install support",
-      ]}
-      whyTitle="What to look for in a TV installer"
-      whyParagraphs={[
-        "A reliable installer should understand TV sizes, mount types, wall construction, cable routing, and safe fastening.",
-        "Homeowners should also look for clear communication, transparent pricing, and the ability to explain what is included before the job starts.",
-        "SaskHandy helps make that easier by letting homeowners post the job, compare bids, and chat before hiring.",
-      ]}
-      articleSections={tvInstallArticleSections}
-      bottomTitle="Find TV installation help in Saskatoon"
-      bottomParagraph="Post the job, include your TV size and wall type if you know it, and let local handymen send you bids."
       relatedLinks={tvRelatedLinks}
     />
   );
@@ -729,7 +660,15 @@ export function SmartDoorbellInstallationSaskatoonPage() {
         "A strong Wi-Fi signal at the front door is critical for alerts, live video, and recordings.",
         "Professional help can reduce frustrating issues like weak signal, bad camera angles, and unreliable notifications.",
       ]}
-      articleSections={smartDoorbellArticleSections}
+      articleSections={[
+        ...smartDoorbellArticleSections,
+        ...doorbellSecurityArticleSections.filter((section) =>
+          [
+            "Important security features",
+            "Using SaskHandy for security-related installs",
+          ].includes(section.heading)
+        ),
+      ]}
       bottomTitle="Get smart doorbell installation help"
       bottomParagraph="Post your smart doorbell job on SaskHandy and include your model, power type, and whether you want it connected to Alexa, Google Home, Apple HomeKit, or another system."
       relatedLinks={doorbellRelatedLinks}
@@ -770,44 +709,6 @@ export function SmartHomeDoorbellIntegrationSaskatoonPage() {
       articleSections={smartHomeIntegrationArticleSections}
       bottomTitle="Post your smart home integration job"
       bottomParagraph="Describe your doorbell model, your smart home platform, and what you want to happen when someone rings the doorbell or motion is detected."
-      relatedLinks={doorbellRelatedLinks}
-    />
-  );
-}
-
-export function DoorbellSecuritySaskatoonPage() {
-  return (
-    <SeoLandingPage
-      locationName="Saskatoon"
-      title="Home Security Doorbell Installation in Saskatoon"
-      pageTitle="Home Security Doorbell Installation Saskatoon | SaskHandy"
-      metaDescription="Improve front-door visibility with smart doorbell installation in Saskatoon. Post your job on SaskHandy and get local bids."
-      badge="Home security doorbells"
-      intro="A smart doorbell can help Saskatoon homeowners monitor visitors, packages, and front-door activity from their phone."
-      secondaryIntro="With video, motion alerts, two-way audio, and night vision, a smart doorbell can become a practical part of your home security setup."
-      heroImage="/images/saskatchewan.jpg"
-      primaryCtaText={homeownerCta}
-      sectionTitle="Security-focused doorbell features"
-      sectionDescription="Smart doorbells can help homeowners stay aware of what is happening near the front door."
-      items={[
-        "Video monitoring",
-        "Motion alerts",
-        "Two-way audio",
-        "Night vision",
-        "Package monitoring",
-        "Event history",
-        "Smart light triggers",
-        "Security camera integration",
-      ]}
-      whyTitle="How smart doorbells support home security"
-      whyParagraphs={[
-        "A visible smart doorbell can discourage unwanted activity by showing that the front door is being monitored.",
-        "Motion alerts help homeowners know when someone approaches, even before the doorbell rings.",
-        "When connected with lights, cameras, or smart locks, the doorbell can become part of a broader home security system.",
-      ]}
-      articleSections={doorbellSecurityArticleSections}
-      bottomTitle="Get help installing a home security doorbell"
-      bottomParagraph="Post your job on SaskHandy and connect with local handymen who can help install and set up your smart doorbell."
       relatedLinks={doorbellRelatedLinks}
     />
   );

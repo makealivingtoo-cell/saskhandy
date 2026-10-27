@@ -21,7 +21,7 @@
     <priority>0.7</priority>
   </url>
 
-  <!-- Regina Core Service SEO Pages -->
+  <!-- Regina services -->
   <url>
     <loc>https://saskhandy.com/local-handyman-services-regina</loc>
     <priority>0.9</priority>
@@ -67,6 +67,7 @@
     <priority>0.8</priority>
   </url>
 
+  <!-- Other Saskatchewan cities -->
   <url>
     <loc>https://saskhandy.com/moose-jaw-handyman-services</loc>
     <priority>0.6</priority>
@@ -87,6 +88,7 @@
     <priority>0.7</priority>
   </url>
 
+  <!-- Saskatchewan services -->
   <url>
     <loc>https://saskhandy.com/furniture-assembly-saskatchewan</loc>
     <priority>0.8</priority>
@@ -117,7 +119,7 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Saskatoon Core Service SEO Pages -->
+  <!-- Saskatoon services -->
   <url>
     <loc>https://saskhandy.com/local-handyman-services-saskatoon</loc>
     <priority>0.95</priority>
@@ -218,20 +220,10 @@
     <priority>0.85</priority>
   </url>
 
-  <!-- Saskatoon TV Mounting SEO Pages -->
+  <!-- Saskatoon TV mounting and buying guide -->
   <url>
     <loc>https://saskhandy.com/tv-mounting-saskatoon</loc>
     <priority>0.95</priority>
-  </url>
-
-  <url>
-    <loc>https://saskhandy.com/professional-tv-mounting-saskatoon</loc>
-    <priority>0.85</priority>
-  </url>
-
-  <url>
-    <loc>https://saskhandy.com/tv-installation-service-saskatoon</loc>
-    <priority>0.85</priority>
   </url>
 
   <url>
@@ -239,7 +231,7 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Saskatoon Doorbell SEO Pages -->
+  <!-- Saskatoon doorbell services and guides -->
   <url>
     <loc>https://saskhandy.com/ring-doorbell-installation-saskatoon</loc>
     <priority>0.9</priority>
@@ -256,15 +248,11 @@
   </url>
 
   <url>
-    <loc>https://saskhandy.com/home-security-doorbell-installation-saskatoon</loc>
-    <priority>0.75</priority>
-  </url>
-
-  <url>
     <loc>https://saskhandy.com/diy-vs-professional-doorbell-installation-saskatoon</loc>
     <priority>0.75</priority>
   </url>
 
+  <!-- Public information and blog -->
   <url>
     <loc>https://saskhandy.com/about</loc>
     <priority>0.6</priority>
