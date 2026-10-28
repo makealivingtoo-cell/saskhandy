@@ -1,3 +1,6 @@
+import { hasMetaConsent, META_CONSENT_CHANGED } from "./metaConsent";
+import { jobLeadData, registrationData } from "@shared/metaConversions";
+
 declare global {
   interface Window {
     fbq?: (...args: any[]) => void;
@@ -15,7 +18,7 @@ let pixelLoading = false;
 let pixelInitialized = false;
 
 function initializePixel() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !hasMetaConsent()) return;
   if (!META_PIXEL_ID) return;
   if (typeof window.fbq !== "function") return;
   if (pixelInitialized) return;
@@ -26,6 +29,7 @@ function initializePixel() {
    * This mirrors Meta's normal Pixel behavior: init is placed in the fbq
    * queue before any conversion event, even if fbevents.js is still loading.
    */
+  window.fbq("set", "autoConfig", false, META_PIXEL_ID);
   window.fbq("init", META_PIXEL_ID);
   window.fbq("track", "PageView");
 
@@ -33,7 +37,7 @@ function initializePixel() {
 }
 
 function loadMetaPixel() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !hasMetaConsent()) return;
   if (!META_PIXEL_ID) return;
 
   if (!window.fbq) {
@@ -79,6 +83,14 @@ function loadMetaPixel() {
 
 export function initMetaPixel() {
   if (typeof window === "undefined") return;
+  window.addEventListener(META_CONSENT_CHANGED, () => {
+    if (hasMetaConsent()) {
+      window.fbq?.("consent", "grant");
+      loadMetaPixel();
+    } else {
+      window.fbq?.("consent", "revoke");
+    }
+  });
 
   const load = () => loadMetaPixel();
 
@@ -93,7 +105,7 @@ export function initMetaPixel() {
 }
 
 function ensurePixelThenTrack(callback: () => void) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !hasMetaConsent()) return;
 
   /*
    * loadMetaPixel creates the fbq queue and queues Pixel initialization
@@ -111,30 +123,20 @@ function ensurePixelThenTrack(callback: () => void) {
 
 export function trackCompleteRegistration(
   method: string = "website",
-  userType?: RegistrationUserType
+  userType?: RegistrationUserType,
+  eventId?: string
 ) {
+  if (!eventId || !userType) return;
   ensurePixelThenTrack(() => {
-    const contentName =
-      userType === "homeowner"
-        ? "Homeowner Signup"
-        : userType === "handyman"
-          ? "Handyman Signup"
-          : "SaskHandy Signup";
-
     window.fbq?.("track", "CompleteRegistration", {
-      content_name: contentName,
-      status: "completed",
-      registration_method: method,
-      user_type: userType ?? "unknown",
-    });
+      ...registrationData(userType), registration_method: method,
+    }, { eventID: eventId });
   });
 }
 
-export function trackLead(source: string = "website") {
+export function trackJobLead(eventId?: string) {
+  if (!eventId) return;
   ensurePixelThenTrack(() => {
-    window.fbq?.("track", "Lead", {
-      content_name: "Handyman Interest",
-      lead_source: source,
-    });
+    window.fbq?.("track", "Lead", jobLeadData, { eventID: eventId });
   });
 }

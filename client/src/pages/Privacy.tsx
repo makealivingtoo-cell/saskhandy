@@ -414,6 +414,15 @@ export default function PrivacyPage() {
 
             <section id="cookies" className="scroll-mt-24">
               <h2 className="text-2xl font-bold mb-4">Cookies and Technical Data</h2>
+              <p className="mb-4 text-muted-foreground">
+                If you allow Meta tracking through Ad privacy, we use Meta Pixel and
+                Conversions API to share page visits, successful registrations and job-posting
+                events, browser identifiers and a hashed email address with Meta for advertising
+                measurement and improvement. Hashing enables matching; it does not make the data
+                anonymous. We do not include job descriptions, photos or messages in these events.
+                You can decline or withdraw permission using Ad privacy. Withdrawal stops future
+                sharing from this browser and does not recall information already sent.
+              </p>
               <div className="space-y-4 text-foreground">
                 <p className="text-muted-foreground">
                   SaskHandy may use cookies, session tokens, local storage, analytics tools, and
