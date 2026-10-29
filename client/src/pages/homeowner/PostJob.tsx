@@ -1,3 +1,4 @@
+import { trackJobLead } from "@/lib/metaPixel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -226,6 +227,9 @@ export default function PostJob() {
 
   const createJob = trpc.jobs.create.useMutation({
     onSuccess: () => {
+      if (user?.userType === "homeowner" && user.role !== "admin") {
+        trackJobLead();
+      }
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
       toast.success("Job posted. Local handymen can now review it and send bids.");
       navigate("/dashboard");

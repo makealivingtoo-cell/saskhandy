@@ -138,3 +138,18 @@ export function trackLead(source: string = "website") {
     });
   });
 }
+
+/** Called only after a homeowner's job submission succeeds. */
+export function trackJobLead() {
+  try {
+    ensurePixelThenTrack(() => {
+      window.fbq?.("track", "Lead", {
+        content_name: "Customer Job Posted",
+        lead_source: "website",
+        user_type: "homeowner",
+      });
+    });
+  } catch {
+    // Analytics must not interrupt the saved-job confirmation or navigation.
+  }
+}
