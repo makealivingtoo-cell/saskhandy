@@ -1,4 +1,3 @@
-import { getMetaAttribution } from "@/lib/metaConsent";
 import { trackJobLead } from "@/lib/metaPixel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
@@ -227,8 +226,10 @@ export default function PostJob() {
   const improveJobPost = trpc.system.improveJobPost.useMutation();
 
   const createJob = trpc.jobs.create.useMutation({
-    onSuccess: (data) => {
-      trackJobLead(data.metaEventId);
+    onSuccess: () => {
+      if (user?.userType === "homeowner" && user.role !== "admin") {
+        trackJobLead();
+      }
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
       toast.success("Job posted. Local handymen can now review it and send bids.");
       navigate("/dashboard");
@@ -435,7 +436,6 @@ export default function PostJob() {
         photos: uploadedPhotoUrls,
         budgetMin: min,
         budgetMax: max,
-        metaAttribution: getMetaAttribution(),
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not post the job. Please try again.");

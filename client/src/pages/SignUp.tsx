@@ -1,4 +1,3 @@
-import { getMetaAttribution } from "@/lib/metaConsent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
@@ -67,7 +66,7 @@ export default function SignUp() {
 
   const signUp = trpc.auth.signUp.useMutation({
     onSuccess: (data: any) => {
-      trackCompleteRegistration("website", userType, data.metaEventId);
+      trackCompleteRegistration("website", userType);
 
       if (data?.emailSent === false) {
         toast.warning(
@@ -154,7 +153,6 @@ export default function SignUp() {
       smsConsent,
       termsVersion: TERMS_VERSION,
       privacyVersion: PRIVACY_VERSION,
-      metaAttribution: getMetaAttribution(),
     });
   };
 

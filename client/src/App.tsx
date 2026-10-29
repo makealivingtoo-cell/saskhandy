@@ -1,5 +1,3 @@
-import { MetaConsent } from "@/components/MetaConsent";
-import { hasMetaConsent } from "@/lib/metaConsent";
 import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -133,7 +131,7 @@ function MetaPixelPageViewTracker() {
 
     const fbq = (window as any).fbq;
 
-    if (hasMetaConsent() && typeof fbq === "function") {
+    if (typeof fbq === "function") {
       fbq("track", "PageView");
     }
   }, [location]);
@@ -289,7 +287,6 @@ function App() {
           <GoogleAnalyticsPageViewTracker />
           <Router />
           <AddToHomeScreen />
-          <MetaConsent />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

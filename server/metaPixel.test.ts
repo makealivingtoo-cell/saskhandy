@@ -1,62 +1,45 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-let choice: string | null;
 let appendChild: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.resetModules();
-  choice = null;
   appendChild = vi.fn();
-  vi.stubGlobal("localStorage", { getItem: () => choice, setItem: (_: string, value: string) => { choice = value; } });
-  vi.stubGlobal("navigator", { doNotTrack: "0" });
-  vi.stubGlobal("window", { addEventListener: vi.fn(), dispatchEvent: vi.fn(), setTimeout: vi.fn() });
-  vi.stubGlobal("document", { createElement: () => ({}), head: { appendChild }, cookie: "" });
+  vi.stubGlobal("window", {});
+  vi.stubGlobal("document", { createElement: () => ({}), head: { appendChild } });
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-it("does not load Meta or track conversions before consent", async () => {
+it("queues the customer Lead even before the Pixel script loads", async () => {
   const { trackJobLead } = await import("../client/src/lib/metaPixel");
-  trackJobLead("job:42");
-  expect(appendChild).not.toHaveBeenCalled();
-  expect(window.fbq).toBeUndefined();
-});
-
-it("queues matching browser event names and IDs after consent", async () => {
-  choice = "granted";
-  const { trackJobLead, trackCompleteRegistration } = await import("../client/src/lib/metaPixel");
-  trackJobLead("job:42");
-  trackCompleteRegistration("website", "handyman", "registration:7");
+  trackJobLead();
   const queue = (window.fbq as unknown as { queue: unknown[][] }).queue;
-  expect(queue).toContainEqual(["init", "1016886836651819"]);
-  expect(queue).toContainEqual(["track", "Lead", {
+  expect(queue[0]).toEqual(["init", "1016886836651819"]);
+  expect(queue.filter(event => event[1] === "Lead")).toEqual([["track", "Lead", {
     content_name: "Customer Job Posted", lead_source: "website", user_type: "homeowner",
-  }, { eventID: "job:42" }]);
-  expect(queue).toContainEqual(["track", "CompleteRegistration", {
-    content_name: "Handyman Signup", status: "completed", registration_method: "website", user_type: "handyman",
-  }, { eventID: "registration:7" }]);
+  }]]);
   expect(appendChild).toHaveBeenCalledTimes(1);
 });
 
-it("stops new browser events when consent is withdrawn", async () => {
-  choice = "granted";
+it("does not let a blocked script interrupt the job confirmation", async () => {
+  appendChild.mockImplementation(() => { throw new Error("script blocked"); });
   const { trackJobLead } = await import("../client/src/lib/metaPixel");
-  trackJobLead("job:42");
+  expect(() => trackJobLead()).not.toThrow();
+});
+
+it("absorbs an exception from the tracking function", async () => {
+  vi.stubGlobal("window", { fbq: () => { throw new Error("tracking failure"); } });
+  const { trackJobLead } = await import("../client/src/lib/metaPixel");
+  expect(() => trackJobLead()).not.toThrow();
+});
+
+it("preserves separate homeowner and handyman registration labels", async () => {
+  const { trackCompleteRegistration } = await import("../client/src/lib/metaPixel");
+  trackCompleteRegistration("website", "homeowner");
+  trackCompleteRegistration("website", "handyman");
   const queue = (window.fbq as unknown as { queue: unknown[][] }).queue;
-  const count = queue.length;
-  choice = "denied";
-  trackJobLead("job:43");
-  expect(queue).toHaveLength(count);
-});
-
-it("does not send a browser conversion without a server-issued ID", async () => {
-  choice = "granted";
-  const { trackJobLead } = await import("../client/src/lib/metaPixel");
-  trackJobLead();
-  expect(appendChild).not.toHaveBeenCalled();
-});
-
-it("honors browser global privacy control despite a stored grant", async () => {
-  choice = "granted";
-  vi.stubGlobal("navigator", { globalPrivacyControl: true });
-  const { getMetaAttribution } = await import("../client/src/lib/metaConsent");
-  expect(getMetaAttribution()).toBeUndefined();
+  const registrations = queue.filter(event => event[1] === "CompleteRegistration");
+  expect(registrations.map(event => event[2])).toEqual([
+    { content_name: "Homeowner Signup", status: "completed", registration_method: "website", user_type: "homeowner" },
+    { content_name: "Handyman Signup", status: "completed", registration_method: "website", user_type: "handyman" },
+  ]);
 });

@@ -1,5 +1,3 @@
-import { metaAttributionSchema, registrationData, jobLeadData } from "../shared/metaConversions";
-import { sendMetaConversion } from "./metaConversions";
 import { TRPCError } from "@trpc/server";
 import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
@@ -41,7 +39,7 @@ import {
   sendTransactionalSms,
 } from "./sms";
 import { z } from "zod";
-import { randomBytes, randomInt, randomUUID, scryptSync, timingSafeEqual } from "crypto";
+import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "crypto";
 import {
   adminDeleteJobById,
   cancelJobWithReason,
@@ -601,7 +599,6 @@ const authRouter = router({
   signUp: publicProcedure
     .input(
       z.object({
-        metaAttribution: metaAttributionSchema.optional().catch(undefined),
         name: z.string().min(2).max(120),
         email: z.string().email(),
         password: z.string().min(6).max(100),
@@ -617,7 +614,7 @@ const authRouter = router({
         privacyVersion: z.string().min(1),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const email = normalizeEmail(input.email);
       const phoneNumber = normalizeRequiredPhoneNumber(input.phoneNumber);
       const existing = await safeGetUserByEmail(email);
@@ -656,14 +653,6 @@ const authRouter = router({
         smsOptedOutAt: null,
       });
 
-      const metaEventId = `registration:${user.id}`;
-      void sendMetaConversion(ctx.req, {
-        eventName: "CompleteRegistration", eventId: metaEventId,
-        sourcePath: "/sign-up", email: user.email,
-        attribution: input.metaAttribution,
-        customData: registrationData(input.userType),
-      });
-
       if (input.userType === "handyman") {
         await createHandymanProfile({
           userId: user.id,
@@ -685,7 +674,6 @@ const authRouter = router({
       const verificationResult = await createAndSendVerification(user);
 
       return {
-        metaEventId,
         success: true,
         user,
         verificationRequired: true,
@@ -1152,7 +1140,6 @@ const jobsRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        metaAttribution: metaAttributionSchema.optional().catch(undefined),
         title: z.string().min(3).max(255),
         description: z.string().min(10),
         category: z.string(),
@@ -1179,13 +1166,6 @@ const jobsRouter = router({
         budgetMin: input.budgetMin.toFixed(2),
         budgetMax: input.budgetMax.toFixed(2),
         expiresAt,
-      });
-
-      const metaEventId = ctx.user.role === "admin" ? undefined : `job:${randomUUID()}`;
-      if (metaEventId) void sendMetaConversion(ctx.req, {
-        eventName: "Lead", eventId: metaEventId,
-        sourcePath: "/post-job", email: ctx.user.email,
-        attribution: input.metaAttribution, customData: jobLeadData,
       });
 
       const handymanProfiles = await getAllHandymanProfiles();
@@ -1221,7 +1201,7 @@ const jobsRouter = router({
         }
       }
 
-      return { jobId, metaEventId };
+      return { jobId };
     }),
 
   update: protectedProcedure
