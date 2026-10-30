@@ -956,10 +956,19 @@ export async function createQuote(
   data: Omit<InsertQuote, "id" | "publicToken" | "createdAt" | "updatedAt">
 ) {
   const db = await getDb();
-  // 32 random bytes produce a 256-bit, URL-safe-as-hex customer access token.
   const publicToken = randomBytes(32).toString("hex");
-  const result = await db.insert(quotes).values({ ...data, publicToken });
-  return { id: Number((result as any).insertId), publicToken };
+
+  const [result] = await db
+    .insert(quotes)
+    .values({ ...data, publicToken });
+
+  const id = Number(result.insertId);
+
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new Error("Could not retrieve the saved quote ID.");
+  }
+
+  return { id, publicToken };
 }
 
 export async function getQuoteById(id: number) {

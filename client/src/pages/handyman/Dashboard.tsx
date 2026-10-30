@@ -785,7 +785,7 @@ export default function HandymanDashboard() {
         smsPermissionConfirmed: false,
       });
 setCreatedDraftId(null); } }}>Close</Button></div>
-            {createdDraftId && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm">Draft saved. Retry sending, or close this editor and use the draft in your quote list.</p>}
+            {Number.isSafeInteger(createdDraftId) && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm">Draft saved. Retry sending, or close this editor and use the draft in your quote list.</p>}
             <fieldset disabled={submitBusy || createdDraftId !== null} className="space-y-5 disabled:opacity-70">
             <legend className="text-sm font-semibold mb-3">1. Customer</legend>
 
@@ -1088,7 +1088,7 @@ setCreatedDraftId(null); } }}>Close</Button></div>
                           Delete draft
                         </Button>
                       )}
-                      {["sent", "viewed"].includes(quote.status) && (
+                      {["sent", "viewed"].includes(quote.status) && !quote.stripePaymentIntentId && (
                         <Button
                           size="sm"
                           variant="outline"
