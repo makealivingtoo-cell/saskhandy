@@ -1148,6 +1148,7 @@ export async function getAllJobsForAdmin() {
       expiresAt: jobs.expiresAt,
       homeownerName: users.name,
       homeownerEmail: users.email,
+      homeownerPhone: users.phoneNumber,
     })
     .from(jobs)
     .leftJoin(users, eq(jobs.homeownerId, users.id))

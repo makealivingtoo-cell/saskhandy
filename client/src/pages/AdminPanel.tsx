@@ -2024,6 +2024,9 @@ Insurance Reviewed
                             <p className="text-xs text-muted-foreground">
                               {job.homeownerEmail ?? "—"}
                             </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Phone: {job.homeownerPhone?.trim() || "Not provided"}
+                            </p>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{job.category}</td>
@@ -2169,6 +2172,9 @@ Insurance Reviewed
                             <p className="text-xs text-muted-foreground">
                               {job.homeownerEmail ?? "—"}
                             </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Phone: {job.homeownerPhone?.trim() || "Not provided"}
+                            </p>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{job.category}</td>
@@ -2253,6 +2259,9 @@ Insurance Reviewed
                       Email
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                      Phone
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
                       Type
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
@@ -2278,6 +2287,9 @@ Insurance Reviewed
                       <tr key={u.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3 font-medium text-foreground">{u.name ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                          {u.phoneNumber?.trim() || "Not provided"}
+                        </td>
                         <td className="px-4 py-3">
                           <span className="capitalize text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
                             {u.userType ?? "unset"}
