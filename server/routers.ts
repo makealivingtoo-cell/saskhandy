@@ -1,3 +1,4 @@
+import { referralWorkflowRouter } from "./referralWorkflowRouter";
 import { TRPCError } from "@trpc/server";
 import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
@@ -3869,6 +3870,7 @@ const supportRouter = router({
 });
 
 export const appRouter = router({
+  referralWorkflow: referralWorkflowRouter,
   system: systemRouter,
   auth: authRouter,
   handymanProfiles: handymanProfilesRouter,

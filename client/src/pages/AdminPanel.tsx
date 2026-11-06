@@ -1,3 +1,4 @@
+import { ReferralAttention, ReferralWorkflow } from "@/components/ReferralWorkflow";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -583,6 +584,7 @@ export default function AdminPanel() {
           </form>
 
           <div className="border-t border-border/60 pt-5">
+            <ReferralAttention />
             <h3 className="font-semibold text-sm mb-3">Recent referrals</h3>
             {referralJobsLoading ? (
               <div className="flex justify-center py-6">
@@ -597,9 +599,10 @@ export default function AdminPanel() {
                   return (
                     <div
                       key={referral.id}
+                      id={`referral-${referral.id}`}
                       className="rounded-lg border border-border/60 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 w-full">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium text-sm">{referral.title}</p>
                           <StatusBadge status={referral.status} />
@@ -610,6 +613,7 @@ export default function AdminPanel() {
                         <p className="text-xs text-muted-foreground mt-1">
                           Created {format(new Date(referral.createdAt), "MMM d, yyyy h:mm a")} · SaskHandy referral · 20% commission
                         </p>
+                        <ReferralWorkflow referralJobId={referral.id} status={referral.status} admin candidates={allHandymen} />
                       </div>
                     </div>
                   );

@@ -2,6 +2,7 @@ import {
   boolean,
   decimal,
   int,
+  index,
   mysqlEnum,
   mysqlTable,
   text,
@@ -259,6 +260,19 @@ export const referralJobs = mysqlTable("referral_jobs", {
 
 export type ReferralJob = typeof referralJobs.$inferSelect;
 export type InsertReferralJob = typeof referralJobs.$inferInsert;
+
+// Additive activity log; existing referral and quote lifecycle columns are untouched.
+export const referralWorkflowEvents = mysqlTable("referral_workflow_events", {
+  id: int("id").autoincrement().primaryKey(),
+  referralJobId: int("referralJobId").notNull(),
+  actorId: int("actorId").notNull(),
+  candidateId: int("candidateId"),
+  kind: mysqlEnum("kind", ["customer_contacted", "visit_booked", "note", "outreach_sent", "interested", "unavailable"]).notNull(),
+  note: text("note").notNull(),
+  adminOnly: boolean("adminOnly").default(true).notNull(),
+  scheduledAt: timestamp("scheduledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("referral_workflow_referral_idx").on(table.referralJobId)]);
 
 
 // ─── Quick quotes ─────────────────────────────────────────────────────────────
