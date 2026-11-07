@@ -1,5 +1,3 @@
-import { referralAssignmentsRouter } from "./referralAssignments";
-import { referralWorkflowRouter } from "./referralWorkflowRouter";
 import { TRPCError } from "@trpc/server";
 import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
@@ -46,6 +44,9 @@ import {
   adminDeleteJobById,
   cancelJobWithReason,
   createReferralJob,
+  ReferralEligibilityError,
+  getReferralWorkflowEvents,
+  addReferralWorkflowEvent,
   createBid,
   createDispute,
   createEmailVerificationToken,
@@ -1511,6 +1512,44 @@ const referralJobsRouter = router({
       }
 
       return referralJob;
+    }),
+
+  getActivity: protectedProcedure
+    .input(z.object({ referralJobId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getReferralJobById(input.referralJobId);
+      if (!job || job.handymanId !== ctx.user.id || ctx.user.userType !== "handyman") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return getReferralWorkflowEvents(job.id, false);
+    }),
+
+  recordActivity: protectedProcedure
+    .input(z.object({
+      referralJobId: z.number().int().positive(),
+      type: z.enum(["contacted", "inspection", "note"]),
+      note: z.string().trim().min(3).max(1500),
+      scheduledFor: z.string().datetime().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman") throw new TRPCError({ code: "FORBIDDEN" });
+      const job = await getReferralJobById(input.referralJobId);
+      if (!job || job.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (!["accepted", "quote_sent", "awaiting_payment", "in_progress"].includes(job.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Accept an open referral before recording progress." });
+      }
+      if (input.type !== "inspection" && input.scheduledFor) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only inspections may have a scheduled date." });
+      }
+      await addReferralWorkflowEvent({
+        referralJobId: job.id,
+        actorUserId: ctx.user.id,
+        type: input.type,
+        note: input.note,
+        scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : null,
+        privateToAdmin: false,
+      });
+      return { success: true };
     }),
 
   accept: protectedProcedure
@@ -3213,6 +3252,42 @@ const adminRouter = router({
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     return getAllReferralJobsForAdmin();
   }),
+  getReferralActivity: protectedProcedure
+    .input(z.object({ referralJobId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const job = await getReferralJobById(input.referralJobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      return getReferralWorkflowEvents(job.id, true);
+    }),
+
+  recordReferralActivity: protectedProcedure
+    .input(z.object({
+      referralJobId: z.number().int().positive(),
+      type: z.enum(["outreach", "contacted", "inspection", "note"]),
+      note: z.string().trim().min(3).max(1500),
+      scheduledFor: z.string().datetime().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const job = await getReferralJobById(input.referralJobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      if (["completed", "cancelled", "declined"].includes(job.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This referral is closed." });
+      }
+      if (input.type !== "inspection" && input.scheduledFor) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only inspections may have a scheduled date." });
+      }
+      await addReferralWorkflowEvent({
+        referralJobId: job.id,
+        actorUserId: ctx.user.id,
+        type: input.type,
+        note: input.note,
+        scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : null,
+        privateToAdmin: true,
+      });
+      return { success: true };
+    }),
 
   createReferralJob: protectedProcedure
     .input(
@@ -3239,18 +3314,26 @@ const adminRouter = router({
         });
       }
 
-      const referralJobId = await createReferralJob({
-        createdByAdminId: ctx.user.id,
-        handymanId: handyman.id,
-        homeownerName: input.homeownerName,
-        homeownerEmail: input.homeownerEmail?.trim() || null,
-        homeownerPhone: input.homeownerPhone?.trim() || null,
-        address: input.address?.trim() || null,
-        title: input.title,
-        description: input.description,
-        category: input.category,
-        photos: input.photos ?? [],
-      });
+      let referralJobId: number;
+      try {
+        referralJobId = await createReferralJob({
+          createdByAdminId: ctx.user.id,
+          handymanId: handyman.id,
+          homeownerName: input.homeownerName,
+          homeownerEmail: input.homeownerEmail?.trim() || null,
+          homeownerPhone: input.homeownerPhone?.trim() || null,
+          address: input.address?.trim() || null,
+          title: input.title,
+          description: input.description,
+          category: input.category,
+          photos: input.photos ?? [],
+        });
+      } catch (error) {
+        if (error instanceof ReferralEligibilityError) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+        }
+        throw error;
+      }
 
       await notifyUser({
         userId: handyman.id,
@@ -3871,8 +3954,6 @@ const supportRouter = router({
 });
 
 export const appRouter = router({
-  referralWorkflow: referralWorkflowRouter,
-  referralAssignments: referralAssignmentsRouter,
   system: systemRouter,
   auth: authRouter,
   handymanProfiles: handymanProfilesRouter,

@@ -2,7 +2,6 @@ import {
   boolean,
   decimal,
   int,
-  index,
   mysqlEnum,
   mysqlTable,
   text,
@@ -261,18 +260,19 @@ export const referralJobs = mysqlTable("referral_jobs", {
 export type ReferralJob = typeof referralJobs.$inferSelect;
 export type InsertReferralJob = typeof referralJobs.$inferInsert;
 
-// Additive activity log; existing referral and quote lifecycle columns are untouched.
+// Internal progress history: entries do not trigger any notifications or payments.
 export const referralWorkflowEvents = mysqlTable("referral_workflow_events", {
   id: int("id").autoincrement().primaryKey(),
   referralJobId: int("referralJobId").notNull(),
-  actorId: int("actorId").notNull(),
-  candidateId: int("candidateId"),
-  kind: mysqlEnum("kind", ["customer_contacted", "visit_booked", "note", "outreach_sent", "interested", "unavailable"]).notNull(),
+  actorUserId: int("actorUserId").notNull(),
+  type: mysqlEnum("type", ["outreach", "contacted", "inspection", "note"]).notNull(),
   note: text("note").notNull(),
-  adminOnly: boolean("adminOnly").default(true).notNull(),
-  scheduledAt: timestamp("scheduledAt"),
+  scheduledFor: timestamp("scheduledFor"),
+  privateToAdmin: boolean("privateToAdmin").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, table => [index("referral_workflow_referral_idx").on(table.referralJobId)]);
+});
+
+export type ReferralWorkflowEvent = typeof referralWorkflowEvents.$inferSelect;
 
 
 // ─── Quick quotes ─────────────────────────────────────────────────────────────
@@ -556,11 +556,3 @@ export type InsertSupportTicket = typeof supportTickets.$inferInsert;
 
 export type SupportTicketMessage = typeof supportTicketMessages.$inferSelect;
 export type InsertSupportTicketMessage = typeof supportTicketMessages.$inferInsert;
-
-// Referral eligibility only; does not suspend login or modify active jobs.
-export const referralAssignmentRestrictions = mysqlTable("referral_assignment_restrictions", {
-  userId: int("userId").primaryKey(),
-  status: mysqlEnum("status", ["active", "suspended", "blocked"]).default("active").notNull(),
-  updatedBy: int("updatedBy").notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});

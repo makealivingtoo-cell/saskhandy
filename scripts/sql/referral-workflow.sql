@@ -1,12 +1,12 @@
-CREATE TABLE IF NOT EXISTS `referral_workflow_events` (
-  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `referralJobId` int NOT NULL,
-  `actorId` int NOT NULL,
-  `candidateId` int,
-  `kind` enum('customer_contacted','visit_booked','note','outreach_sent','interested','unavailable') NOT NULL,
-  `note` text NOT NULL,
-  `adminOnly` boolean NOT NULL DEFAULT true,
-  `scheduledAt` timestamp NULL,
-  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY `referral_workflow_referral_idx` (`referralJobId`)
+-- Additive and safe to run repeatedly. Does not edit referral, quote, or payment records.
+CREATE TABLE IF NOT EXISTS referral_workflow_events (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  referralJobId INT NOT NULL,
+  actorUserId INT NOT NULL,
+  type ENUM('outreach','contacted','inspection','note') NOT NULL,
+  note TEXT NOT NULL,
+  scheduledFor TIMESTAMP NULL,
+  privateToAdmin TINYINT(1) NOT NULL DEFAULT 0,
+  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY referral_workflow_events_job_created_idx (referralJobId, createdAt)
 );

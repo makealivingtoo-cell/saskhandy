@@ -1,5 +1,3 @@
-import { TRPCError } from "@trpc/server";
-import { referralIneligibility } from "../shared/referralEligibility";
 import "dotenv/config";
 import { randomBytes } from "crypto";
 import { drizzle } from "drizzle-orm/mysql2";
@@ -19,7 +17,7 @@ import {
   reviews,
   reports,
   referralJobs,
-  referralAssignmentRestrictions,
+  referralWorkflowEvents,
   quotes,
   supportTicketMessages,
   supportTickets,
@@ -877,6 +875,13 @@ export async function recalculateHandymanRating(userId: number) {
     .where(eq(handymanProfiles.userId, userId));
 }
 
+export class ReferralEligibilityError extends Error {
+  constructor() {
+    super("Only handymen with an approved ID Name Matched review can receive new referrals.");
+    this.name = "ReferralEligibilityError";
+  }
+}
+
 // ─── SaskHandy-referred jobs ──────────────────────────────────────────────────
 export async function createReferralJob(
   data: Omit<
@@ -894,18 +899,37 @@ export async function createReferralJob(
   > & { photos?: string[] | null }
 ) {
   const db = await getDb();
-  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-  return db.transaction(async tx => {
-    // Lock current account and identity state through insert. A stale dropdown cannot bypass this.
-    const [user] = await tx.select().from(users).where(eq(users.id, data.handymanId)).for("update");
-    const [profile] = await tx.select().from(handymanProfiles).where(eq(handymanProfiles.userId, data.handymanId)).for("update");
-    const [restriction] = await tx.select().from(referralAssignmentRestrictions).where(eq(referralAssignmentRestrictions.userId, data.handymanId));
-    const reason = referralIneligibility({ userType: user?.userType ?? null, identityVerificationStatus: profile?.identityVerificationStatus ?? null, referralAccess: restriction?.status ?? null });
-    if (reason) throw new TRPCError({ code: "BAD_REQUEST", message: `${reason}. Refresh the handyman list and choose an eligible handyman.` });
-    const result = await tx.insert(referralJobs).values({
-      ...data, photos: stringifyPhotos(data.photos), sourceType: "saskhandy_referral", commissionRate: "20.00", status: "sent",
+  if (!db) throw new Error("Database unavailable");
+  return db.transaction(async (tx) => {
+    // Lock both rows until insertion: a stale dropdown selection cannot bypass
+    // revocation of ID Name Matched status. Existing referrals are never changed.
+    const eligible = await tx
+      .select({
+        id: users.id,
+        userType: users.userType,
+        identityVerificationStatus: handymanProfiles.identityVerificationStatus,
+      })
+      .from(users)
+      .innerJoin(handymanProfiles, eq(handymanProfiles.userId, users.id))
+      .where(eq(users.id, data.handymanId))
+      .for("update");
+    if (
+      eligible.length !== 1 ||
+      eligible[0].userType !== "handyman" ||
+      eligible[0].identityVerificationStatus !== "approved"
+    ) {
+      throw new ReferralEligibilityError();
+    }
+    const [result] = await tx.insert(referralJobs).values({
+      ...data,
+      photos: stringifyPhotos(data.photos),
+      sourceType: "saskhandy_referral",
+      commissionRate: "20.00",
+      status: "sent",
     });
-    return Number(result[0].insertId);
+    const id = Number(result.insertId);
+    if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Referral was not saved.");
+    return id;
   });
 }
 
@@ -928,8 +952,28 @@ export async function getReferralJobsForHandyman(handymanId: number) {
 
 export async function getAllReferralJobsForAdmin() {
   const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
   const rows = await db.select().from(referralJobs).orderBy(desc(referralJobs.updatedAt));
-  return rows.map(normalizeReferralJob);
+  if (!rows.length) return [];
+  // Attach quote summaries only; never expose public quote tokens in the admin list.
+  const linked = await db
+    .select({
+      id: quotes.id,
+      referralJobId: quotes.referralJobId,
+      status: quotes.status,
+      totalAmount: quotes.totalAmount,
+      updatedAt: quotes.updatedAt,
+    })
+    .from(quotes)
+    .where(inArray(quotes.referralJobId, rows.map((r) => r.id)))
+    .orderBy(desc(quotes.updatedAt));
+  const latest = new Map<number, (typeof linked)[number]>();
+  for (const quote of linked) {
+    if (quote.referralJobId && !latest.has(quote.referralJobId)) {
+      latest.set(quote.referralJobId, quote);
+    }
+  }
+  return rows.map((row) => ({ ...normalizeReferralJob(row), latestQuote: latest.get(row.id) ?? null }));
 }
 
 export async function updateReferralJobStatus(
@@ -956,6 +1000,33 @@ export async function updateReferralJobStatus(
       updatedAt: now,
     })
     .where(eq(referralJobs.id, id));
+}
+
+export async function getReferralWorkflowEvents(referralJobId: number, isAdmin: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  return db.select().from(referralWorkflowEvents).where(
+    isAdmin
+      ? eq(referralWorkflowEvents.referralJobId, referralJobId)
+      : and(eq(referralWorkflowEvents.referralJobId, referralJobId), eq(referralWorkflowEvents.privateToAdmin, false))
+  ).orderBy(desc(referralWorkflowEvents.createdAt), desc(referralWorkflowEvents.id));
+}
+
+export async function addReferralWorkflowEvent(entry: {
+  referralJobId: number;
+  actorUserId: number;
+  type: "outreach" | "contacted" | "inspection" | "note";
+  note: string;
+  scheduledFor?: Date | null;
+  privateToAdmin: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(referralWorkflowEvents).values({
+    ...entry,
+    scheduledFor: entry.scheduledFor ?? null,
+  });
+  return Number(result.insertId);
 }
 
 // ─── Quotes ──────────────────────────────────────────────────────────────────

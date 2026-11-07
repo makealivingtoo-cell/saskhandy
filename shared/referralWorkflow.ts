@@ -1,73 +1,44 @@
-export const workflowKinds = [
-  "customer_contacted",
-  "visit_booked",
-  "note",
-  "outreach_sent",
-  "interested",
-  "unavailable",
-] as const;
-export const workflowLabels: Record<(typeof workflowKinds)[number], string> = {
-  customer_contacted: "Customer contacted",
-  visit_booked: "Visit booked",
-  note: "Note",
-  outreach_sent: "Outreach sent",
-  interested: "Interested",
-  unavailable: "Unavailable",
-};
-
-type Event = { kind: string; createdAt: Date; scheduledAt: Date | null };
-type Quote = { id?: number; status: string; expiresAt: Date | null };
-// Derived guidance only: never changes referral or payment state.
-export function referralNextAction(
-  status: string,
-  events: Event[],
-  quotes: Quote[],
-  now = new Date()
-) {
-  if (["completed", "cancelled"].includes(status)) return null;
-  if (quotes.some(q => q.status === "paid"))
-    return "Payment secured — arrange or complete the work";
-  if (quotes.some(q => q.status === "completed")) return null;
-  // Older withdrawn/failed quotes must not overshadow a newer replacement.
-  quotes = [...quotes]
-    .filter(q => !["cancelled", "declined"].includes(q.status))
-    .sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
-    .slice(0, 1);
-  if (status === "in_progress")
-    return "Work in progress — confirm completion when finished";
-  if (quotes.some(q => q.status === "payment_failed"))
-    return "Payment failed — follow up with the homeowner";
-  if (quotes.some(q => ["approved", "payment_pending"].includes(q.status)))
-    return "Quote approved — payment not yet secured";
-  if (quotes.some(q => q.status === "expired"))
-    return "Quote expired — review before following up";
-  if (
-    quotes.some(
-      q =>
-        ["sent", "viewed"].includes(q.status) &&
-        q.expiresAt &&
-        q.expiresAt <= now
-    )
-  )
-    return "Quote expired — review before following up";
-  if (quotes.some(q => ["sent", "viewed"].includes(q.status)))
-    return "Awaiting homeowner quote approval";
-  if (status === "awaiting_payment") return "Awaiting payment confirmation";
-  if (status === "quote_sent")
-    return "Review the quote outcome before following up";
-  if (status === "declined")
-    return "Handyman declined — find another available handyman";
-  if (status === "sent") return "Awaiting assigned handyman response";
-  if (quotes.some(q => q.status === "draft"))
-    return "Draft quote saved — review and send it";
-  const visit = events
-    .filter(e => e.kind === "visit_booked")
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-  if (visit?.scheduledAt && visit.scheduledAt > now)
-    return "Visit booked — awaiting the scheduled visit";
-  if (visit)
-    return "Visit date passed — confirm the outcome and prepare a quote";
-  if (events.some(e => e.kind === "customer_contacted"))
-    return "Customer contacted — confirm scope and prepare a quote";
-  return "Contact the homeowner to confirm scope and availability";
+/** Short, advisory next steps derived from the existing quote and referral states. */
+export function referralNextAction(referralStatus: string, quoteStatus?: string | null): string {
+  if (referralStatus === "completed") return "No action needed · completed";
+  if (referralStatus === "cancelled" || referralStatus === "declined") return "Review before assigning someone else";
+  switch (quoteStatus) {
+    case "completed":
+      return "No action needed · completed";
+    case "paid":
+      return "Confirm work is scheduled and progressing";
+    case "payment_pending":
+      return "Check that payment is secured before work starts";
+    case "approved":
+      return "Homeowner approved the quote · payment needed";
+    case "sent":
+    case "viewed":
+      return "Follow up on homeowner quote review";
+    case "draft":
+      return "Handyman to send quote";
+    case "payment_failed":
+      return "Follow up on failed payment";
+    case "declined":
+    case "expired":
+      return "Handyman to review and revise the quote";
+  }
+  switch (referralStatus) {
+    case "sent":
+      return "Handyman to accept referral";
+    case "accepted":
+      return "Handyman to contact homeowner / book inspection";
+    case "awaiting_payment":
+      return "Payment still needed before work starts";
+    case "quote_sent":
+      return "Follow up on quote approval";
+    case "in_progress":
+      return "Follow up on job progress";
+    case "completed":
+      return "No action needed · completed";
+    case "declined":
+    case "cancelled":
+      return "Review before assigning someone else";
+    default:
+      return "Check status with handyman";
+  }
 }
