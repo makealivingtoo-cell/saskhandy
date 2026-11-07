@@ -138,9 +138,9 @@ await page.route(/https:\/\//, route => route.abort());
 try {
   await page.goto(`${origin}/admin`);
   await page.getByText("Referral next actions", { exact: true }).waitFor();
-  await page.getByLabel("Assign to handyman *", { exact: true }).locator('option[value="7"]').waitFor({ state: "attached" });
+  await page.getByLabel(/^Assign to handyman/).locator('option[value="7"]').waitFor({ state: "attached" });
   const options = await page
-    .getByLabel("Assign to handyman *", { exact: true })
+    .getByLabel(/^Assign to handyman/)
     .locator("option")
     .allTextContents();
   assert(options.some(s => s.includes("Eligible fixture")));
@@ -161,7 +161,7 @@ try {
     .click();
   await page.getByText("Confirmed scope", { exact: true }).waitFor();
   await page
-    .getByLabel("Update", { exact: true })
+    .getByLabel(/^Update/)
     .selectOption("outreach_sent");
   await page
     .getByText("Records outreach you have already made.", { exact: false })
@@ -213,11 +213,11 @@ try {
     .click();
   await page.getByLabel("Note for SaskHandy", { exact: true }).waitFor();
   const kinds = await page
-    .getByLabel("Update", { exact: true })
+    .getByLabel(/^Update/)
     .locator("option")
     .allTextContents();
   assert.deepEqual(kinds, ["Customer contacted", "Visit booked", "Note"]);
-  await page.getByLabel("Update", { exact: true }).selectOption("visit_booked");
+  await page.getByLabel(/^Update/).selectOption("visit_booked");
   await page
     .getByLabel("Visit date and time (your local time)", { exact: true })
     .waitFor();
