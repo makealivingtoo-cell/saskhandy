@@ -556,3 +556,11 @@ export type InsertSupportTicket = typeof supportTickets.$inferInsert;
 
 export type SupportTicketMessage = typeof supportTicketMessages.$inferSelect;
 export type InsertSupportTicketMessage = typeof supportTicketMessages.$inferInsert;
+
+// Referral eligibility only; does not suspend login or modify active jobs.
+export const referralAssignmentRestrictions = mysqlTable("referral_assignment_restrictions", {
+  userId: int("userId").primaryKey(),
+  status: mysqlEnum("status", ["active", "suspended", "blocked"]).default("active").notNull(),
+  updatedBy: int("updatedBy").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});

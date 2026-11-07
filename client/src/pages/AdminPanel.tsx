@@ -104,6 +104,15 @@ export default function AdminPanel() {
     enabled: isAuthenticated && user?.role === "admin",
   });
 
+  const assignmentCandidates = trpc.referralAssignments.list.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin", retry: false,
+  });
+  const eligibleHandymen = assignmentCandidates.data?.filter(person => !person.ineligibleReason) ?? [];
+  const setReferralAccess = trpc.referralAssignments.setAccess.useMutation({
+    onSuccess: async () => { toast.success("Referral access updated. Existing jobs remain assigned."); await assignmentCandidates.refetch(); },
+    onError: error => toast.error(error.message),
+  });
+
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<number, string>>({});
   const [payoutAdminNotes, setPayoutAdminNotes] = useState<Record<number, string>>({});
@@ -161,6 +170,7 @@ export default function AdminPanel() {
           : "Identity status updated."
       );
       refetchInsurance();
+      void assignmentCandidates.refetch();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -434,13 +444,29 @@ export default function AdminPanel() {
             </Button>
           </div>
 
+          <p className="text-sm text-muted-foreground mb-3">Only ID Name Matched handymen with active referral access can receive new referrals. Confirm the handyman's suitability for the job separately.</p>
+          {assignmentCandidates.isPending && <p role="status">Loading eligible handymen…</p>}
+          {assignmentCandidates.isError && <p role="alert">Could not verify referral eligibility. New assignments are unavailable. <Button size="sm" variant="outline" onClick={() => void assignmentCandidates.refetch()}>Retry</Button></p>}
+          <Button className="mb-3" size="sm" variant="outline" onClick={() => void assignmentCandidates.refetch()}>Refresh eligible handymen</Button>
+          <details className="mb-4 border rounded-lg p-3">
+            <summary className="cursor-pointer font-medium">Manage referral access</summary>
+            <p className="text-xs text-muted-foreground my-2">These restrictions affect new referrals only. They do not block login or change existing jobs. Active access still requires ID Name Matched.</p>
+            {assignmentCandidates.data?.filter(person => person.userType === "handyman").map(person => <label key={person.userId} className="flex flex-wrap gap-2 items-center py-2 text-sm">
+              <span>{person.userName ?? `Handyman #${person.userId}`}</span>
+              <select aria-label={`Referral access for ${person.userName ?? person.userId}`} className="border rounded p-2" disabled={setReferralAccess.isPending} value={person.referralAccess ?? "active"} onChange={event => setReferralAccess.mutate({ userId: person.userId, status: event.target.value as "active" | "suspended" | "blocked" })}>
+                <option value="active">Active</option><option value="suspended">Suspended</option><option value="blocked">Blocked</option>
+              </select>
+              <span className="text-muted-foreground">{person.ineligibleReason ?? "Eligible for referral assignment"}</span>
+            </label>)}
+          </details>
+
           <form
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               const handymanId = Number(referralForm.handymanId);
-              if (!Number.isInteger(handymanId) || handymanId <= 0) {
-                toast.error("Choose a handyman for this referral.");
+              if (!Number.isInteger(handymanId) || !eligibleHandymen.some(person => person.userId === handymanId)) {
+                toast.error("Choose an available ID-matched handyman for this referral.");
                 return;
               }
               const photos = referralForm.photos
@@ -465,21 +491,21 @@ export default function AdminPanel() {
                 <span className="font-medium">Assign to handyman *</span>
                 <select
                   required
-                  value={referralForm.handymanId}
+                  value={eligibleHandymen.some(person => String(person.userId) === referralForm.handymanId) ? referralForm.handymanId : ""}
                   onChange={(event) => updateReferralForm("handymanId", event.target.value)}
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value="">Choose a handyman</option>
-                  {allHandymen.map((handyman) => (
+                  {eligibleHandymen.map((handyman) => (
                     <option key={handyman.userId} value={handyman.userId}>
-                      {handyman.userName ?? handyman.userEmail ?? `Handyman #${handyman.userId}`}
+                      {handyman.userName ?? `Handyman #${handyman.userId}`}
                       {handyman.serviceArea ? ` · ${handyman.serviceArea}` : ""}
                     </option>
                   ))}
                 </select>
-                {allHandymen.length === 0 && (
+                {!assignmentCandidates.isPending && !assignmentCandidates.isError && eligibleHandymen.length === 0 && (
                   <span className="block text-xs text-amber-700">
-                    No handyman profiles are available to assign.
+                    No ID-matched handymen available.
                   </span>
                 )}
               </label>
@@ -572,7 +598,7 @@ export default function AdminPanel() {
             </div>
             <Button
               type="submit"
-              disabled={createReferralJob.isPending || allHandymen.length === 0}
+              disabled={createReferralJob.isPending || assignmentCandidates.isPending || assignmentCandidates.isError || !eligibleHandymen.some(person => String(person.userId) === referralForm.handymanId)}
             >
               {createReferralJob.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -613,6 +639,9 @@ export default function AdminPanel() {
                         <p className="text-xs text-muted-foreground mt-1">
                           Created {format(new Date(referral.createdAt), "MMM d, yyyy h:mm a")} · SaskHandy referral · 20% commission
                         </p>
+                        {assignmentCandidates.data && !["completed", "cancelled"].includes(referral.status) && !eligibleHandymen.some(person => person.userId === referral.handymanId) && (
+                          <p role="status" className="mt-2 rounded bg-amber-50 p-3 text-sm text-amber-900">Review assigned handyman: {assignmentCandidates.data.find(person => person.userId === referral.handymanId)?.ineligibleReason ?? "Account unavailable"}. Existing assignment has not been changed.</p>
+                        )}
                         <ReferralWorkflow referralJobId={referral.id} status={referral.status} admin candidates={allHandymen} />
                       </div>
                     </div>

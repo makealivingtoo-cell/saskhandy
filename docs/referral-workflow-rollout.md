@@ -28,3 +28,14 @@ Safe reassignment with quote/payment checks and audit history; intake before ass
 - TypeScript comparison against main commit `0aa576a`: both have the same 209 diagnostics after normalizing line numbers; this branch adds none.
 - Full test suite with a dummy test-only Stripe key: branch 28 passed / 4 failed; unchanged main 14 passed / 4 failed. The same four existing failures remain. No live credentials were used.
 - Live database migration, browser UI verification and end-to-end payment staging tests have not been performed. Keep this as a draft and the feature disabled until staging verification is complete.
+
+
+## ID-matched referral assignments (additional change)
+
+New referral assignments now require an existing handyman account, `identityVerificationStatus=approved`, and active referral access. Both the dropdown and the insert-time transaction enforce this. Account and identity rows stay locked until the referral insert completes; changing referral access uses the same account lock. Other verification badges do not grant eligibility.
+
+The app previously had no account suspension/blocking field. The new admin controls are explicitly **referral-only restrictions** (active/suspended/blocked); they do not prevent login or change current jobs. Existing non-closed referrals display a review warning if their assigned handyman is no longer eligible. Missing profiles/accounts fail closed. Availability/category filtering is not part of this change.
+
+**Deployment prerequisite:** re-run `pnpm exec tsx scripts/apply-referral-workflow.mts` before deploying this revision. It now also creates `referral_assignment_restrictions`; both CREATE TABLE statements are idempotent. Unlike activity tracking, the eligibility rule is always enforced on new assignments, independent of REFERRAL_WORKFLOW_ENABLED. If its table is absent, new assignments fail closed; existing quote/payment routes do not depend on it. No current referrals are rewritten or reassigned.
+
+Additional validation: 11 eligibility tests pass alongside the 14 workflow tests; client and server builds pass. Database transaction tests use mocks; actual database locking, migration and browser checks still require staging before deployment.

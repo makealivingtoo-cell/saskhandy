@@ -12,6 +12,12 @@ try {
       "utf8"
     )
   );
+  await connection.execute(
+    readFileSync(
+      new URL("./sql/referral-assignment-restrictions.sql", import.meta.url),
+      "utf8"
+    )
+  );
   console.log(
     "Referral workflow table is ready. Existing referrals and quotes were not modified."
   );
