@@ -1,15 +1,29 @@
-name: SaskHandy referral revision build
-
+name: SaskHandy referral migration and production build
 on:
   push:
     branches:
-      - fix/referral-workflow-v2
+      - fix/referral-legacy-schema-migration
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpass
+          MYSQL_DATABASE: referral_workflow_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ptestpass"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:testpass@127.0.0.1:3306/referral_workflow_ci
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,9 +34,9 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Focused referral tests
+      - name: Verify legacy schema migration and new writes
+        run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
+      - name: Referral unit tests
         run: pnpm exec vitest run server/referralWorkflowNextAction.test.ts
-      - name: Full production build and prerender
-        run: |
-          pnpm exec playwright install --with-deps chromium
-          pnpm run build
+      - name: Full production build
+        run: pnpm run build
