@@ -4,11 +4,11 @@ Adds an admin next-action overview, per-referral activity history, private outre
 
 ## Isolation and rollout
 
-1. Leave `REFERRAL_WORKFLOW_ENABLED` unset (default off). Ship to a staging environment first. No new table is accessed when disabled; existing referral and quote routes keep their behavior.
-2. Against staging only, run `pnpm exec tsx scripts/apply-referral-workflow.mts`. This creates one independent table with `IF NOT EXISTS`. It does not alter, delete or backfill existing records. Do not use `db:push` to deploy this feature: the repository's earlier migration snapshots need separate reconciliation.
+1. Leave `REFERRAL_WORKFLOW_ENABLED` unset (default off). Ship to a staging environment first. This flag controls activity tracking only. Assignment eligibility is always enforced and requires its table before deploying this revision.
+2. Against staging only, run `pnpm exec tsx scripts/apply-referral-workflow.mts`. This creates two independent tables with `IF NOT EXISTS`. It does not alter, delete or backfill existing records. Do not use `db:push` to deploy this feature: the repository's earlier migration snapshots need separate reconciliation.
 3. Enable `REFERRAL_WORKFLOW_ENABLED=true` in staging. Use test accounts and test referrals; verify admin private notes are invisible to the handyman, unassigned handymen cannot fetch history, accepted referrals can record a contact and visit, and the existing quote creation/send/approval/payment paths still work. Use payment test mode and test recipients only.
-4. Review the PR and staging results before production release. Apply the additive SQL before enabling the flag. Production migration/activation is a separate step; this PR does not execute it.
-5. Roll back by unsetting the flag or setting it to `false`. Keep the activity table to preserve entries. No reversal of old job or payment state is needed.
+4. Review the PR and staging results before production release. Apply both additive SQL files before deploying the assignment changes or enabling activity tracking. Production migration/activation is a separate step; this PR does not execute it.
+5. Roll back by unsetting the flag or setting it to `false`. Keep the activity table to preserve entries. No reversal of old job or payment state is needed. Disabling this flag does not disable assignment eligibility; roll back the application revision if that change needs reversal.
 
 ## Behavior
 
@@ -23,11 +23,14 @@ Safe reassignment with quote/payment checks and audit history; intake before ass
 
 ## Validation on this branch
 
-- All 14 dedicated workflow tests pass (permissions, disabled-feature isolation, append-only writes, input validation and next-action guidance).
-- Vite client production build and esbuild server bundle pass. The full prerender/browser-install portion of `pnpm build` was not run.
-- TypeScript comparison against main commit `0aa576a`: both have the same 209 diagnostics after normalizing line numbers; this branch adds none.
-- Full test suite with a dummy test-only Stripe key: branch 28 passed / 4 failed; unchanged main 14 passed / 4 failed. The same four existing failures remain. No live credentials were used.
-- Live database migration, browser UI verification and end-to-end payment staging tests have not been performed. Keep this as a draft and the feature disabled until staging verification is complete.
+- 25 dedicated tests pass (14 workflow and 11 assignment eligibility tests).
+- Three real-MySQL integration checks pass in the disposable GitHub Actions database: additive migrations applied twice with existing referral/paid-quote rows unchanged; current eligibility enforced; referral acceptance through quote creation, sending, approval, simulated failed/successful payment and completion.
+- External SMS, email and Stripe calls are mocked. These checks do not validate live delivery, real Stripe webhooks or concurrent lock contention.
+- Vite client production build and esbuild server bundle pass. The full SEO prerender build was not run.
+- TypeScript has 208 existing diagnostics versus 209 on the previous branch; no new file/error-code diagnostics. Earlier full-suite comparison identified the same four failures on unchanged main. The repository as a whole is not green.
+- Chromium browser checks pass: eligible-only dropdown, empty state and disabled submission, existing-assignment warning, progress saving, outreach guidance, mobile horizontal layout, feature-off isolation and handyman update controls. Screenshots are attached to the CI run.
+- Validation run: https://github.com/makealivingtoo-cell/saskhandy/actions/runs/42355242390 (tested application/test code at `4f06ec3`; subsequent changes document these results only).
+- Production migration and deployment have not been performed.
 
 
 ## ID-matched referral assignments (additional change)
@@ -38,4 +41,4 @@ The app previously had no account suspension/blocking field. The new admin contr
 
 **Deployment prerequisite:** re-run `pnpm exec tsx scripts/apply-referral-workflow.mts` before deploying this revision. It now also creates `referral_assignment_restrictions`; both CREATE TABLE statements are idempotent. Unlike activity tracking, the eligibility rule is always enforced on new assignments, independent of REFERRAL_WORKFLOW_ENABLED. If its table is absent, new assignments fail closed; existing quote/payment routes do not depend on it. No current referrals are rewritten or reassigned.
 
-Additional validation: 11 eligibility tests pass alongside the 14 workflow tests; client and server builds pass. Database transaction tests use mocks; actual database locking, migration and browser checks still require staging before deployment.
+The GitHub Actions workflow uses an isolated MySQL service with synthetic records and no production credentials. Its schema reset is restricted to the disposable localhost test database. Browser checks use synthetic API responses; database integration tests independently exercise the real router and SQL paths.
