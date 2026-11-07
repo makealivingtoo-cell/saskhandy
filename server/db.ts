@@ -1,3 +1,5 @@
+import { TRPCError } from "@trpc/server";
+import { referralIneligibility } from "../shared/referralEligibility";
 import "dotenv/config";
 import { randomBytes } from "crypto";
 import { drizzle } from "drizzle-orm/mysql2";
@@ -17,6 +19,7 @@ import {
   reviews,
   reports,
   referralJobs,
+  referralAssignmentRestrictions,
   quotes,
   supportTicketMessages,
   supportTickets,
@@ -891,15 +894,19 @@ export async function createReferralJob(
   > & { photos?: string[] | null }
 ) {
   const db = await getDb();
-  const result = await db.insert(referralJobs).values({
-    ...data,
-    photos: stringifyPhotos(data.photos),
-    // Attribution and commission are fixed by the server for admin referrals.
-    sourceType: "saskhandy_referral",
-    commissionRate: "20.00",
-    status: "sent",
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+  return db.transaction(async tx => {
+    // Lock current account and identity state through insert. A stale dropdown cannot bypass this.
+    const [user] = await tx.select().from(users).where(eq(users.id, data.handymanId)).for("update");
+    const [profile] = await tx.select().from(handymanProfiles).where(eq(handymanProfiles.userId, data.handymanId)).for("update");
+    const [restriction] = await tx.select().from(referralAssignmentRestrictions).where(eq(referralAssignmentRestrictions.userId, data.handymanId));
+    const reason = referralIneligibility({ userType: user?.userType ?? null, identityVerificationStatus: profile?.identityVerificationStatus ?? null, referralAccess: restriction?.status ?? null });
+    if (reason) throw new TRPCError({ code: "BAD_REQUEST", message: `${reason}. Refresh the handyman list and choose an eligible handyman.` });
+    const result = await tx.insert(referralJobs).values({
+      ...data, photos: stringifyPhotos(data.photos), sourceType: "saskhandy_referral", commissionRate: "20.00", status: "sent",
+    });
+    return Number(result[0].insertId);
   });
-  return Number((result as any).insertId);
 }
 
 export async function getReferralJobById(id: number) {
