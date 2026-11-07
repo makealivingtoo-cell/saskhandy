@@ -138,6 +138,7 @@ await page.route(/https:\/\//, route => route.abort());
 try {
   await page.goto(`${origin}/admin`);
   await page.getByText("Referral next actions", { exact: true }).waitFor();
+  await page.getByLabel("Assign to handyman *", { exact: true }).locator('option[value="7"]').waitFor({ state: "attached" });
   const options = await page
     .getByLabel("Assign to handyman *", { exact: true })
     .locator("option")

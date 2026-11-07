@@ -2,8 +2,6 @@ name: Referral staging checks
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [codex/referral-workflow-tracking]
 permissions:
   contents: read
 concurrency:
