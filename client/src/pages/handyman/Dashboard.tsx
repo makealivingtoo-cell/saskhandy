@@ -1,3 +1,4 @@
+import { ReferralWorkflow } from "@/components/ReferralWorkflow";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { StarRatingDisplay } from "@/components/StarRating";
@@ -761,6 +762,7 @@ export default function HandymanDashboard() {
                         Accept the referral to access the homeowner’s contact details. The 20% SaskHandy referral commission applies to this job.
                       </p>
                     ) : null}
+                    <ReferralWorkflow referralJobId={referral.id} status={referral.status} />
                   </article>
                 );
               })}
