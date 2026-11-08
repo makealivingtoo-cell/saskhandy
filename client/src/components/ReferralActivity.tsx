@@ -49,7 +49,7 @@ export function ReferralActivity({
     if ((kind === "inspection" || (role === "admin" && kind === "outreach")) && scheduledFor) {
       const parsed = new Date(scheduledFor);
       if (Number.isNaN(parsed.getTime())) {
-        toast.error("Enter a valid inspection date and time.");
+        toast.error("Enter a valid date and time.");
         return;
       }
       time = parsed.toISOString();
@@ -103,7 +103,7 @@ export function ReferralActivity({
                     {record.privateToAdmin ? " · Admin only" : ""}
                   </p>
                   <p className="text-muted-foreground">{format(new Date(record.createdAt), "MMM d, yyyy h:mm a")}</p>
-                  {record.scheduledFor && <p>Visit: {format(new Date(record.scheduledFor), "MMM d, yyyy h:mm a")}</p>}
+                  {record.scheduledFor && <p>{record.type === "outreach" ? "Follow-up" : "Visit"}: {format(new Date(record.scheduledFor), "MMM d, yyyy h:mm a")}</p>}
                   <p className="mt-1 whitespace-pre-wrap break-words">{record.note}</p>
                 </li>
               ))}

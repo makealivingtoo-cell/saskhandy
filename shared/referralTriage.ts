@@ -40,6 +40,7 @@ export function getFollowUpState(referral: ReferralTriageInput, now = new Date()
 export function getReferralStage(referral: ReferralTriageInput): Exclude<ReferralFilter, "all" | "attention"> {
   if (CLOSED.has(referral.status)) return "closed";
   const quoteStatus = referral.latestQuote?.status;
+  if (quoteStatus === "paid" || quoteStatus === "completed") return "active";
   if (quoteStatus && PAYMENT.has(quoteStatus)) return "payment";
   if (referral.status === "awaiting_payment") return "payment";
   if (quoteStatus && QUOTE.has(quoteStatus)) return "quote";

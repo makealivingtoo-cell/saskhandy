@@ -23,6 +23,7 @@ describe("admin referral triage", () => {
     expect(getReferralStage({...base,status:"quote_sent",latestQuote:{status:"viewed"}})).toBe("quote");
     expect(getReferralStage({...base,status:"quote_sent",latestQuote:{status:"approved"}})).toBe("payment");
     expect(getReferralStage({...base,status:"in_progress",latestQuote:{status:"paid"}})).toBe("active");
+    expect(getReferralStage({...base,status:"accepted",latestQuote:{status:"paid"}})).toBe("active");
     expect(getReferralStage({...base,status:"completed",latestQuote:{status:"paid"}})).toBe("closed");
   });
   it("counts inactive notes accurately without pretending contact was made", () => {
