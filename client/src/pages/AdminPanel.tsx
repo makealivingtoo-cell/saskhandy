@@ -3,6 +3,14 @@ import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReferralActivity } from "@/components/ReferralActivity";
 import { referralNextAction } from "@shared/referralWorkflow";
+import {
+  daysWithoutLoggedActivity,
+  getFollowUpState,
+  matchesReferralFilter,
+  referralNeedsAttention,
+  referralTriageRank,
+  type ReferralFilter,
+} from "@shared/referralTriage";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
@@ -129,6 +137,8 @@ export default function AdminPanel() {
     category: "",
     photos: "",
   });
+  const [referralSearch, setReferralSearch] = useState("");
+  const [referralFilter, setReferralFilter] = useState<ReferralFilter>("all");
 
   const updateReferralForm = (field: keyof typeof referralForm, value: string) => {
     setReferralForm((current) => ({ ...current, [field]: value }));
@@ -272,6 +282,33 @@ export default function AdminPanel() {
     [insuranceQueue]
   );
 
+  const referralTriage = useMemo(() => {
+    const now = new Date();
+    const all = referralJobs ?? [];
+    const search = referralSearch.trim().toLowerCase();
+    const filtered = all
+      .filter((referral) => matchesReferralFilter(referral, referralFilter, now))
+      .filter((referral) => {
+        if (!search) return true;
+        const handyman = allHandymen.find((person) => person.userId === referral.handymanId);
+        return [
+          referral.title,
+          referral.homeownerName,
+          referral.category,
+          referral.homeownerPhone,
+          handyman?.userName,
+        ].some((value) => value?.toLowerCase().includes(search));
+      })
+      .sort((a, b) =>
+        referralTriageRank(a, now) - referralTriageRank(b, now) ||
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+    return {
+      filtered,
+      attention: all.filter((referral) => referralNeedsAttention(referral, now)).length,
+      overdue: all.filter((referral) => getFollowUpState(referral, now) === "overdue").length,
+    };
+  }, [referralJobs, referralSearch, referralFilter, allHandymen]);
 
   const jobsByCreatedDate = useMemo(
     () =>
@@ -602,17 +639,57 @@ export default function AdminPanel() {
           </form>
 
           <div className="border-t border-border/60 pt-5">
-            <h3 className="font-semibold text-sm mb-3">Recent referrals</h3>
+            <div className="mb-3 flex flex-col gap-1">
+              <h3 className="font-semibold text-sm">Referral follow-up queue</h3>
+              <p className="text-xs text-muted-foreground">
+                {(referralJobs ?? []).length} total · {referralTriage.attention} need review · {referralTriage.overdue} overdue follow-ups.
+                Times and outreach updates come from logged activity; no messages are sent automatically.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+              <label className="text-xs font-medium">
+                Search referrals
+                <input
+                  type="search"
+                  value={referralSearch}
+                  onChange={(event) => setReferralSearch(event.target.value)}
+                  placeholder="Homeowner, job, handyman, phone..."
+                  className="mt-1 w-full rounded-md border border-input bg-background p-2 text-sm font-normal"
+                />
+              </label>
+              <label className="text-xs font-medium">
+                Show
+                <select
+                  value={referralFilter}
+                  onChange={(event) => setReferralFilter(event.target.value as ReferralFilter)}
+                  className="mt-1 w-full rounded-md border border-input bg-background p-2 text-sm font-normal"
+                >
+                  <option value="all">All referrals (priority first)</option>
+                  <option value="attention">Needs review</option>
+                  <option value="handyman">Waiting on handyman</option>
+                  <option value="quote">Quote preparation / review</option>
+                  <option value="payment">Payment attention</option>
+                  <option value="active">In progress</option>
+                  <option value="closed">Closed referrals</option>
+                </select>
+              </label>
+            </div>
             {referralJobsLoading ? (
               <div className="flex justify-center py-6">
                 <Loader2 className="w-5 h-5 animate-spin text-primary" />
               </div>
             ) : !referralJobs?.length ? (
               <p className="text-sm text-muted-foreground py-3">No referrals yet.</p>
+            ) : referralTriage.filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-3">
+                No referrals match this search or filter.
+              </p>
             ) : (
               <div className="space-y-3">
-                {referralJobs.map((referral) => {
+                {referralTriage.filtered.map((referral) => {
                   const handyman = allHandymen.find((profile) => profile.userId === referral.handymanId);
+                  const followUpState = getFollowUpState(referral);
+                  const gapDays = daysWithoutLoggedActivity(referral);
                   return (
                     <div
                       key={referral.id}
@@ -637,6 +714,23 @@ export default function AdminPanel() {
                             Linked quote #{referral.latestQuote.id} · {referral.latestQuote.status.replaceAll("_", " ")} · ${Number(referral.latestQuote.totalAmount).toFixed(2)}
                           </p>
                         )}
+                        {followUpState && referral.latestOutreach?.scheduledFor && (
+                          <p className={`text-xs font-semibold mt-2 ${followUpState === "overdue" ? "text-red-700" : followUpState === "today" ? "text-amber-700" : "text-primary"}`}>
+                            Follow-up {followUpState === "overdue" ? "overdue" : followUpState === "today" ? "due today" : "scheduled"}:
+                            {" "}{format(new Date(referral.latestOutreach.scheduledFor), "MMM d, yyyy h:mm a")}
+                          </p>
+                        )}
+                        {referral.latestOutreach && (
+                          <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap break-words">
+                            Latest handyman outreach ({format(new Date(referral.latestOutreach.createdAt), "MMM d")}):
+                            {" "}{referral.latestOutreach.note}
+                          </p>
+                        )}
+                        {!["completed", "cancelled", "declined"].includes(referral.status) && gapDays >= 3 && (
+                          <p className="text-xs text-amber-700 mt-1">
+                            No logged update in {gapDays} days. Check whether a follow-up is needed.
+                          </p>
+                        )}
                         <p className="text-xs font-medium text-primary mt-2">
                           Next: {referralNextAction(referral.status, referral.latestQuote?.status)}
                         </p>
@@ -644,6 +738,7 @@ export default function AdminPanel() {
                           referralJobId={referral.id}
                           role="admin"
                           readOnly={["completed", "cancelled", "declined"].includes(referral.status)}
+                          onActivitySaved={() => refetchReferralJobs()}
                         />
                       </div>
                     </div>

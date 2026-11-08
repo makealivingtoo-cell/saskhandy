@@ -973,7 +973,46 @@ export async function getAllReferralJobsForAdmin() {
       latest.set(quote.referralJobId, quote);
     }
   }
-  return rows.map((row) => ({ ...normalizeReferralJob(row), latestQuote: latest.get(row.id) ?? null }));
+
+  // Admin-only digest of already saved notes. No automatic messages or status
+  // changes; a newer outreach without a scheduled time clears the prior reminder.
+  const history = await db
+    .select({
+      id: referralWorkflowEvents.id,
+      referralJobId: referralWorkflowEvents.referralJobId,
+      type: referralWorkflowEvents.type,
+      note: referralWorkflowEvents.note,
+      scheduledFor: referralWorkflowEvents.scheduledFor,
+      createdAt: referralWorkflowEvents.createdAt,
+    })
+    .from(referralWorkflowEvents)
+    .where(inArray(referralWorkflowEvents.referralJobId, rows.map((row) => row.id)))
+    .orderBy(desc(referralWorkflowEvents.createdAt), desc(referralWorkflowEvents.id));
+
+  const lastActivity = new Map<number, Date>();
+  const lastOutreach = new Map<number, {
+    note: string;
+    createdAt: Date;
+    scheduledFor: Date | null;
+  }>();
+  for (const event of history) {
+    if (!lastActivity.has(event.referralJobId)) {
+      lastActivity.set(event.referralJobId, event.createdAt);
+    }
+    if (event.type === "outreach" && !lastOutreach.has(event.referralJobId)) {
+      lastOutreach.set(event.referralJobId, {
+        note: event.note,
+        createdAt: event.createdAt,
+        scheduledFor: event.scheduledFor,
+      });
+    }
+  }
+  return rows.map((row) => ({
+    ...normalizeReferralJob(row),
+    latestQuote: latest.get(row.id) ?? null,
+    lastActivityAt: lastActivity.get(row.id) ?? null,
+    latestOutreach: lastOutreach.get(row.id) ?? null,
+  }));
 }
 
 export async function updateReferralJobStatus(

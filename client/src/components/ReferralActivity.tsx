@@ -9,10 +9,12 @@ export function ReferralActivity({
   referralJobId,
   role,
   readOnly = false,
+  onActivitySaved,
 }: {
   referralJobId: number;
   role: "admin" | "handyman";
   readOnly?: boolean;
+  onActivitySaved?: () => void | Promise<unknown>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [kind, setKind] = useState<"outreach" | "contacted" | "inspection" | "note">(
@@ -44,7 +46,7 @@ export function ReferralActivity({
       return;
     }
     let time: string | null = null;
-    if (kind === "inspection" && scheduledFor) {
+    if ((kind === "inspection" || (role === "admin" && kind === "outreach")) && scheduledFor) {
       const parsed = new Date(scheduledFor);
       if (Number.isNaN(parsed.getTime())) {
         toast.error("Enter a valid inspection date and time.");
@@ -63,6 +65,7 @@ export function ReferralActivity({
       }
       setNote("");
       setScheduledFor("");
+      await onActivitySaved?.();
       toast.success("Progress note saved. No message was sent.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save the progress note.");
@@ -84,7 +87,7 @@ export function ReferralActivity({
             <p className="text-xs text-muted-foreground">Loading activity...</p>
           ) : query.isError ? (
             <div className="text-xs text-red-700" role="alert">
-              Could not load the activity log. Check that the referral activity database migration has run.
+              Could not load activity history. Please retry; if it persists, check the server error logs.
               <Button size="sm" type="button" variant="outline" className="ml-2" onClick={() => void query.refetch()}>
                 Retry
               </Button>
@@ -121,16 +124,41 @@ export function ReferralActivity({
                   <option value="note">Progress note</option>
                 </select>
               </label>
-              {kind === "inspection" && (
+              {(kind === "inspection" || (role === "admin" && kind === "outreach")) && (
                 <label className="block text-xs font-medium">
-                  Visit date and time (optional)
+                  {kind === "inspection" ? "Visit date and time (optional)" : "Next follow-up date and time (optional)"}
                   <input
                     type="datetime-local"
                     className="mt-1 block w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
                     value={scheduledFor}
                     onChange={(e) => setScheduledFor(e.target.value)}
                   />
+                  {role === "admin" && kind === "outreach" && (
+                    <span className="block text-xs text-muted-foreground mt-1">
+                      Save an outreach update with no date to clear a previous follow-up reminder.
+                    </span>
+                  )}
                 </label>
+              )}
+              {role === "admin" && kind === "outreach" && (
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "Awaiting handyman response",
+                    "Handyman will contact homeowner",
+                    "Handyman unavailable — review reassignment",
+                  ].map((template) => (
+                    <Button
+                      key={template}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-auto py-1 text-xs"
+                      onClick={() => setNote(template)}
+                    >
+                      {template}
+                    </Button>
+                  ))}
+                </div>
               )}
               <label className="block text-xs font-medium">
                 Details

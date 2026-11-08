@@ -2,7 +2,7 @@ name: SaskHandy referral migration and production build
 on:
   push:
     branches:
-      - fix/referral-legacy-schema-migration
+      - fix/referral-queue-triage
   workflow_dispatch:
 
 jobs:
@@ -37,6 +37,6 @@ jobs:
       - name: Verify legacy schema migration and new writes
         run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
       - name: Referral unit tests
-        run: pnpm exec vitest run server/referralWorkflowNextAction.test.ts
+        run: pnpm exec vitest run server/referralWorkflowNextAction.test.ts shared/referralTriage.test.ts
       - name: Full production build
         run: pnpm run build

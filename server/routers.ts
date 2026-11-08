@@ -3275,8 +3275,8 @@ const adminRouter = router({
       if (["completed", "cancelled", "declined"].includes(job.status)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "This referral is closed." });
       }
-      if (input.type !== "inspection" && input.scheduledFor) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Only inspections may have a scheduled date." });
+      if (!["inspection", "outreach"].includes(input.type) && input.scheduledFor) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only inspections and admin outreach reminders may have a scheduled date." });
       }
       await addReferralWorkflowEvent({
         referralJobId: job.id,
