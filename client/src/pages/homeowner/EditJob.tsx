@@ -6,10 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
+import {
+  formatJobTiming,
+  JOB_TIMING_PREFERENCE_LABELS,
+  JOB_TIMING_PREFERENCE_VALUES,
+  type JobTimingPreference,
+} from "@shared/constants";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { toast } from "sonner";
+
+function getTodayDateInputValue() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+}
 
 export default function EditJob() {
   const { isAuthenticated, user, loading } = useAuth();
@@ -36,6 +47,9 @@ export default function EditJob() {
   const [location, setLocation] = useState("");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
+  const [timingPreference, setTimingPreference] = useState<JobTimingPreference | "">("");
+  const [preferredStartDate, setPreferredStartDate] = useState("");
+  const [preferredEndDate, setPreferredEndDate] = useState("");
 
   useEffect(() => {
     if (job) {
@@ -45,6 +59,9 @@ export default function EditJob() {
       setLocation(job.location ?? "");
       setBudgetMin(job.budgetMin?.toString() ?? "");
       setBudgetMax(job.budgetMax?.toString() ?? "");
+      setTimingPreference((job.timingPreference as JobTimingPreference | null) ?? "");
+      setPreferredStartDate(job.preferredStartDate ?? "");
+      setPreferredEndDate(job.preferredEndDate ?? "");
     }
   }, [job]);
 
@@ -102,6 +119,23 @@ export default function EditJob() {
       return;
     }
 
+    if (timingPreference === "date_range") {
+      if (!preferredStartDate || !preferredEndDate) {
+        toast.error("Choose both dates for your preferred job window.");
+        return;
+      }
+
+      if (preferredStartDate < getTodayDateInputValue()) {
+        toast.error("The start date must be today or later.");
+        return;
+      }
+
+      if (preferredEndDate < preferredStartDate) {
+        toast.error("The end date must be the same as or later than the start date.");
+        return;
+      }
+    }
+
     updateJob.mutate({
       jobId,
       title,
@@ -110,6 +144,9 @@ export default function EditJob() {
       location,
       budgetMin: min,
       budgetMax: max,
+      timingPreference: timingPreference || null,
+      preferredStartDate: timingPreference === "date_range" ? preferredStartDate : null,
+      preferredEndDate: timingPreference === "date_range" ? preferredEndDate : null,
     });
   };
 
@@ -253,6 +290,78 @@ export default function EditJob() {
                 />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+            <div>
+              <Label htmlFor="timing-preference">When would you like the job done?</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Optional. A rough timeframe helps handymen know if they can fit it in.
+              </p>
+            </div>
+            <Select
+              value={timingPreference}
+              onValueChange={(value) => {
+                const nextPreference = value as JobTimingPreference;
+                setTimingPreference(nextPreference);
+                if (nextPreference !== "date_range") {
+                  setPreferredStartDate("");
+                  setPreferredEndDate("");
+                }
+              }}
+            >
+              <SelectTrigger id="timing-preference" className="bg-white">
+                <SelectValue placeholder="Choose a timeframe (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {JOB_TIMING_PREFERENCE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {JOB_TIMING_PREFERENCE_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {timingPreference && (
+              <button
+                type="button"
+                className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                onClick={() => {
+                  setTimingPreference("");
+                  setPreferredStartDate("");
+                  setPreferredEndDate("");
+                }}
+              >
+                Clear timing
+              </button>
+            )}
+
+            {timingPreference === "date_range" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="preferred-start-date">From</Label>
+                  <Input
+                    id="preferred-start-date"
+                    type="date"
+                    min={getTodayDateInputValue()}
+                    value={preferredStartDate}
+                    onChange={(event) => setPreferredStartDate(event.target.value)}
+                    className="bg-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="preferred-end-date">To</Label>
+                  <Input
+                    id="preferred-end-date"
+                    type="date"
+                    min={preferredStartDate || getTodayDateInputValue()}
+                    value={preferredEndDate}
+                    onChange={(event) => setPreferredEndDate(event.target.value)}
+                    className="bg-white"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <Button type="submit" className="w-full" size="lg" disabled={updateJob.isPending}>

@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import { formatJobTiming } from "@shared/constants";
 import {
   ArrowRight,
   Briefcase,
@@ -328,6 +329,12 @@ export default function HomeownerDashboard() {
                           <span className="rounded-full bg-secondary px-2 py-0.5">{job.category}</span>
                           <span>{job.location}</span>
                           <span>{formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}</span>
+                          {formatJobTiming(job.timingPreference, job.preferredStartDate, job.preferredEndDate) && (
+                            <span className="inline-flex items-center gap-1 font-medium text-primary">
+                              <Clock className="h-3 w-3" />
+                              {formatJobTiming(job.timingPreference, job.preferredStartDate, job.preferredEndDate)}
+                            </span>
+                          )}
                         </div>
                       </div>
 

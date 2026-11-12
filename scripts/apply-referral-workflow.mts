@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createConnection, type RowDataPacket } from "mysql2/promise";
 import { readFileSync } from "node:fs";
 
-// Non-destructive, repeatable migration for both legacy and current referral activity tables.
+// Non-destructive, repeatable migrations for referral activity and homeowner job timing.
 // This must run after the existing referral/quotes pre-deploy initialization.
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 
@@ -110,7 +110,34 @@ try {
     "SELECT `id`, `referralJobId`, `actorUserId`, `type`, `note`, `scheduledFor`, `privateToAdmin`, `createdAt` FROM `referral_workflow_events` WHERE `referralJobId` = ? ORDER BY `createdAt` DESC, `id` DESC LIMIT 0",
     [0]
   );
-  console.log("Referral activity schema ready, including legacy-column reconciliation; existing jobs, quotes and payments unchanged.");
+
+  // Homeowner-posted jobs can optionally include a requested completion window.
+  const [jobColumnRows] = await db.query<Column[]>(
+    `SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_TYPE
+       FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'jobs'`
+  );
+  if (jobColumnRows.length === 0) {
+    throw new Error("The jobs table is missing; homeowner timing migration stopped safely.");
+  }
+
+  const jobColumns = new Set(jobColumnRows.map((column) => column.COLUMN_NAME));
+  const timingColumns: Array<[string, string]> = [
+    ["timingPreference", "VARCHAR(32) NULL AFTER `budgetMax`"],
+    ["preferredStartDate", "DATE NULL AFTER `timingPreference`"],
+    ["preferredEndDate", "DATE NULL AFTER `preferredStartDate`"],
+  ];
+  for (const [name, definition] of timingColumns) {
+    if (!jobColumns.has(name)) {
+      await db.query(`ALTER TABLE \`jobs\` ADD COLUMN \`${name}\` ${definition}`);
+      console.log(`Added jobs.${name}`);
+    }
+  }
+
+  await db.query(
+    "SELECT `timingPreference`, `preferredStartDate`, `preferredEndDate` FROM `jobs` LIMIT 0"
+  );
+  console.log("Referral workflow and homeowner job timing schemas are ready; existing records were preserved.");
 } finally {
   await db.end();
 }

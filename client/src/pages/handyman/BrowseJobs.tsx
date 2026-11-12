@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { formatJobTiming } from "@shared/constants";
 import { differenceInHours, formatDistanceToNow } from "date-fns";
 import {
   Briefcase,
@@ -336,6 +337,15 @@ export default function BrowseJobs() {
                       </span>
                       <StatusBadge status={job.status} />
                     </div>
+
+                  {formatJobTiming(job.timingPreference, job.preferredStartDate, job.preferredEndDate) && (
+                    <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        Wants it: {formatJobTiming(job.timingPreference, job.preferredStartDate, job.preferredEndDate)}
+                      </span>
+                    </div>
+                  )}
 
                     <div className="mt-4 pt-4 border-t border-border/40 flex items-end justify-between gap-4">
                       <div className="min-w-0">

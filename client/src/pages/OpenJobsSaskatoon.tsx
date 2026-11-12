@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import { formatJobTiming } from "@shared/constants";
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -347,6 +348,12 @@ export default function OpenJobsSaskatoonPage() {
                             <Clock className="h-4 w-4 text-emerald-700" />
                             {formatPostedDate(job.createdAt)}
                           </div>
+                          {formatJobTiming(job.timingPreference, job.preferredStartDate, job.preferredEndDate) && (
+                            <div className="inline-flex items-center gap-2 font-medium text-emerald-800">
+                              <Clock className="h-4 w-4" />
+                              Wants it: {formatJobTiming(job.timingPreference, job.preferredStartDate, job.preferredEndDate)}
+                            </div>
+                          )}
                         </div>
                       </div>
 

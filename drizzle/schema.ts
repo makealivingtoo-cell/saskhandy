@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   decimal,
   int,
   mysqlEnum,
@@ -173,6 +174,9 @@ export const jobs = mysqlTable("jobs", {
   photos: text("photos"),
   budgetMin: decimal("budgetMin", { precision: 10, scale: 2 }),
   budgetMax: decimal("budgetMax", { precision: 10, scale: 2 }),
+  timingPreference: varchar("timingPreference", { length: 32 }),
+  preferredStartDate: date("preferredStartDate", { mode: "string" }),
+  preferredEndDate: date("preferredEndDate", { mode: "string" }),
   status: mysqlEnum("status", [
     "open",
     "awaiting_payment",

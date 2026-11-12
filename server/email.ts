@@ -501,16 +501,18 @@ export async function sendNewJobPostedEmail(params: {
   jobTitle: string;
   category: string;
   location: string;
+  timing?: string | null;
   jobId?: number;
 }) {
   const ctaUrl = params.jobId ? `${APP_URL}/jobs/${params.jobId}` : `${APP_URL}/jobs`;
+  const timingLine = params.timing ? `Requested timing: ${params.timing}\n\n` : "";
 
   await sendActionEmail({
     to: params.to,
     subject: `New ${params.category} job posted: "${params.jobTitle}"`,
     heading: "A new job matches your services",
     intro: params.handymanName ? `Hi ${params.handymanName},` : undefined,
-    body: `A new job in ${params.location} was posted in the "${params.category}" category.\n\nJob: ${params.jobTitle}\n\nOpen the job to review the details and submit a bid if it is a good fit.`,
+    body: `A new job in ${params.location} was posted in the "${params.category}" category.\n\nJob: ${params.jobTitle}\n\n${timingLine}Open the job to review the details and submit a bid if it is a good fit.`,
     ctaLabel: "View Job",
     ctaUrl,
   });

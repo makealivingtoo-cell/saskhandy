@@ -142,6 +142,11 @@ import {
   updateSupportTicketStatus,
 } from "./db-support";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import {
+  formatJobTiming,
+  JOB_TIMING_PREFERENCE_VALUES,
+  type JobTimingPreference,
+} from "@shared/constants";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -165,6 +170,79 @@ const PRIVACY_VERSION = "2026-04-11";
 
 const OPEN_JOB_STALE_DAYS = 28;
 const SYSTEM_EXPIRED_REASON = "system_expired";
+
+type JobTimingInput = {
+  timingPreference?: JobTimingPreference | null;
+  preferredStartDate?: string | null;
+  preferredEndDate?: string | null;
+};
+
+function isValidIsoDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function getCurrentReginaDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Regina",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function validateJobTiming(input: JobTimingInput, ctx: z.RefinementCtx) {
+  const hasStartDate = Boolean(input.preferredStartDate);
+  const hasEndDate = Boolean(input.preferredEndDate);
+
+  if (input.timingPreference === "date_range") {
+    if (!hasStartDate || !hasEndDate) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Choose both the first and last date for the job window.",
+        path: [hasStartDate ? "preferredEndDate" : "preferredStartDate"],
+      });
+      return;
+    }
+
+    if (!isValidIsoDate(input.preferredStartDate!) || !isValidIsoDate(input.preferredEndDate!)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Enter valid dates for the job window.",
+        path: ["preferredStartDate"],
+      });
+      return;
+    }
+
+    if (input.preferredStartDate! < getCurrentReginaDate()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "The start date must be today or later.",
+        path: ["preferredStartDate"],
+      });
+      return;
+    }
+
+    if (input.preferredStartDate! > input.preferredEndDate!) {
+      ctx.addIssue({
+        code: "custom",
+        message: "The end date must be the same as or later than the start date.",
+        path: ["preferredEndDate"],
+      });
+    }
+    return;
+  }
+
+  if (hasStartDate || hasEndDate) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Choose a date range before entering specific dates.",
+      path: ["timingPreference"],
+    });
+  }
+}
 
 function getFreshJobExpiryDate(days = OPEN_JOB_STALE_DAYS) {
   const expiresAt = new Date();
@@ -1198,7 +1276,10 @@ const jobsRouter = router({
         photos: z.array(z.string().url()).max(8).optional(),
         budgetMin: z.number().positive(),
         budgetMax: z.number().positive(),
-      })
+        timingPreference: z.enum(JOB_TIMING_PREFERENCE_VALUES).nullable().optional(),
+        preferredStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+        preferredEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+      }).superRefine(validateJobTiming)
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.userType !== "homeowner" && ctx.user.role !== "admin") {
@@ -1216,8 +1297,17 @@ const jobsRouter = router({
         photos: input.photos ?? [],
         budgetMin: input.budgetMin.toFixed(2),
         budgetMax: input.budgetMax.toFixed(2),
+        timingPreference: input.timingPreference ?? null,
+        preferredStartDate: input.timingPreference === "date_range" ? input.preferredStartDate ?? null : null,
+        preferredEndDate: input.timingPreference === "date_range" ? input.preferredEndDate ?? null : null,
         expiresAt,
       });
+
+      const timingLabel = formatJobTiming(
+        input.timingPreference,
+        input.preferredStartDate,
+        input.preferredEndDate
+      );
 
       const handymanProfiles = await getAllHandymanProfiles();
 
@@ -1234,7 +1324,7 @@ const jobsRouter = router({
           userId: handyman.id,
           type: "system",
           title: "New job posted",
-          message: `A new ${input.category} job was posted: "${input.title}".`,
+          message: `A new ${input.category} job was posted: "${input.title}".${timingLabel ? ` Requested timing: ${timingLabel}.` : ""}`,
           link: `/jobs/${jobId}`,
         });
 
@@ -1246,6 +1336,7 @@ const jobsRouter = router({
               jobTitle: input.title,
               category: input.category,
               location: input.location,
+              timing: timingLabel,
               jobId,
             })
           );
@@ -1266,7 +1357,10 @@ const jobsRouter = router({
         photos: z.array(z.string().url()).max(8).optional(),
         budgetMin: z.number().positive(),
         budgetMax: z.number().positive(),
-      })
+        timingPreference: z.enum(JOB_TIMING_PREFERENCE_VALUES).nullable().optional(),
+        preferredStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+        preferredEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+      }).superRefine(validateJobTiming)
     )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -1292,6 +1386,9 @@ const jobsRouter = router({
         photos: input.photos ?? [],
         budgetMin: input.budgetMin.toFixed(2),
         budgetMax: input.budgetMax.toFixed(2),
+        timingPreference: input.timingPreference ?? null,
+        preferredStartDate: input.timingPreference === "date_range" ? input.preferredStartDate ?? null : null,
+        preferredEndDate: input.timingPreference === "date_range" ? input.preferredEndDate ?? null : null,
         expiresAt: getFreshJobExpiryDate(),
       });
 

@@ -13,12 +13,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { JOB_CATEGORIES } from "@shared/constants";
+import {
+  formatJobTiming,
+  JOB_CATEGORIES,
+  JOB_TIMING_PREFERENCE_LABELS,
+  JOB_TIMING_PREFERENCE_VALUES,
+  type JobTimingPreference,
+} from "@shared/constants";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
+  Clock,
   ImagePlus,
   Loader2,
   MapPin,
@@ -52,6 +59,13 @@ const jobExamples = [
   "Yard cleanup",
   "Paint touch-ups",
 ];
+
+function getLocalDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function getJobStrength({
   title,
@@ -118,6 +132,9 @@ export default function PostJob() {
   const [location, setLocation] = useState("");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
+  const [timingPreference, setTimingPreference] = useState<JobTimingPreference | "">("");
+  const [preferredStartDate, setPreferredStartDate] = useState("");
+  const [preferredEndDate, setPreferredEndDate] = useState("");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
@@ -155,6 +172,9 @@ export default function PostJob() {
         location: string;
         budgetMin: string;
         budgetMax: string;
+        timingPreference: JobTimingPreference | "";
+        preferredStartDate: string;
+        preferredEndDate: string;
       }>;
 
       setRoughIdea(draft.roughIdea ?? "");
@@ -164,6 +184,9 @@ export default function PostJob() {
       setLocation(draft.location ?? "");
       setBudgetMin(draft.budgetMin ?? "");
       setBudgetMax(draft.budgetMax ?? "");
+      setTimingPreference(draft.timingPreference ?? "");
+      setPreferredStartDate(draft.preferredStartDate ?? "");
+      setPreferredEndDate(draft.preferredEndDate ?? "");
     } catch {
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     } finally {
@@ -181,7 +204,10 @@ export default function PostJob() {
       category ||
       location.trim() ||
       budgetMin ||
-      budgetMax;
+      budgetMax ||
+      timingPreference ||
+      preferredStartDate ||
+      preferredEndDate;
 
     if (!hasDraft) {
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -198,9 +224,24 @@ export default function PostJob() {
         location,
         budgetMin,
         budgetMax,
+        timingPreference,
+        preferredStartDate,
+        preferredEndDate,
       })
     );
-  }, [draftHydrated, roughIdea, title, description, category, location, budgetMin, budgetMax]);
+  }, [
+    draftHydrated,
+    roughIdea,
+    title,
+    description,
+    category,
+    location,
+    budgetMin,
+    budgetMax,
+    timingPreference,
+    preferredStartDate,
+    preferredEndDate,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -381,6 +422,23 @@ export default function PostJob() {
       return false;
     }
 
+    if (timingPreference === "date_range") {
+      if (!preferredStartDate || !preferredEndDate) {
+        toast.error("Choose both dates for your preferred job window.");
+        return false;
+      }
+
+      if (preferredStartDate < getLocalDateInputValue()) {
+        toast.error("The start date must be today or later.");
+        return false;
+      }
+
+      if (preferredEndDate < preferredStartDate) {
+        toast.error("The end date must be the same as or later than the start date.");
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -436,6 +494,9 @@ export default function PostJob() {
         photos: uploadedPhotoUrls,
         budgetMin: min,
         budgetMax: max,
+        timingPreference: timingPreference || null,
+        preferredStartDate: timingPreference === "date_range" ? preferredStartDate : null,
+        preferredEndDate: timingPreference === "date_range" ? preferredEndDate : null,
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not post the job. Please try again.");
@@ -707,6 +768,80 @@ export default function PostJob() {
                   </div>
                 </div>
 
+                <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <Label htmlFor="timing-preference">When would you like the job done?</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Optional. A rough timeframe helps handymen know if they can fit it in.
+                      </p>
+                      <Select
+                        value={timingPreference}
+                        onValueChange={(value) => {
+                          const nextPreference = value as JobTimingPreference;
+                          setTimingPreference(nextPreference);
+                          if (nextPreference !== "date_range") {
+                            setPreferredStartDate("");
+                            setPreferredEndDate("");
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="timing-preference" className="mt-3 bg-white">
+                          <SelectValue placeholder="Choose a timeframe (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {JOB_TIMING_PREFERENCE_VALUES.map((value) => (
+                            <SelectItem key={value} value={value}>
+                              {JOB_TIMING_PREFERENCE_LABELS[value]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    {timingPreference && (
+                      <button
+                        type="button"
+                        className="mt-2 text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        onClick={() => {
+                          setTimingPreference("");
+                          setPreferredStartDate("");
+                          setPreferredEndDate("");
+                        }}
+                      >
+                        Clear timing
+                      </button>
+                    )}
+                    </div>
+                  </div>
+
+                  {timingPreference === "date_range" && (
+                    <div className="grid gap-3 pl-7 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="preferred-start-date">From</Label>
+                        <Input
+                          id="preferred-start-date"
+                          type="date"
+                          min={getLocalDateInputValue()}
+                          value={preferredStartDate}
+                          onChange={(event) => setPreferredStartDate(event.target.value)}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="preferred-end-date">To</Label>
+                        <Input
+                          id="preferred-end-date"
+                          type="date"
+                          min={preferredStartDate || getLocalDateInputValue()}
+                          value={preferredEndDate}
+                          onChange={(event) => setPreferredEndDate(event.target.value)}
+                          className="bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -846,6 +981,12 @@ export default function PostJob() {
                   <div className="rounded-xl bg-muted/40 p-4">
                     <p className="text-xs text-muted-foreground">Budget</p>
                     <p className="mt-1 font-semibold text-foreground">${budgetMin}–${budgetMax}</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-4">
+                    <p className="text-xs text-muted-foreground">Timing</p>
+                    <p className="mt-1 font-semibold text-foreground">
+                      {formatJobTiming(timingPreference, preferredStartDate, preferredEndDate) ?? "Not specified"}
+                    </p>
                   </div>
                   <div className="rounded-xl bg-muted/40 p-4">
                     <p className="text-xs text-muted-foreground">Photos</p>

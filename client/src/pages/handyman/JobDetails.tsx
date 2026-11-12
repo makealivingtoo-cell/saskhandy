@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
+import { formatJobTiming } from "@shared/constants";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -260,6 +261,11 @@ export default function HandymanJobDetails() {
   const goldShieldVerified =
     identityApproved &&
     handymanProfile?.criminalRecordCheckStatus === "reviewed";
+  const jobTiming = formatJobTiming(
+    job.timingPreference,
+    job.preferredStartDate,
+    job.preferredEndDate
+  );
 
   return (
     <AppLayout>
@@ -292,6 +298,16 @@ export default function HandymanJobDetails() {
           <p className="text-sm text-muted-foreground leading-relaxed mb-5">
             {job.description}
           </p>
+
+          {jobTiming && (
+            <div className="mb-5 flex items-start gap-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2.5">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Homeowner’s requested timing</p>
+                <p className="text-sm font-semibold text-foreground">{jobTiming}</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border/40">
             <div>
