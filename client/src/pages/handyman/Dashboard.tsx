@@ -29,6 +29,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
+type QuoteLineItemDraft = { description: string; quantity: string; unitPrice: string };
+
 function StatCard({
   label,
   value,
@@ -190,6 +192,8 @@ export default function HandymanDashboard() {
     title: "",
     scope: "",
     subtotal: "",
+    itemizedPricing: false,
+    lineItems: [] as QuoteLineItemDraft[],
     gstRate: "5",
     pstRate: "6",
     chargeGst: false,
@@ -241,12 +245,41 @@ export default function HandymanDashboard() {
       toast.error("This referral is no longer available. Refresh the referrals before quoting.");
       return;
     }
-    const subtotal = Number(quoteForm.subtotal);
+    const submittedLineItems = quoteForm.itemizedPricing ? quoteForm.lineItems : [];
+    const hasInvalidLineItem = submittedLineItems.some((item) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unitPrice);
+      return (
+        !item.description.trim() ||
+        !item.quantity.trim() ||
+        !item.unitPrice.trim() ||
+        !Number.isFinite(quantity) ||
+        quantity <= 0 ||
+        !Number.isFinite(unitPrice) ||
+        unitPrice < 0
+      );
+    });
+    if (quoteForm.itemizedPricing && (!submittedLineItems.length || hasInvalidLineItem)) {
+      toast.error("Complete every line item or remove it before saving the quote.");
+      return;
+    }
+
+    const lineItems = submittedLineItems.map((item) => ({
+      description: item.description.trim(),
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+    }));
+    const itemizedSubtotal = Number(
+      lineItems
+        .reduce((total, item) => total + Math.round(item.quantity * item.unitPrice * 100) / 100, 0)
+        .toFixed(2)
+    );
+    const subtotal = quoteForm.itemizedPricing ? itemizedSubtotal : Number(quoteForm.subtotal);
     const gstRate = quoteForm.chargeGst ? Number(quoteForm.gstRate || "0") : 0;
     const pstRate = Number(quoteForm.pstRate || "0");
 
     if (
-      !Number.isFinite(subtotal) || subtotal <= 0 ||
+      !Number.isFinite(subtotal) || subtotal <= 0 || subtotal > 999999.99 ||
       !Number.isFinite(gstRate) || gstRate < 0 ||
       !Number.isFinite(pstRate) || pstRate < 0
     ) {
@@ -270,6 +303,7 @@ export default function HandymanDashboard() {
         title: quoteForm.title.trim(),
         scope: quoteForm.scope.trim(),
         subtotal,
+        lineItems: quoteForm.itemizedPricing ? lineItems : undefined,
         gstRate,
         pstRate,
       });
@@ -295,6 +329,8 @@ export default function HandymanDashboard() {
         title: "",
         scope: "",
         subtotal: "",
+        itemizedPricing: false,
+        lineItems: [],
         gstRate: "5",
         pstRate: "6",
         chargeGst: false,
@@ -475,7 +511,17 @@ export default function HandymanDashboard() {
     (quoteFilter === "paid" && ["paid", "completed"].includes(quote.status))
   );
   const money = (value: number) => new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(value);
-  const amount = Math.max(0, Number(quoteForm.subtotal) || 0);
+  const lineItemAmount = Number(
+    quoteForm.lineItems
+      .reduce((total, item) => {
+        const quantity = Number(item.quantity);
+        const unitPrice = Number(item.unitPrice);
+        if (!Number.isFinite(quantity) || !Number.isFinite(unitPrice)) return total;
+        return total + Math.round(quantity * unitPrice * 100) / 100;
+      }, 0)
+      .toFixed(2)
+  );
+  const amount = Math.max(0, quoteForm.itemizedPricing ? lineItemAmount : Number(quoteForm.subtotal) || 0);
   const gst = Math.round(amount * (quoteForm.chargeGst ? Number(quoteForm.gstRate) || 0 : 0)) / 100;
   const pst = Math.round(amount * (Number(quoteForm.pstRate) || 0)) / 100;
   const chosenReferral = acceptedReferrals.find(job => String(job.id) === quoteForm.referralJobId);
@@ -787,6 +833,8 @@ export default function HandymanDashboard() {
         title: "",
         scope: "",
         subtotal: "",
+        itemizedPricing: false,
+        lineItems: [],
         gstRate: "5",
         pstRate: "6",
         chargeGst: false,
@@ -922,23 +970,128 @@ setCreatedDraftId(null); } }}>Close</Button></div>
             </div>
 
             <h3 className="border-t pt-5 text-sm font-semibold">3. Pricing</h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-subtotal">
-                    Subtotal (CAD)
-                  </label>
-                  <input
-                    id="quote-subtotal"
-                    required
-                    type="number"
-                    min="0.01"
-                    max="999999.99"
-                    step="0.01"
-                    value={quoteForm.subtotal}
-                    onChange={(event) => setQuoteForm((current) => ({ ...current, subtotal: event.target.value }))}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm"
-                  />
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={quoteForm.itemizedPricing}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, itemizedPricing: event.target.checked }))}
+                />
+                Add itemized pricing
+              </label>
+              {quoteForm.itemizedPricing && (
+                <div className="space-y-3 rounded-xl border border-border/70 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">Add each part of the work. The subtotal will be calculated from these items.</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setQuoteForm((current) => ({
+                        ...current,
+                        lineItems: [...current.lineItems, { description: "", quantity: "1", unitPrice: "" }],
+                      }))}
+                    >
+                      <Plus className="mr-1.5 h-4 w-4" />Add item
+                    </Button>
+                  </div>
+                  {quoteForm.lineItems.map((item, index) => (
+                    <div key={index} className="space-y-2 rounded-lg bg-muted/20 p-3">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_110px_150px_auto]">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium" htmlFor={`quote-line-description-${index}`}>Description</label>
+                          <input
+                            id={`quote-line-description-${index}`}
+                            required
+                            maxLength={255}
+                            value={item.description}
+                            onChange={(event) => setQuoteForm((current) => ({
+                              ...current,
+                              lineItems: current.lineItems.map((line, lineIndex) => lineIndex === index ? { ...line, description: event.target.value } : line),
+                            }))}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                            placeholder="e.g. Labour or replacement part"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium" htmlFor={`quote-line-quantity-${index}`}>Quantity</label>
+                          <input
+                            id={`quote-line-quantity-${index}`}
+                            required
+                            type="number"
+                            min="0.01"
+                            max="10000"
+                            step="0.01"
+                            value={item.quantity}
+                            onChange={(event) => setQuoteForm((current) => ({
+                              ...current,
+                              lineItems: current.lineItems.map((line, lineIndex) => lineIndex === index ? { ...line, quantity: event.target.value } : line),
+                            }))}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium" htmlFor={`quote-line-price-${index}`}>Unit price (CAD)</label>
+                          <input
+                            id={`quote-line-price-${index}`}
+                            required
+                            type="number"
+                            min="0"
+                            max="999999.99"
+                            step="0.01"
+                            value={item.unitPrice}
+                            onChange={(event) => setQuoteForm((current) => ({
+                              ...current,
+                              lineItems: current.lineItems.map((line, lineIndex) => lineIndex === index ? { ...line, unitPrice: event.target.value } : line),
+                            }))}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setQuoteForm((current) => ({
+                              ...current,
+                              lineItems: current.lineItems.filter((_, lineIndex) => lineIndex !== index),
+                            }))}
+                          >
+                            <Trash2 className="mr-1.5 h-4 w-4" />Remove
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-right text-xs text-muted-foreground">
+                        Line total: {money(Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * 100) / 100)}
+                      </p>
+                    </div>
+                  ))}
                 </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {quoteForm.itemizedPricing ? (
+                  <div className="rounded-lg bg-muted/30 p-3">
+                    <p className="text-sm font-medium">Subtotal (CAD)</p>
+                    <p className="mt-2 text-lg font-semibold">{money(amount)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Calculated from the line items above.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-subtotal">
+                      Subtotal (CAD)
+                    </label>
+                    <input
+                      id="quote-subtotal"
+                      required
+                      type="number"
+                      min="0.01"
+                      max="999999.99"
+                      step="0.01"
+                      value={quoteForm.subtotal}
+                      onChange={(event) => setQuoteForm((current) => ({ ...current, subtotal: event.target.value }))}
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-gst-rate">
                     GST rate (%)

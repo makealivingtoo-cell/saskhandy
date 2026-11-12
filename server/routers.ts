@@ -95,6 +95,8 @@ import {
   getQuoteById,
   getQuoteByPublicToken,
   getQuotesForHandyman,
+  expireQuoteIfNeeded,
+  expireExpiredQuotesForHandyman,
   getPayoutRequestById,
   getPayoutRequestsByHandyman,
   getReviewForJob,
@@ -284,6 +286,52 @@ function buildHandymanBidTrustFields(params: {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+const REFERRAL_MATCH_IGNORED_WORDS = new Set([
+  "and", "are", "for", "from", "home", "house", "install", "installation",
+  "job", "new", "of", "on", "project", "quote", "remove", "replace",
+  "replacement", "repair", "service", "the", "to", "work",
+]);
+
+function normalizeReferralMatchText(value?: string | null) {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function referralWorkWords(...values: Array<string | null | undefined>) {
+  return new Set(
+    values
+      .map(normalizeReferralMatchText)
+      .join(" ")
+      .split(/\s+/)
+      .filter((word) => word.length >= 3 && !REFERRAL_MATCH_IGNORED_WORDS.has(word))
+  );
+}
+
+function isLikelySameReferralWork(
+  quote: { title: string; scope: string; address?: string | null },
+  referral: { title: string; description: string; address?: string | null }
+) {
+  const quoteTitle = normalizeReferralMatchText(quote.title);
+  const referralTitle = normalizeReferralMatchText(referral.title);
+  const quoteWords = referralWorkWords(quote.title, quote.scope);
+  const referralWords = referralWorkWords(referral.title, referral.description);
+  const sharedWords = [...quoteWords].filter((word) => referralWords.has(word)).length;
+  const overlap = sharedWords / Math.max(1, Math.min(quoteWords.size, referralWords.size));
+  const quoteAddress = normalizeReferralMatchText(quote.address);
+  const referralAddress = normalizeReferralMatchText(referral.address);
+  const sameAddress = !!quoteAddress && quoteAddress === referralAddress;
+  const titleMatch =
+    quoteTitle.length >= 10 &&
+    referralTitle.length >= 10 &&
+    (quoteTitle === referralTitle || quoteTitle.includes(referralTitle) || referralTitle.includes(quoteTitle));
+
+  return titleMatch || (sharedWords >= 2 && overlap >= 0.6) || (sameAddress && sharedWords >= 2 && overlap >= 0.5);
 }
 
 function normalizeRequiredPhoneNumber(phoneNumber: string) {
@@ -1473,6 +1521,7 @@ const referralJobsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
     }
 
+    await expireExpiredQuotesForHandyman(ctx.user.id);
     const referrals = await getReferralJobsForHandyman(ctx.user.id);
     return referrals.map((referralJob) =>
       referralJob.status === "sent" || referralJob.status === "declined"
@@ -1616,7 +1665,7 @@ const quotesRouter = router({
     if (ctx.user.userType !== "handyman") {
       throw new TRPCError({ code: "FORBIDDEN", message: "Handyman access required." });
     }
-    return getQuotesForHandyman(ctx.user.id);
+    return expireExpiredQuotesForHandyman(ctx.user.id);
   }),
 
   deleteDraft: protectedProcedure
@@ -1714,6 +1763,7 @@ const quotesRouter = router({
       }
 
       if (input.referralJobId) {
+        await expireExpiredQuotesForHandyman(ctx.user.id);
         const referralJob = await getReferralJobById(input.referralJobId);
         if (!referralJob) throw new TRPCError({ code: "NOT_FOUND", message: "Referral not found." });
         if (referralJob.handymanId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
@@ -1721,6 +1771,18 @@ const quotesRouter = router({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Accept the referral before creating its quote.",
+          });
+        }
+
+        const activeQuote = (await getQuotesForHandyman(ctx.user.id)).find(
+          (existingQuote) =>
+            existingQuote.referralJobId === referralJob.id &&
+            ["draft", "sent", "viewed", "approved", "payment_pending", "payment_failed", "paid", "completed"].includes(existingQuote.status)
+        );
+        if (activeQuote) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A quote already exists for this referral. Open it from your quote list or withdraw it before creating another.",
           });
         }
 
@@ -1738,14 +1800,59 @@ const quotesRouter = router({
         });
       }
 
-      if (!homeownerPhone || !normalizePhoneNumber(homeownerPhone)) {
+      const normalizedHomeownerPhone = homeownerPhone ? normalizePhoneNumber(homeownerPhone) : null;
+      if (!normalizedHomeownerPhone) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "A valid customer phone number is required to send the quote by text.",
         });
       }
 
+      if (!input.referralJobId) {
+        const customerEmail = homeownerEmail ? normalizeEmail(homeownerEmail) : "";
+        const activeReferral = (await getReferralJobsForHandyman(ctx.user.id)).find((referralJob) => {
+          if (!["sent", "accepted", "quote_sent", "awaiting_payment", "in_progress"].includes(referralJob.status)) {
+            return false;
+          }
+
+          const referralPhone = referralJob.homeownerPhone
+            ? normalizePhoneNumber(referralJob.homeownerPhone)
+            : null;
+          const referralEmail = referralJob.homeownerEmail
+            ? normalizeEmail(referralJob.homeownerEmail)
+            : "";
+          const sameContact =
+            (!!normalizedHomeownerPhone && normalizedHomeownerPhone === referralPhone) ||
+            (!!customerEmail && customerEmail === referralEmail);
+
+          return sameContact && isLikelySameReferralWork(
+            { title: input.title, scope: input.scope, address },
+            { title: referralJob.title, description: referralJob.description, address: referralJob.address }
+          );
+        });
+
+        if (activeReferral) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `This work appears to match the active SaskHandy referral "${activeReferral.title}". Use the referral quote flow so its 20% commission stays attached. If this is separate work for the same customer, contact a SaskHandy admin for a manual review.`,
+          });
+        }
+      }
+
       const subtotal = Number(input.subtotal.toFixed(2));
+      if (input.lineItems?.length) {
+        const itemizedSubtotal = Number(
+          input.lineItems
+            .reduce((total, item) => total + Math.round(item.quantity * item.unitPrice * 100) / 100, 0)
+            .toFixed(2)
+        );
+        if (Math.round(itemizedSubtotal * 100) !== Math.round(subtotal * 100)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "The line items must add up to the quote subtotal.",
+          });
+        }
+      }
       const usesSplitTaxes = input.gstRate !== undefined || input.pstRate !== undefined;
       const gstRate = Number((input.gstRate ?? 0).toFixed(2));
       const pstRate = Number((input.pstRate ?? 0).toFixed(2));
@@ -1771,7 +1878,7 @@ const quotesRouter = router({
         sourceType,
         homeownerName,
         homeownerEmail,
-        homeownerPhone: normalizePhoneNumber(homeownerPhone),
+        homeownerPhone: normalizedHomeownerPhone,
         address,
         title: input.title,
         scope: input.scope,
@@ -1850,8 +1957,7 @@ const quotesRouter = router({
       if (!quote || quote.status === "draft" || quote.status === "cancelled") {
         throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
       }
-      if (quote.expiresAt && quote.expiresAt.getTime() < Date.now() && quote.status !== "paid") {
-        if (quote.status !== "expired") await updateQuoteStatus(quote.id, "expired");
+      if (await expireQuoteIfNeeded(quote)) {
         throw new TRPCError({ code: "NOT_FOUND", message: "This quote has expired." });
       }
       if (quote.status === "sent") await updateQuoteStatus(quote.id, "viewed");
@@ -1887,8 +1993,7 @@ const quotesRouter = router({
     .mutation(async ({ input }) => {
       const quote = await getQuoteByPublicToken(input.token);
       if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
-      if (quote.expiresAt && quote.expiresAt.getTime() < Date.now()) {
-        if (quote.status !== "expired") await updateQuoteStatus(quote.id, "expired");
+      if (await expireQuoteIfNeeded(quote)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "This quote has expired." });
       }
       if (quote.status !== "sent" && quote.status !== "viewed") {
@@ -1897,8 +2002,23 @@ const quotesRouter = router({
           message: "This quote can no longer be approved or declined.",
         });
       }
+      if (quote.referralJobId) {
+        const referralJob = await getReferralJobById(quote.referralJobId);
+        if (!referralJob || ["declined", "cancelled", "completed"].includes(referralJob.status)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This referral is no longer active, so this quote cannot be approved or declined.",
+          });
+        }
+      }
 
       await updateQuoteStatus(quote.id, input.decision);
+      if (quote.referralJobId) {
+        await updateReferralJobStatus(
+          quote.referralJobId,
+          input.decision === "approved" ? "awaiting_payment" : "accepted"
+        );
+      }
       return { success: true, status: input.decision };
     }),
 

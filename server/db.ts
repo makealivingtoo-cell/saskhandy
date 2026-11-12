@@ -953,8 +953,18 @@ export async function getReferralJobsForHandyman(handymanId: number) {
 export async function getAllReferralJobsForAdmin() {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const rows = await db.select().from(referralJobs).orderBy(desc(referralJobs.updatedAt));
+  let rows = await db.select().from(referralJobs).orderBy(desc(referralJobs.updatedAt));
   if (!rows.length) return [];
+
+  const linkedQuoteRows = await db
+    .select()
+    .from(quotes)
+    .where(inArray(quotes.referralJobId, rows.map((row) => row.id)));
+  for (const quote of linkedQuoteRows) {
+    await expireQuoteIfNeeded(quote);
+  }
+  rows = await db.select().from(referralJobs).orderBy(desc(referralJobs.updatedAt));
+
   // Attach quote summaries only; never expose public quote tokens in the admin list.
   const linked = await db
     .select({
@@ -963,10 +973,11 @@ export async function getAllReferralJobsForAdmin() {
       status: quotes.status,
       totalAmount: quotes.totalAmount,
       updatedAt: quotes.updatedAt,
+      createdAt: quotes.createdAt,
     })
     .from(quotes)
     .where(inArray(quotes.referralJobId, rows.map((r) => r.id)))
-    .orderBy(desc(quotes.updatedAt));
+    .orderBy(desc(quotes.createdAt), desc(quotes.id));
   const latest = new Map<number, (typeof linked)[number]>();
   for (const quote of linked) {
     if (quote.referralJobId && !latest.has(quote.referralJobId)) {
@@ -1039,6 +1050,15 @@ export async function updateReferralJobStatus(
       updatedAt: now,
     })
     .where(eq(referralJobs.id, id));
+}
+
+export async function markReferralInProgressAfterQuotePayment(referralJobId: number) {
+  const referralJob = await getReferralJobById(referralJobId);
+  if (!referralJob || ["declined", "cancelled", "completed"].includes(referralJob.status)) return false;
+  if (referralJob.status !== "in_progress") {
+    await updateReferralJobStatus(referralJobId, "in_progress");
+  }
+  return true;
 }
 
 export async function getReferralWorkflowEvents(referralJobId: number, isAdmin: boolean) {
@@ -1174,6 +1194,54 @@ export async function updateQuoteStatus(id: number, status: QuoteStatus) {
       updatedAt: now,
     })
     .where(eq(quotes.id, id));
+}
+
+export async function expireQuoteIfNeeded(
+  quote: Pick<typeof quotes.$inferSelect, "id" | "handymanId" | "referralJobId" | "status" | "expiresAt">
+) {
+  const terminalStatuses = new Set(["draft", "declined", "cancelled", "paid", "completed"]);
+  const isExpired = quote.status === "expired";
+  const isPastDue =
+    !!quote.expiresAt &&
+    quote.expiresAt.getTime() < Date.now() &&
+    !terminalStatuses.has(quote.status);
+
+  if (!isExpired && !isPastDue) return false;
+
+  let latestLinkedQuoteId: number | null = null;
+  if (quote.referralJobId) {
+    const linkedQuotes = await getQuotesForHandyman(quote.handymanId);
+    const latestLinkedQuote = linkedQuotes
+      .filter((candidate) => candidate.referralJobId === quote.referralJobId)
+      .sort((a, b) => {
+        const createdDifference = b.createdAt.getTime() - a.createdAt.getTime();
+        return createdDifference || b.id - a.id;
+      })[0];
+    latestLinkedQuoteId = latestLinkedQuote?.id ?? null;
+  }
+
+  if (!isExpired) await updateQuoteStatus(quote.id, "expired");
+
+  if (quote.referralJobId && latestLinkedQuoteId === quote.id) {
+    const referralJob = await getReferralJobById(quote.referralJobId);
+    if (
+      referralJob &&
+      referralJob.status !== "accepted" &&
+      !["declined", "cancelled", "completed", "in_progress"].includes(referralJob.status)
+    ) {
+      await updateReferralJobStatus(referralJob.id, "accepted");
+    }
+  }
+
+  return true;
+}
+
+export async function expireExpiredQuotesForHandyman(handymanId: number) {
+  const quotesForHandyman = await getQuotesForHandyman(handymanId);
+  for (const quote of quotesForHandyman) {
+    await expireQuoteIfNeeded(quote);
+  }
+  return getQuotesForHandyman(handymanId);
 }
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────

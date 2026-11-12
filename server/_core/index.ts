@@ -32,6 +32,7 @@ import {
   markBidReminderSent,
   markPaymentReminderChecked,
   markPaymentReminderSent,
+  markReferralInProgressAfterQuotePayment,
   updateJob,
 } from "../db";
 import { payments, jobs, quotes } from "../../drizzle/schema";
@@ -96,6 +97,7 @@ async function updateQuoteFromPaymentIntent(
     .select({
       totalAmount: quotes.totalAmount,
       stripePaymentIntentId: quotes.stripePaymentIntentId,
+      referralJobId: quotes.referralJobId,
     })
     .from(quotes)
     .where(eq(quotes.id, quoteId))
@@ -138,6 +140,10 @@ async function updateQuoteFromPaymentIntent(
         ...(status === "payment_failed" ? [ne(quotes.status, "paid")] : [])
       )
     );
+
+  if (status === "paid" && quote.referralJobId) {
+    await markReferralInProgressAfterQuotePayment(quote.referralJobId);
+  }
 
   console.log(`[Webhook] Quote ${quoteId} payment ${status}.`);
   return true;

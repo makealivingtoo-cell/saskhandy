@@ -7,6 +7,8 @@ import {
   getJobById,
   getPaymentByJob,
   getQuoteByPublicToken,
+  expireQuoteIfNeeded,
+  markReferralInProgressAfterQuotePayment,
   updatePayment,
   updateQuote,
   updateQuoteStatus,
@@ -122,10 +124,12 @@ export const stripeRouter = router({
       const quote = await getQuoteByPublicToken(input.token);
       if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
       if (quote.status === "paid") {
+        if (quote.referralJobId) {
+          await markReferralInProgressAfterQuotePayment(quote.referralJobId);
+        }
         return { clientSecret: null, paymentIntentId: quote.stripePaymentIntentId, alreadyPaid: true };
       }
-      if (quote.expiresAt && quote.expiresAt.getTime() < Date.now()) {
-        if (quote.status !== "expired") await updateQuoteStatus(quote.id, "expired");
+      if (await expireQuoteIfNeeded(quote)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "This quote has expired." });
       }
       if (!["approved", "payment_pending", "payment_failed"].includes(quote.status)) {
@@ -139,6 +143,9 @@ export const stripeRouter = router({
         const existingIntent = await retrievePaymentIntent(quote.stripePaymentIntentId);
         if (existingIntent.status === "succeeded") {
           await updateQuoteStatus(quote.id, "paid");
+          if (quote.referralJobId) {
+            await markReferralInProgressAfterQuotePayment(quote.referralJobId);
+          }
           return {
             clientSecret: null,
             paymentIntentId: existingIntent.id,
@@ -207,7 +214,12 @@ export const stripeRouter = router({
     .mutation(async ({ input }) => {
       const quote = await getQuoteByPublicToken(input.token);
       if (!quote) throw new TRPCError({ code: "NOT_FOUND", message: "Quote not found." });
-      if (quote.status === "paid") return { success: true, status: "paid" as const };
+      if (quote.status === "paid") {
+        if (quote.referralJobId) {
+          await markReferralInProgressAfterQuotePayment(quote.referralJobId);
+        }
+        return { success: true, status: "paid" as const };
+      }
       if (!quote.stripePaymentIntentId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "No payment has been started." });
       }
@@ -219,6 +231,9 @@ export const stripeRouter = router({
 
       if (paymentIntent.status === "succeeded") {
         await updateQuoteStatus(quote.id, "paid");
+        if (quote.referralJobId) {
+          await markReferralInProgressAfterQuotePayment(quote.referralJobId);
+        }
         return { success: true, status: "paid" as const };
       }
       if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "canceled") {
