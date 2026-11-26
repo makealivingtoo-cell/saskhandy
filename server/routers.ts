@@ -1,3 +1,8 @@
+import { ensureDirectRequest,localPriceGuidance } from "./directRequests";
+import { canSeeDirectedJob } from "../shared/requestPolicy";
+import { matchesIntent } from "../shared/paymentIntegrity";
+import { reconcilePayment } from "./paymentReconciliation";
+import { retrievePaymentIntent } from "./stripe";
 import { publicProfessional } from "../shared/publicProfessional";
 import { appointmentRouter } from "./appointmentRouter";
 import { myHomeRouter } from "./myHomeRouter";
@@ -1272,6 +1277,7 @@ const handymanProfilesRouter = router({
 });
 
 const jobsRouter = router({
+  priceGuidance: protectedProcedure.input(z.object({category:z.enum(JOB_CATEGORIES),location:z.string().max(255)})).query(async({ctx,input})=>ctx.user.userType==="homeowner"?localPriceGuidance(input.category,input.location):null),
   matchingStatus: protectedProcedure.input(z.object({jobId:z.number().int().positive()})).query(async ({ctx,input})=>{
     const job=await getJobById(input.jobId);
     if(!job|| (job.homeownerId!==ctx.user.id&&ctx.user.role!=="admin"))throw new TRPCError({code:"NOT_FOUND"});
@@ -1285,6 +1291,7 @@ const jobsRouter = router({
         category: z.string(),
         location: z.string().min(2),
         photos: z.array(z.string().url()).max(8).optional(),
+        requestedHandymanId: z.number().int().positive().optional(),
         budgetMin: z.number().positive().nullable().optional(),
         budgetMax: z.number().positive().nullable().optional(),
         timingPreference: z.enum(JOB_TIMING_PREFERENCE_VALUES).nullable().optional(),
@@ -1299,8 +1306,10 @@ const jobsRouter = router({
 
       const expiresAt = getFreshJobExpiryDate();
 
+      if(input.requestedHandymanId) await ensureDirectRequest(ctx.user.id,input.requestedHandymanId,input);
       const queueMatching = matchingEnabled();
       const jobId = await createJob({
+        ...(input.requestedHandymanId?{requestedHandymanId:input.requestedHandymanId}:{}),
         homeownerId: ctx.user.id,
         title: input.title,
         description: input.description,
@@ -1366,6 +1375,7 @@ const jobsRouter = router({
         category: z.string(),
         location: z.string().min(2),
         photos: z.array(z.string().url()).max(8).optional(),
+        requestedHandymanId: z.number().int().positive().optional(),
         budgetMin: z.number().positive().nullable().optional(),
         budgetMax: z.number().positive().nullable().optional(),
         timingPreference: z.enum(JOB_TIMING_PREFERENCE_VALUES).nullable().optional(),
@@ -1523,6 +1533,7 @@ const jobsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
       }
 
+      if(!canSeeDirectedJob(job,ctx.user))throw new TRPCError({code:"NOT_FOUND"});
       if(job.status!=="open"&&ctx.user?.id!==job.homeownerId&&ctx.user?.id!==job.selectedHandymanId&&ctx.user?.role!=="admin")throw new TRPCError({code:"NOT_FOUND"});
       const homeowner = await safeGetUserById(job.homeownerId);
       return { ...job, homeownerName: homeowner?.name };
@@ -1536,11 +1547,11 @@ const jobsRouter = router({
         category: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx,input }) => {
       // expiresAt is the maintenance deadline, not the visibility state.
       // The job remains live until the stale-job maintenance loop explicitly
       // archives it as system_expired. This preserves the legacy 7-day grace period.
-      return getOpenJobs(input.limit, input.offset, input.category);
+      return getOpenJobs(input.limit, input.offset, input.category,ctx.user?.userType==="handyman"?ctx.user.id:undefined);
     }),
 
   updateStatus: protectedProcedure
@@ -2334,6 +2345,7 @@ const bidsRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
+      if(!canSeeDirectedJob(job,ctx.user))throw new TRPCError({code:"NOT_FOUND"});
       if (job.status !== "open") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open for bids" });
       }
@@ -2423,6 +2435,7 @@ const bidsRouter = router({
       });
     }
 
+    if (!canSeeDirectedJob(job,ctx.user)) throw new TRPCError({code:"NOT_FOUND"});
     if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
       throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
     }
@@ -2463,7 +2476,8 @@ const bidsRouter = router({
         });
       }
 
-      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+      if (!canSeeDirectedJob(job,ctx.user)) throw new TRPCError({code:"NOT_FOUND"});
+    if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
       }
 
@@ -2504,7 +2518,8 @@ const bidsRouter = router({
       const job = await getJobById(bid.jobId);
 
       // system_expired jobs are retained for Admin history only.
-      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+      if (!canSeeDirectedJob(job,ctx.user)) throw new TRPCError({code:"NOT_FOUND"});
+    if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
         continue;
       }
 
@@ -2711,38 +2726,11 @@ const paymentsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      await updatePayment(payment.id, { stripePaymentIntentId: input.stripePaymentIntentId });
-
-      const job = await getJobById(input.jobId);
-      if (job?.selectedHandymanId) {
-        await notifyUser({
-          userId: job.selectedHandymanId,
-          type: "payment_received",
-          title: "Homeowner payment received",
-          message: `The homeowner payment for "${job.title}" has been received. Please message the homeowner to confirm your arrival time or next availability before starting the job.`,
-          link: "/handyman/dashboard",
-        });
-
-        const handyman = await safeGetUserById(job.selectedHandymanId);
-        if (handyman?.email) {
-          void safeSendEmail("sendPaymentReceivedEmail", () =>
-            sendPaymentReceivedEmail({
-              to: handyman.email!,
-              handymanName: handyman.name,
-              jobTitle: job.title,
-            })
-          );
-        }
-
-        void safeSendSms("sendPaymentReceivedSms", () =>
-          sendPaymentReceivedSms({
-            user: handyman,
-            jobTitle: job.title,
-            jobId: job.id,
-          })
-        );
-      }
-
+      const job=await getJobById(input.jobId);
+      if(!job||!job.selectedHandymanId||payment.stripePaymentIntentId!==input.stripePaymentIntentId)throw new TRPCError({code:"CONFLICT",message:"Payment does not match the checkout record."});
+      const intent=await retrievePaymentIntent(input.stripePaymentIntentId);
+      if(intent.status!=="succeeded"||!matchesIntent(intent,{id:payment.stripePaymentIntentId,amount:payment.amount,jobId:job.id,homeownerId:job.homeownerId,handymanId:job.selectedHandymanId}))throw new TRPCError({code:"CONFLICT",message:"Payment has not been confirmed."});
+      await reconcilePayment(intent);
       return { success: true };
     }),
 });
@@ -3134,7 +3122,8 @@ const messagesRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+      if (!canSeeDirectedJob(job,ctx.user)) throw new TRPCError({code:"NOT_FOUND"});
+    if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
       }
 
@@ -3239,7 +3228,8 @@ const messagesRouter = router({
       const job = await getJobById(input.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+      if (!canSeeDirectedJob(job,ctx.user)) throw new TRPCError({code:"NOT_FOUND"});
+    if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
       }
 

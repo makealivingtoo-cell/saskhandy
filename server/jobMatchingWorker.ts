@@ -27,7 +27,7 @@ async function runWave(jobId:number,now:Date){
   // Only complete eligible profiles can receive an automatic invitation; no inference of availability.
   const paused=process.env.SASKHANDY_V2_APPOINTMENTS==="1"?await tx.select({id:professionalAvailability.handymanId}).from(professionalAvailability).where(eq(professionalAvailability.acceptingJobs,false)):[];
   const pausedIds=new Set(paused.map(p=>p.id));
-  const eligible=candidates.filter(({profile,user})=>!pausedIds.has(user.id)&&user.name&&user.name.trim().length>=2&&profile.profileImageUrl&&profile.bio&&profile.bio.trim().length>=25&&eligibleForJobInvitation(profile,job));
+  const eligible=candidates.filter(({profile,user})=>(!job.requestedHandymanId||job.requestedHandymanId===user.id)&&!pausedIds.has(user.id)&&user.name&&user.name.trim().length>=2&&profile.profileImageUrl&&profile.bio&&profile.bio.trim().length>=25&&eligibleForJobInvitation(profile,job));
   // Rotate the starting position by job ID to avoid always favouring the oldest profiles.
   const offset=eligible.length?jobId%eligible.length:0;
   const rotated=[...eligible.slice(offset),...eligible.slice(0,offset)];
@@ -58,7 +58,7 @@ async function deliverEmail(id:number,now:Date){
   const [job]=await db.select().from(jobs).where(eq(jobs.id,claim.jobId)).limit(1);
   const [person]=await db.select({profile:handymanProfiles,user:users}).from(handymanProfiles).innerJoin(users,eq(users.id,handymanProfiles.userId)).where(eq(users.id,claim.handymanId)).limit(1);
   const activeBids=await db.select({id:bids.id}).from(bids).where(and(eq(bids.jobId,claim.jobId),inArray(bids.status,["pending","accepted"]))).limit(1);
-  if(!job||job.status!=="open"||job.selectedHandymanId||job.selectedBidId||(job.expiresAt&&job.expiresAt<=now)||activeBids.length||!person||person.user.userType!=="handyman"||!person.user.emailVerified||!person.user.email||!eligibleForJobInvitation(person.profile,job)){
+  if(!job||job.status!=="open"||job.selectedHandymanId||job.selectedBidId||(job.expiresAt&&job.expiresAt<=now)||activeBids.length||!person||(job.requestedHandymanId&&job.requestedHandymanId!==claim.handymanId)||person.user.userType!=="handyman"||!person.user.emailVerified||!person.user.email||!eligibleForJobInvitation(person.profile,job)){
    await db.update(jobMatchInvitations).set({emailStatus:"skipped"}).where(guard);return;
   }
   if(process.env.SASKHANDY_V2_APPOINTMENTS==="1"){

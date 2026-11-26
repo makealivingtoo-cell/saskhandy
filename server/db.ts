@@ -2,7 +2,7 @@ import "dotenv/config";
 import { randomBytes } from "crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql, { type Pool } from "mysql2/promise";
-import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql, or } from "drizzle-orm";
 import {
   bids,
   disputes,
@@ -1274,14 +1274,15 @@ export async function getJobsByHomeowner(homeownerId: number) {
   return rows.map(normalizeJob);
 }
 
-export async function getOpenJobs(limit = 20, offset = 0, category?: string) {
+export async function getOpenJobs(limit = 20, offset = 0, category?: string, professionalId?: number) {
   const db = await getDb();
 
+  const visible = professionalId ? or(isNull(jobs.requestedHandymanId),eq(jobs.requestedHandymanId,professionalId)) : isNull(jobs.requestedHandymanId);
   if (category) {
     const rows = await db
       .select()
       .from(jobs)
-      .where(and(eq(jobs.status, "open"), eq(jobs.category, category)))
+      .where(and(eq(jobs.status, "open"), eq(jobs.category, category),visible))
       .orderBy(desc(jobs.createdAt))
       .limit(limit)
       .offset(offset);
@@ -1292,7 +1293,7 @@ export async function getOpenJobs(limit = 20, offset = 0, category?: string) {
   const rows = await db
     .select()
     .from(jobs)
-    .where(eq(jobs.status, "open"))
+    .where(and(eq(jobs.status, "open"),visible))
     .orderBy(desc(jobs.createdAt))
     .limit(limit)
     .offset(offset);

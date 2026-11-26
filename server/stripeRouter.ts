@@ -104,6 +104,7 @@ export const stripeRouter = router({
         }
       }
 
+      if (bookingEnabled()) await claimBookingCheckout(job.id,ctx.user.id);
       const result = await createPaymentIntent({
         amount,
         jobId: input.jobId,

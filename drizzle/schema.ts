@@ -190,6 +190,7 @@ export const jobs = mysqlTable("jobs", {
     .default("open")
     .notNull(),
   selectedHandymanId: int("selectedHandymanId"),
+  requestedHandymanId: int("requestedHandymanId"),
   selectedBidId: int("selectedBidId"),
 
   cancelReason: varchar("cancelReason", { length: 120 }),

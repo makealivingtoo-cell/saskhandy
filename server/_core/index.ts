@@ -527,6 +527,7 @@ async function checkJobReminders() {
   try {
     const now = new Date();
 
+    await checkBookingHolds(now);
     if (isQuietHour(now)) {
       console.log("[Reminder] Skipping check during quiet hours.");
       return;
@@ -537,7 +538,6 @@ async function checkJobReminders() {
     await checkStaleOpenJobs(now);
     await checkMatchingWorkflows(now);
     await checkAppointmentReminders(now);
-    await checkBookingHolds(now);
     await checkHomeMaintenance(now);
   } catch (err: any) {
     console.error("[Reminder] Check failed:", err?.message ?? err);

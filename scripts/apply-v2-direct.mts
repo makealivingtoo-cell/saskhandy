@@ -1,0 +1,3 @@
+import "dotenv/config";import {createConnection,type RowDataPacket} from "mysql2/promise";
+if(!process.env.DATABASE_URL)throw Error("DATABASE_URL required");const db=await createConnection(process.env.DATABASE_URL);
+try{const [rows]=await db.query<RowDataPacket[]>("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='jobs' AND COLUMN_NAME='requestedHandymanId'");if(!rows.length)await db.query("ALTER TABLE jobs ADD COLUMN requestedHandymanId INT NULL DEFAULT NULL");console.log("Directed request column ready; existing requests remain public.");}finally{await db.end();}

@@ -1,3 +1,6 @@
+import {stripe,retrievePaymentIntent} from "./stripe";
+import {matchesIntent} from "../shared/paymentIntegrity";
+import {reconcilePayment} from "./paymentReconciliation";
 import {and,eq,gt,lt,lte,inArray,asc,isNull} from "drizzle-orm";
 import {z} from "zod";
 import {TRPCError} from "@trpc/server";
@@ -80,7 +83,7 @@ export const instantBookingRouter=router({
   return row?{startAt:row.slot.startAt,endAt:row.slot.endAt,holdUntil:row.slot.holdUntil,checkoutStarted:!!row.slot.checkoutStartedAt,status:row.slot.status}:null;
  }),
  cancelHold:protectedProcedure.input(z.object({jobId:id})).mutation(async({ctx,input})=>{
-  requireEnabled();if(!await cancelUnpaidHold(input.jobId,ctx.user.id))throw new TRPCError({code:"CONFLICT",message:"This reservation can no longer be cancelled automatically. If payment was started, contact support."});return {success:true};
+  requireEnabled();if(!await cancelUnpaidHold(input.jobId,ctx.user.id)&&!await reconcileExpiredBooking(input.jobId,ctx.user.id))throw new TRPCError({code:"CONFLICT",message:"If checkout started, wait until the hold expires so we can verify the payment. Processing or uncertain payments need review."});return {success:true};
  }),
 });
 export async function claimBookingCheckout(jobId:number,homeownerId:number){
@@ -91,28 +94,40 @@ export async function claimBookingCheckout(jobId:number,homeownerId:number){
   if(!bookingEnabled())return;
   const [slot]=await tx.select().from(instantSlots).where(eq(instantSlots.jobId,jobId)).for("update");
   if(!slot)return;
-  if(slot.status!=="reserved"||slot.startAt<=new Date()||(!slot.checkoutStartedAt&&(!slot.holdUntil||slot.holdUntil<=new Date())))throw unavailable();
+  if(slot.status!=="reserved"||slot.startAt<=new Date()||(!slot.holdUntil||slot.holdUntil<=new Date()))throw unavailable();
   if(!slot.checkoutStartedAt)await tx.update(instantSlots).set({checkoutStartedAt:new Date()}).where(eq(instantSlots.id,slot.id));
  });
 }
-async function cancelUnpaidHold(jobId:number,owner?:number){
+async function cancelUnpaidHold(jobId:number,owner?:number,confirmedCancelledIntent?:string){
  const db=await getDb();return db.transaction(async tx=>{
   const [job]=await tx.select().from(jobs).where(eq(jobs.id,jobId)).for("update");
   if(!job||job.status!=="awaiting_payment"||(owner!==undefined&&job.homeownerId!==owner))return false;
   const [slot]=await tx.select().from(instantSlots).where(eq(instantSlots.jobId,jobId)).for("update");
   const [payment]=await tx.select().from(payments).where(eq(payments.jobId,jobId)).for("update");
-  if(!slot||slot.status!=="reserved"||slot.checkoutStartedAt||!payment||payment.status!=="pending"||payment.stripePaymentIntentId|| (owner===undefined&&(!slot.holdUntil||slot.holdUntil>new Date())))return false;
+  if(!slot||slot.status!=="reserved"||!payment||!["pending","failed"].includes(payment.status)|| (confirmedCancelledIntent ? payment.stripePaymentIntentId!==confirmedCancelledIntent : !!slot.checkoutStartedAt||!!payment.stripePaymentIntentId)|| (owner===undefined&&(!slot.holdUntil||slot.holdUntil>new Date())))return false;
   await tx.update(instantSlots).set({status:"withdrawn"}).where(eq(instantSlots.id,slot.id));
   await tx.update(jobs).set({status:"cancelled",cancelReason:"booking_hold_cancelled",cancelledAt:new Date()}).where(eq(jobs.id,jobId));
   await tx.update(bids).set({status:"cancelled"}).where(eq(bids.jobId,jobId));
   await tx.update(payments).set({status:"failed"}).where(eq(payments.jobId,jobId));
   await tx.update(jobAppointments).set({status:"cancelled"}).where(eq(jobAppointments.jobId,jobId));
-  for(const userId of [job.homeownerId,slot.handymanId])await tx.insert(notifications).values({userId,type:"system",title:"Unpaid reservation cancelled",message:"The appointment reservation ended before checkout was started. No payment was collected.",link:userId===job.homeownerId?"/jobs/"+jobId:"/handyman/jobs/"+jobId});
+  for(const userId of [job.homeownerId,slot.handymanId])await tx.insert(notifications).values({userId,type:"system",title:"Unpaid reservation cancelled",message:"The appointment reservation ended. No payment was collected.",link:userId===job.homeownerId?"/jobs/"+jobId:"/handyman/jobs/"+jobId});
   return true;
  });
 }
+export async function reconcileExpiredBooking(jobId:number,owner?:number){
+ const db=await getDb();const [row]=await db.select({slot:instantSlots,job:jobs,payment:payments}).from(instantSlots).innerJoin(jobs,eq(jobs.id,instantSlots.jobId)).innerJoin(payments,eq(payments.jobId,jobs.id)).where(eq(jobs.id,jobId)).limit(1);
+ if(!row||row.job.status!=="awaiting_payment"||row.slot.status!=="reserved"||!row.slot.holdUntil||row.slot.holdUntil>new Date()||(owner!==undefined&&row.job.homeownerId!==owner))return false;
+ const id=row.payment.stripePaymentIntentId;if(!id)return cancelUnpaidHold(jobId,owner);
+ const intent=await retrievePaymentIntent(id);const expected={id,amount:row.payment.amount,jobId,homeownerId:row.job.homeownerId,handymanId:row.slot.handymanId};
+ if(!matchesIntent(intent,expected))return false;
+ if(intent.status==="succeeded"){await reconcilePayment(intent);return false;}
+ if(intent.status==="processing"||intent.status==="requires_capture")return false;
+ const cancelled=intent.status==="canceled"?intent:await stripe.paymentIntents.cancel(id,{}, {idempotencyKey:"booking-expiry-"+id});
+ if(cancelled.status!=="canceled"||!matchesIntent(cancelled,expected)||cancelled.amount_received!==0)return false;
+ return cancelUnpaidHold(jobId,owner,id);
+}
 export async function checkBookingHolds(now:Date){
  if(!bookingEnabled())return;const db=await getDb();
- const rows=await db.select({jobId:instantSlots.jobId}).from(instantSlots).where(and(eq(instantSlots.status,"reserved"),isNull(instantSlots.checkoutStartedAt),lte(instantSlots.holdUntil,now))).limit(50);
- for(const row of rows)if(row.jobId)try{await cancelUnpaidHold(row.jobId);}catch(e){console.error("[Booking] hold cleanup failed",row.jobId,e);}
+ const rows=await db.select({jobId:instantSlots.jobId}).from(instantSlots).where(and(eq(instantSlots.status,"reserved"),lte(instantSlots.holdUntil,now))).limit(50);
+ for(const row of rows)if(row.jobId)try{await reconcileExpiredBooking(row.jobId);}catch(e){console.error("[Booking] hold cleanup failed",row.jobId,e);}
 }

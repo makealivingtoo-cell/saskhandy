@@ -133,7 +133,9 @@ export default function PostJob() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [requestedHandymanId,setRequestedHandymanId]=useState<number|null>(()=>{const v=new URLSearchParams(window.location.search).get("professional");return v&&/^\d+$/.test(v)?Number(v):null;});
   const [location, setLocation] = useState("");
+  const guide=trpc.jobs.priceGuidance.useQuery({category:category as Parameters<typeof trpc.jobs.priceGuidance.useQuery>[0]["category"],location},{enabled:!!user&&!!category&&/saskatoon/i.test(location),retry:false});
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [timingPreference, setTimingPreference] = useState<JobTimingPreference | "">("");
@@ -491,6 +493,7 @@ export default function PostJob() {
         category,
         location: location.trim(),
         photos: uploadedPhotoUrls,
+        ...(requestedHandymanId?{requestedHandymanId}:{}),
         ...budget,
         timingPreference: timingPreference || null,
         preferredStartDate: timingPreference === "date_range" ? preferredStartDate : null,
@@ -530,6 +533,7 @@ export default function PostJob() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-serif text-foreground">Request help</h1>
+          {requestedHandymanId&&<div className="mt-2 rounded-xl border p-3 text-sm">Private request: only your selected professional will receive this opportunity. <Button type="button" variant="outline" size="sm" onClick={()=>setRequestedHandymanId(null)}>Request public quotes instead</Button></div>}
           <p className="mt-1 text-sm text-muted-foreground">
             Tell us what you need. You can review everything before it goes live.
           </p>
@@ -906,6 +910,7 @@ export default function PostJob() {
 
                 <div className="space-y-2">
                   <Label>Do you have a budget in mind? (Optional)</Label>
+                  {guide.data&&<p className="rounded-lg bg-muted/40 p-3 text-sm">Past Saskatoon jobs in this category: ${guide.data.low}–${guide.data.high} CAD (middle half of {guide.data.sample} completed jobs in the past year, rounded). Scope and materials vary; this is not your quote.</p>}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
