@@ -28,7 +28,7 @@ try{
    let errors=[];page.on("pageerror",e=>errors.push(e.message));
    for(const [path,marker] of paths){
     errors=[];const key=label+"-"+role+"-"+(path==="/"?"home":path.slice(1).replaceAll("/","-"));let status,problem=null,overflow=0;
-    try{const response=await page.goto(origin+path,{waitUntil:"domcontentloaded",timeout:20000});status=response?.status();assert.equal(status,200);await page.getByText(marker,{exact:false}).first().waitFor({state:"visible",timeout:15000});await page.waitForTimeout(300);assert.equal(new URL(page.url()).pathname,path,"unexpected redirect");overflow=await page.evaluate(()=>Math.max(0,document.documentElement.scrollWidth-innerWidth));if(errors.length)throw Error(errors.join("; "));}catch(e){problem=String(e);}
+    try{const response=await page.goto(origin+path,{waitUntil:"domcontentloaded",timeout:20000});status=response?.status();assert.equal(status,200);await page.getByText(marker,{exact:false}).filter({visible:true}).first().waitFor({state:"visible",timeout:15000});await page.waitForTimeout(300);assert.equal(new URL(page.url()).pathname,path,"unexpected redirect");overflow=await page.evaluate(()=>Math.max(0,document.documentElement.scrollWidth-innerWidth));if(errors.length)throw Error(errors.join("; "));}catch(e){problem=String(e);}
     await page.screenshot({path:output+"/"+key+".png",fullPage:true,timeout:15000}).catch(()=>{});
     report.push({viewport:label,role,path,status,overflow,problem});
    }

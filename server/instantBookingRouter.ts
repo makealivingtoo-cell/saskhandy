@@ -7,7 +7,7 @@ import {instantSlots,users,handymanProfiles,professionalAvailability,jobAppointm
 import {BOOKABLE_SERVICES,bookingEnabled,validSlotPrice,splitPrice,priceRange} from "../shared/instantBooking";
 import {validAppointmentWindow} from "../shared/appointmentPolicy";
 import {eligibleForJobInvitation} from "../shared/jobMatching";
-const service=z.enum(["assembly","yard","cleaning"]);
+const service=z.enum(Object.keys(BOOKABLE_SERVICES) as [keyof typeof BOOKABLE_SERVICES,...(keyof typeof BOOKABLE_SERVICES)[]]);
 const id=z.number().int().positive();
 type Tx=Parameters<Parameters<Awaited<ReturnType<typeof getDb>>["transaction"]>[0]>[0];
 const unavailable=()=>new TRPCError({code:"CONFLICT",message:"That time is no longer available. Choose another appointment."});
@@ -27,7 +27,7 @@ export const instantBookingRouter=router({
   if(!bookingEnabled())return {enabled:false,slots:[],guidance:[]};
   const db=await getDb(),now=new Date(Date.now()+3600000);
   const rows=await db.select({slot:instantSlots,profile:handymanProfiles,user:users,availability:professionalAvailability}).from(instantSlots).innerJoin(users,eq(users.id,instantSlots.handymanId)).innerJoin(handymanProfiles,eq(handymanProfiles.userId,users.id)).leftJoin(professionalAvailability,eq(professionalAvailability.handymanId,users.id)).where(and(eq(instantSlots.status,"available"),gt(instantSlots.startAt,now),eq(users.userType,"handyman"),eq(users.emailVerified,true))).orderBy(asc(instantSlots.startAt)).limit(100);
-  const slots=rows.filter(({slot,profile,user,availability})=>slot.service in BOOKABLE_SERVICES&&!!user.name&&!!profile.profileImageUrl&&!!profile.bio&&profile.bio.trim().length>=25&&availability?.acceptingJobs!==false&&eligibleForJobInvitation(profile,{category:BOOKABLE_SERVICES[slot.service as keyof typeof BOOKABLE_SERVICES].category,location:"Saskatoon"})).map(({slot,user})=>({id:slot.id,handymanId:slot.handymanId,name:user.name,service:slot.service,scope:slot.scope,price:slot.price,startAt:slot.startAt,endAt:slot.endAt}));
+  const slots=rows.filter(({slot,profile,user,availability})=>Object.hasOwn(BOOKABLE_SERVICES,slot.service)&&!!user.name&&!!profile.profileImageUrl&&!!profile.bio&&profile.bio.trim().length>=25&&availability?.acceptingJobs!==false&&eligibleForJobInvitation(profile,{category:BOOKABLE_SERVICES[slot.service as keyof typeof BOOKABLE_SERVICES].category,location:"Saskatoon"})).map(({slot,user})=>({id:slot.id,handymanId:slot.handymanId,name:user.name,service:slot.service,scope:slot.scope,price:slot.price,startAt:slot.startAt,endAt:slot.endAt}));
   // Public guidance is a range of real listed offers, not a prediction for an unknown job.
   return {enabled:true,slots,guidance:Object.keys(BOOKABLE_SERVICES).map(key=>({service:key,range:priceRange(slots.filter(s=>s.service===key))}))};
  }),
@@ -55,7 +55,7 @@ export const instantBookingRouter=router({
   requireEnabled();if(ctx.user.userType!=="homeowner"||!ctx.user.emailVerified)throw new TRPCError({code:"FORBIDDEN",message:"Verify your homeowner account before booking."});
   const db=await getDb();return db.transaction(async tx=>{
    const [initial]=await tx.select().from(instantSlots).where(eq(instantSlots.id,input.id)).limit(1);
-   if(!initial||!(initial.service in BOOKABLE_SERVICES))throw unavailable();
+   if(!initial||!Object.hasOwn(BOOKABLE_SERVICES,initial.service))throw unavailable();
    const key=initial.service as keyof typeof BOOKABLE_SERVICES;
    if(!await eligible(tx,initial.handymanId,key))throw unavailable();
    const [slot]=await tx.select().from(instantSlots).where(eq(instantSlots.id,input.id)).for("update");

@@ -1565,6 +1565,7 @@ const jobsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
+      if(input.status!=="completed")throw new TRPCError({code:"BAD_REQUEST",message:"Use the appropriate job, payment or resolution action to change status."});
       if (input.status === "completed") {
         if (job.status !== "in_progress") {
           throw new TRPCError({
@@ -2917,11 +2918,10 @@ const disputesRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
 
-      await resolveDispute(input.disputeId, input.resolution, input.adminNotes);
-
       const allDisputes = await getAllDisputes();
       const dispute = allDisputes.find((d) => d.id === input.disputeId);
 
+      if(!dispute||dispute.status!=="open")throw new TRPCError({code:"CONFLICT",message:"Only an open dispute can be resolved."});
       if (dispute) {
         const job = await getJobById(dispute.jobId);
 
@@ -2943,6 +2943,7 @@ const disputesRouter = router({
               });
 
               await updateJobStatus(job.id, "completed");
+              await resolveDispute(input.disputeId,input.resolution,input.adminNotes);
 
               await notifyUser({
                 userId: job.selectedHandymanId,
@@ -2989,19 +2990,13 @@ const disputesRouter = router({
                 );
               }
             } else {
-              if (payment.stripePaymentIntentId) {
-                try {
-                  await stripe.refunds.create({
-                    payment_intent: payment.stripePaymentIntentId,
-                    reason: "requested_by_customer",
-                  });
-                } catch (err: any) {
-                  console.error(`[Dispute] Stripe refund failed: ${err.message}`);
-                }
-              }
+              if (!payment.stripePaymentIntentId||payment.status==="completed"||payment.stripeTransferId||payment.stripeTransferStatus!=="not_started")throw new TRPCError({code:"CONFLICT",message:"Payment has been released or cannot be verified. Manual reconciliation is required."});
+              const refund=await stripe.refunds.create({payment_intent:payment.stripePaymentIntentId,amount:Math.round(Number(payment.amount)*100),reason:"requested_by_customer"},{idempotencyKey:"dispute-refund-"+dispute.id+"-"+payment.id});
+              if(refund.status!=="succeeded")throw new TRPCError({code:"CONFLICT",message:"Stripe has not confirmed the refund. The dispute remains open."});
 
               await updatePayment(payment.id, { status: "refunded" });
               await updateJobStatus(job.id, "cancelled");
+              await resolveDispute(input.disputeId,input.resolution,input.adminNotes);
 
               await notifyUser({
                 userId: job.homeownerId,

@@ -1,3 +1,4 @@
+import PhotoDescription from "@/components/PhotoDescription";
 import VoiceDescription from "@/components/VoiceDescription";
 import { readRequestStart, clearRequestStart } from "@/lib/requestDraft";
 import { readJobBudget, formatJobBudget } from "@shared/jobBudget";
@@ -608,6 +609,7 @@ export default function PostJob() {
               />
             </div>
 
+            <PhotoDescription context={roughIdea} onUse={text=>setRoughIdea(old=>(old.trim()?old.trim()+"\n"+text:text).slice(0,10000))}/>
             <div className="mt-3 flex flex-wrap gap-2">
               {jobExamples.map((example) => (
                 <button
@@ -676,7 +678,8 @@ export default function PostJob() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       Add any answers that matter to the description. You can skip what you don’t know.
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <PhotoDescription context={roughIdea} onUse={text=>setRoughIdea(old=>(old.trim()?old.trim()+"\n"+text:text).slice(0,10000))}/>
+            <div className="mt-3 flex flex-wrap gap-2">
                       {followUpQuestions.map((question) => (
                         <span
                           key={question}

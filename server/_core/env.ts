@@ -11,4 +11,5 @@ export const ENV = {
   groqApiKey: process.env.GROQ_API_KEY ?? "",
   groqBaseUrl: process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1",
   groqModel: process.env.GROQ_MODEL ?? "llama-3.1-8b-instant",
+  groqVisionModel: process.env.GROQ_VISION_MODEL ?? "",
 };
