@@ -1,3 +1,4 @@
+import JobAppointment from "@/components/JobAppointment";
 import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { StripePaymentModal } from "@/components/StripePaymentModal";
@@ -806,6 +807,7 @@ export default function JobDetails() {
           </div>
         </div>
 
+        {isOwner && user && job.status==="in_progress" && <JobAppointment jobId={jobId} userId={user.id}/>}
         {acceptedBid && job.status !== "cancelled" && (
           <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
             <div className="flex items-center justify-between gap-3 mb-4">

@@ -1,3 +1,4 @@
+import AppointmentSchedule from "@/components/AppointmentSchedule";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { StarRatingDisplay } from "@/components/StarRating";
@@ -537,6 +538,7 @@ export default function HandymanDashboard() {
   return (
     <AppLayout>
       <div className="mx-auto max-w-6xl space-y-5">
+        <AppointmentSchedule professional />
         {/* Header */}
         <div className="bg-white rounded-2xl border border-border/60 p-6">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">

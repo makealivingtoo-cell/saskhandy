@@ -17,7 +17,8 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "db:referral-workflow": "tsx scripts/apply-referral-workflow.mts",
     "db:v2-budget": "tsx scripts/apply-v2-budget.mts",
-    "db:v2-matching": "tsx scripts/apply-v2-matching.mts"
+    "db:v2-matching": "tsx scripts/apply-v2-matching.mts",
+    "db:v2-appointments": "tsx scripts/apply-v2-appointments.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

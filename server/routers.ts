@@ -1,3 +1,4 @@
+import { appointmentRouter } from "./appointmentRouter";
 import { matchingEnabled, getMatchingStatus, getMatchingHealth } from "./jobMatchingWorker";
 import { validJobBudget } from "../shared/jobBudget";
 import { eligibleForJobInvitation } from "../shared/jobMatching";
@@ -4187,6 +4188,7 @@ export const appRouter = router({
   auth: authRouter,
   handymanProfiles: handymanProfilesRouter,
   jobs: jobsRouter,
+  appointments: appointmentRouter,
   referralJobs: referralJobsRouter,
   quotes: quotesRouter,
   workReviews: workReviewsRouter,

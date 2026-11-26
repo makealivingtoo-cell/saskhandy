@@ -1,3 +1,4 @@
+import AppointmentSchedule from "@/components/AppointmentSchedule";
 import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
@@ -306,9 +307,10 @@ export default function HomeownerDashboard() {
               <StatCard label="Total Jobs" value={jobs?.length ?? 0} icon={Briefcase} color="bg-purple-50 text-purple-600" />
             </div>
 
+            <AppointmentSchedule />
             <div className="space-y-3">
               <div>
-                <h2 className="text-base font-semibold text-foreground">Your Jobs</h2>
+                <h2 className="text-base font-semibold text-foreground">Your jobs</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Open jobs are visible to handymen. Review quotes when they come in.
                 </p>

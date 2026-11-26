@@ -580,3 +580,26 @@ export const jobMatchInvitations = mysqlTable("job_match_invitations", {
   nextAttemptAt: timestamp("nextAttemptAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 },t=>[uniqueIndex("job_match_unique_invite").on(t.jobId,t.handymanId),index("job_match_email_due_idx").on(t.emailStatus,t.nextAttemptAt)]);
+
+// An appointment is separate from job and payment state. A reschedule proposal
+// never removes the previously confirmed slot until both parties agree.
+export const jobAppointments = mysqlTable("job_appointments",{
+  jobId:int("jobId").primaryKey(),
+  homeownerId:int("homeownerId").notNull(),
+  handymanId:int("handymanId").notNull(),
+  status:mysqlEnum("status",["pending","confirmed","cancelled"]).default("pending").notNull(),
+  startAt:timestamp("startAt"),
+  endAt:timestamp("endAt"),
+  proposedStartAt:timestamp("proposedStartAt"),
+  proposedEndAt:timestamp("proposedEndAt"),
+  proposedBy:int("proposedBy"),
+  version:int("version").default(1).notNull(),
+  reminderSentAt:timestamp("reminderSentAt"),
+  createdAt:timestamp("createdAt").defaultNow().notNull(),
+  updatedAt:timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+},t=>[index("appointment_pro_schedule").on(t.handymanId,t.status,t.startAt),index("appointment_home_schedule").on(t.homeownerId,t.status,t.startAt)]);
+export const professionalAvailability = mysqlTable("professional_availability",{
+  handymanId:int("handymanId").primaryKey(),
+  acceptingJobs:boolean("acceptingJobs").default(true).notNull(),
+  updatedAt:timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
