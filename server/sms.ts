@@ -114,7 +114,7 @@ export async function sendNewBidSms(params: {
   await sendTransactionalSms({
     label: "new bid SMS",
     user: params.user,
-    body: `SaskHandy: You received a new bid for "${params.jobTitle}". Review it here: ${getAppUrl(
+    body: `SaskHandy: You have a new quote for "${params.jobTitle}". Review it here: ${getAppUrl(
       `/jobs/${params.jobId}`
     )}`,
   });

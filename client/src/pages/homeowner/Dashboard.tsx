@@ -111,7 +111,7 @@ export default function HomeownerDashboard() {
   const handleShare = async () => {
     const shareData = {
       title: "SaskHandy",
-      text: "Need help with a small home job? Post it on SaskHandy and get bids from local handymen.",
+      text: "Need help with a small home job? Post it on SaskHandy and get quotes from local professionals.",
       url: "https://saskhandy.com",
     };
 
@@ -229,7 +229,7 @@ export default function HomeownerDashboard() {
                         },
                         {
                           icon: Briefcase,
-                          title: "Compare local bids",
+                          title: "Compare local quotes",
                           text: "Review price, profile, availability and messages.",
                         },
                         {
@@ -268,7 +268,7 @@ export default function HomeownerDashboard() {
                 },
                 {
                   icon: Briefcase,
-                  title: "2. Compare bids",
+                  title: "2. Compare quotes",
                   text: "Review price, profile, trust signals, availability and messages in one place.",
                 },
                 {
@@ -310,7 +310,7 @@ export default function HomeownerDashboard() {
               <div>
                 <h2 className="text-base font-semibold text-foreground">Your Jobs</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Open jobs are visible to handymen. Review bids when they come in.
+                  Open jobs are visible to handymen. Review quotes when they come in.
                 </p>
               </div>
 

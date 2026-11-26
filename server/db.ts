@@ -9,6 +9,7 @@ import {
   emailVerificationTokens,
   handymanProfiles,
   jobs,
+  jobMatchRuns,
   messages,
   notifications,
   passwordResetTokens,
@@ -1245,13 +1246,15 @@ export async function expireExpiredQuotesForHandyman(handymanId: number) {
 }
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
-export async function createJob(data: Omit<InsertJob, "photos"> & { photos?: string[] | null }) {
+export async function createJob(data: Omit<InsertJob, "photos"> & { photos?: string[] | null }, queueMatching = false) {
   const db = await getDb();
-  const result = await db.insert(jobs).values({
-    ...data,
-    photos: stringifyPhotos(data.photos),
+  return db.transaction(async tx=>{
+    const [result] = await tx.insert(jobs).values({...data,photos:stringifyPhotos(data.photos)});
+    const id=Number(result.insertId);
+    if(!Number.isSafeInteger(id)||id<=0)throw new Error("Job was not saved.");
+    if(queueMatching) await tx.insert(jobMatchRuns).values({jobId:id});
+    return id;
   });
-  return Number((result as any).insertId);
 }
 
 export async function getJobById(id: number) {

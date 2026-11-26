@@ -1,3 +1,4 @@
+import { checkMatchingWorkflows } from "../jobMatchingWorker";
 import "dotenv/config";
 
 // SaskHandy reminder windows use Saskatchewan local time, regardless of server timezone.
@@ -715,6 +716,7 @@ async function checkJobReminders() {
     await checkOpenJobBidReminders(now);
     await checkPaymentReminders(now);
     await checkStaleOpenJobs(now);
+    await checkMatchingWorkflows(now);
   } catch (err: any) {
     console.error("[Reminder] Check failed:", err?.message ?? err);
   } finally {

@@ -246,13 +246,13 @@ export async function sendNewBidEmail(params: {
 
   await sendActionEmail({
     to: params.to,
-    subject: `New bid received for "${params.jobTitle}"`,
-    heading: "You received a new bid",
+    subject: `New quote for "${params.jobTitle}"`,
+    heading: "You have a new quote",
     intro: params.homeownerName ? `Hi ${params.homeownerName},` : undefined,
-    body: `${params.handymanName ?? "A handyman"} placed a bid of $${params.bidAmount.toFixed(
+    body: `${params.handymanName ?? "A handyman"} sent a quote of $${params.bidAmount.toFixed(
       2
-    )} on "${params.jobTitle}". Review the bid and decide whether you want to accept it.`,
-    ctaLabel: "Review Bid",
+    )} on "${params.jobTitle}". Review the quote and choose when you’re ready.`,
+    ctaLabel: "Review quote",
     ctaUrl,
   });
 }
@@ -268,10 +268,10 @@ export async function sendBidAcceptedEmail(params: {
 
   await sendActionEmail({
     to: params.to,
-    subject: `Your bid was accepted for "${params.jobTitle}"`,
-    heading: "Your bid was accepted",
+    subject: `Your quote was accepted for "${params.jobTitle}"`,
+    heading: "Your quote was accepted",
     intro: params.handymanName ? `Hi ${params.handymanName},` : undefined,
-    body: `Your bid of $${params.bidAmount.toFixed(
+    body: `Your quote of $${params.bidAmount.toFixed(
       2
     )} for "${params.jobTitle}" was accepted. The job will move forward once the homeowner completes payment.`,
     ctaLabel: "View Dashboard",
@@ -504,7 +504,7 @@ export async function sendNewJobPostedEmail(params: {
   timing?: string | null;
   jobId?: number;
 }) {
-  const ctaUrl = params.jobId ? `${APP_URL}/jobs/${params.jobId}` : `${APP_URL}/jobs`;
+  const ctaUrl = params.jobId ? `${APP_URL}/handyman/jobs/${params.jobId}` : `${APP_URL}/handyman/browse`;
   const timingLine = params.timing ? `Requested timing: ${params.timing}\n\n` : "";
 
   await sendActionEmail({
@@ -512,7 +512,7 @@ export async function sendNewJobPostedEmail(params: {
     subject: `New ${params.category} job posted: "${params.jobTitle}"`,
     heading: "A new job matches your services",
     intro: params.handymanName ? `Hi ${params.handymanName},` : undefined,
-    body: `A new job in ${params.location} was posted in the "${params.category}" category.\n\nJob: ${params.jobTitle}\n\n${timingLine}Open the job to review the details and submit a bid if it is a good fit.`,
+    body: `A new job in ${params.location} was posted in the "${params.category}" category.\n\nJob: ${params.jobTitle}\n\n${timingLine}Open the job to review the details and send a quote if it is a good fit.`,
     ctaLabel: "View Job",
     ctaUrl,
   });

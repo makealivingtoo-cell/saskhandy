@@ -39,6 +39,11 @@ jobs:
           pnpm db:v2-budget
           pnpm db:v2-budget
           node --input-type=module -e 'import mysql from "mysql2/promise"; import assert from "node:assert/strict"; const db=await mysql.createConnection(process.env.DATABASE_URL); await db.query("INSERT INTO jobs VALUES (2,NULL,NULL)"); const [rows]=await db.query("SELECT * FROM jobs ORDER BY id"); assert.equal(rows[0].budgetMin,"50.00"); assert.equal(rows[0].budgetMax,"150.00"); assert.equal(rows[1].budgetMin,null); await db.query("DROP TABLE jobs"); await db.end()'
+      - run: pnpm db:v2-matching
+      - run: pnpm db:v2-matching
+      - name: Check invitation uniqueness and preserved runs
+        run: |
+          node --input-type=module -e 'import mysql from "mysql2/promise"; import assert from "node:assert/strict"; const db=await mysql.createConnection(process.env.DATABASE_URL); await db.query("INSERT INTO job_match_runs (jobId) VALUES (1)"); await db.query("INSERT INTO job_match_invitations (jobId,handymanId) VALUES (1,2)"); await assert.rejects(db.query("INSERT INTO job_match_invitations (jobId,handymanId) VALUES (1,2)")); await db.end()'
       - run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
       - run: pnpm test
       - run: pnpm check

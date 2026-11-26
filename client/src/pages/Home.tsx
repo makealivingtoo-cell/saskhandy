@@ -7,6 +7,7 @@ import {
   Hammer,
   MapPin,
   ShieldCheck,
+  Star,
   UserCheck,
   Wrench,
 } from "lucide-react";
@@ -537,7 +538,7 @@ export default function HomePage() {
                   variant="outline"
                   className="rounded-full border-white/30 bg-transparent px-8 text-base text-white hover:bg-white/10"
                 >
-                  <Link href="/sign-up">Join as a professional</Link>
+                  <Link href="/sign-up?role=handyman">Join as a professional</Link>
                 </Button>
               </div>
             </div>

@@ -31,13 +31,13 @@ type HandymanSkill = (typeof HANDYMAN_SKILLS)[number];
 
 
 export default function SignUp() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const [, navigate] = useLocation();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [userType, setUserType] = useState<UserType>(() => new URLSearchParams(window.location.search).get("role") === "handyman" ? "handyman" : "homeowner");
+  const [userType, setUserType] = useState<UserType>(() => new URLSearchParams(typeof window === "undefined" ? "" : window.location.search).get("role") === "handyman" ? "handyman" : "homeowner");
   const [selectedSkills, setSelectedSkills] = useState<HandymanSkill[]>([]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,9 +53,12 @@ export default function SignUp() {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate(readRequestStart() !== null ? "/post-job" : "/dashboard");
+      if (user?.role === "admin") { clearRequestStart(); navigate("/admin"); }
+      else if (user?.userType === "handyman") { clearRequestStart(); navigate("/handyman/dashboard"); }
+      else if (user?.userType === "homeowner") navigate(readRequestStart() !== null ? "/post-job" : "/dashboard");
+      else navigate("/role-select");
     }
-  }, [loading, isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, user, navigate]);
 
   const toggleSkill = (skill: HandymanSkill) => {
     setSelectedSkills((prev) =>

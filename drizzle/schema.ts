@@ -3,6 +3,8 @@ import {
   date,
   decimal,
   int,
+  index,
+  uniqueIndex,
   mysqlEnum,
   mysqlTable,
   text,
@@ -560,3 +562,21 @@ export type InsertSupportTicket = typeof supportTickets.$inferInsert;
 
 export type SupportTicketMessage = typeof supportTicketMessages.$inferSelect;
 export type InsertSupportTicketMessage = typeof supportTicketMessages.$inferInsert;
+
+// V2 matching is opt-in at runtime; these tables do not alter historical job data.
+export const jobMatchRuns = mysqlTable("job_match_runs", {
+  jobId: int("jobId").primaryKey(),
+  wave: int("wave").default(0).notNull(),
+  status: mysqlEnum("status",["searching","quote_received","no_quote","closed"]).default("searching").notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  nextRunAt: timestamp("nextRunAt").defaultNow().notNull(),
+}, t=>[index("job_match_due_idx").on(t.status,t.nextRunAt)]);
+export const jobMatchInvitations = mysqlTable("job_match_invitations", {
+  id: int("id").autoincrement().primaryKey(),
+  jobId: int("jobId").notNull(),
+  handymanId: int("handymanId").notNull(),
+  emailStatus: mysqlEnum("emailStatus",["pending","sending","sent","failed","skipped"]).default("pending").notNull(),
+  attempts: int("attempts").default(0).notNull(),
+  nextAttemptAt: timestamp("nextAttemptAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+},t=>[uniqueIndex("job_match_unique_invite").on(t.jobId,t.handymanId),index("job_match_email_due_idx").on(t.emailStatus,t.nextAttemptAt)]);

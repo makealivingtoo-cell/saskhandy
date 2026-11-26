@@ -29,6 +29,8 @@ export default function SupportPage() {
     refetchInterval: 10000,
   });
 
+  const [search, setSearch] = useState("");
+  const visibleFaqs=faqs.filter(faq=>(faq.title+" "+faq.answer).toLowerCase().includes(search.trim().toLowerCase()));
   const [subject, setSubject] = useState("");
   const [category, setCategory] = useState<SupportCategory>("general");
   const [content, setContent] = useState("");
@@ -47,7 +49,7 @@ export default function SupportPage() {
   return (
     <AppLayout title="Support">
       <div className="max-w-3xl mx-auto space-y-6">
-        <AIChatBox />
+        <div><h1 className="text-2xl font-semibold tracking-tight">How can we help?</h1><p className="mt-1 text-sm text-muted-foreground">Find an answer, manage a job or contact us if you need more help.</p></div>
 
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -56,7 +58,9 @@ export default function SupportPage() {
           </div>
 
           <div className="space-y-3">
-            {faqs.map((faq) => (
+            <label className="block text-sm font-medium">Search help<input type="search" className="mt-2 w-full rounded-lg border border-input px-3 py-2 text-base" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search payments, jobs, quotes..." /></label>
+            {visibleFaqs.length===0 && <p className="text-sm text-muted-foreground">No matching answers. Try another search or contact support below.</p>}
+            {visibleFaqs.map((faq) => (
               <div key={faq.id} className="rounded-xl border border-border/60 p-4">
                 <p className="text-sm font-medium text-foreground mb-1">{faq.title}</p>
                 <p className="text-sm text-muted-foreground">{faq.answer}</p>
@@ -65,6 +69,7 @@ export default function SupportPage() {
           </div>
         </div>
 
+        <AIChatBox />
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 space-y-4">
           <h2 className="font-semibold text-foreground">Still need help?</h2>
 

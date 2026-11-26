@@ -154,7 +154,7 @@ export default function PostJob() {
   useEffect(() => {
     try {
       const started = readRequestStart();
-      if (started !== null) { setRoughIdea(started); clearRequestStart(); setDraftHydrated(true); return; }
+      if (started !== null) { setRoughIdea(started); setDraftHydrated(true); return; }
       const idea = new URLSearchParams(window.location.search).get("idea");
       if (idea) {
         setRoughIdea(`I need help with ${idea.toLowerCase()} at my home.`);
@@ -200,6 +200,7 @@ export default function PostJob() {
 
   useEffect(() => {
     if (!draftHydrated) return;
+    clearRequestStart();
 
     const hasDraft =
       roughIdea.trim() ||

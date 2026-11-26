@@ -1,3 +1,4 @@
+import { matchingEnabled, getMatchingStatus, getMatchingHealth } from "./jobMatchingWorker";
 import { validJobBudget } from "../shared/jobBudget";
 import { eligibleForJobInvitation } from "../shared/jobMatching";
 import { TRPCError } from "@trpc/server";
@@ -1268,6 +1269,11 @@ const handymanProfilesRouter = router({
 });
 
 const jobsRouter = router({
+  matchingStatus: protectedProcedure.input(z.object({jobId:z.number().int().positive()})).query(async ({ctx,input})=>{
+    const job=await getJobById(input.jobId);
+    if(!job|| (job.homeownerId!==ctx.user.id&&ctx.user.role!=="admin"))throw new TRPCError({code:"NOT_FOUND"});
+    return matchingEnabled()?getMatchingStatus(input.jobId):null;
+  }),
   create: protectedProcedure
     .input(
       z.object({
@@ -1290,6 +1296,7 @@ const jobsRouter = router({
 
       const expiresAt = getFreshJobExpiryDate();
 
+      const queueMatching = matchingEnabled();
       const jobId = await createJob({
         homeownerId: ctx.user.id,
         title: input.title,
@@ -1303,7 +1310,9 @@ const jobsRouter = router({
         preferredStartDate: input.timingPreference === "date_range" ? input.preferredStartDate ?? null : null,
         preferredEndDate: input.timingPreference === "date_range" ? input.preferredEndDate ?? null : null,
         expiresAt,
-      });
+      }, queueMatching);
+
+      if (queueMatching) return { jobId };
 
       const timingLabel = formatJobTiming(
         input.timingPreference,
@@ -2369,8 +2378,8 @@ const bidsRouter = router({
       await notifyUser({
         userId: job.homeownerId,
         type: "new_bid",
-        title: "New bid received",
-        message: `${ctx.user.name ?? "A handyman"} placed a bid on "${job.title}".`,
+        title: "You have a new quote",
+        message: `${ctx.user.name ?? "A handyman"} sent a quote for "${job.title}".`,
         link: `/jobs/${job.id}`,
       });
 
@@ -3464,6 +3473,10 @@ const notificationsRouter = router({
 });
 
 const adminRouter = router({
+  matchingHealth: protectedProcedure.query(async ({ctx})=>{
+    if(ctx.user.role!=="admin")throw new TRPCError({code:"FORBIDDEN"});
+    return matchingEnabled()?getMatchingHealth():null;
+  }),
   getReferralJobs: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     return getAllReferralJobsForAdmin();

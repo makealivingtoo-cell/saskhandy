@@ -406,7 +406,7 @@ function BidChatDrawer({
           <div className="px-4 py-3 border-b border-border/60 bg-muted/20">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Bid amount</p>
+                <p className="text-xs text-muted-foreground">Quote amount</p>
                 <p className="text-2xl font-bold text-foreground">
                   ${bid.bidAmount}
                 </p>
@@ -527,6 +527,8 @@ export default function JobDetails() {
     { enabled: !!jobId },
   );
 
+  const matching = trpc.jobs.matchingStatus.useQuery({jobId},{enabled:!!jobId&&job?.homeownerId===user?.id&&job?.status==="open",refetchInterval:60000,retry:false});
+
   const { data: bids, isLoading: bidsLoading } = trpc.bids.getForJob.useQuery(
     { jobId },
     { enabled: !!jobId },
@@ -572,7 +574,7 @@ export default function JobDetails() {
 
   const rejectBid = trpc.bids.reject.useMutation({
     onSuccess: async () => {
-      toast.success("Bid rejected.");
+      toast.success("Quote declined.");
       setSelectedBidId(null);
       await utils.bids.getForJob.invalidate({ jobId });
     },
@@ -603,7 +605,7 @@ export default function JobDetails() {
 
   const createDispute = trpc.disputes.create.useMutation({
     onSuccess: async () => {
-      toast.success("Dispute opened.");
+      toast.success("Your problem has been reported.");
       setShowDisputeForm(false);
       await utils.jobs.getById.invalidate({ jobId });
       await utils.disputes.getByJob.invalidate({ jobId });
@@ -1536,15 +1538,16 @@ export default function JobDetails() {
 
         {job.status === "open" && (
           <div>
+            {matching.data && <section className="mb-5 rounded-2xl border border-border/60 bg-white p-5"><h2 className="font-semibold text-foreground">Request progress</h2><p className="mt-2 text-sm text-muted-foreground">{matching.data.status==="quote_received"||pendingBids.length>0?"A quote is ready for you to review.":matching.data.status==="no_quote"?"No quote has arrived yet. Your job is still open. You can update or cancel your request.":matching.data.status==="searching"?(matching.data.invited>0?"We have notified suitable professionals. You’ll see quotes here when they respond.":"Your request is queued for matching."):"Matching has ended for this request."}</p><p className="mt-2 text-sm font-medium">{matching.data.invited} professional{matching.data.invited===1?"":"s"} notified in SaskHandy</p></section>}
             <div className="flex items-start justify-between gap-4 mb-3">
               <div>
                 <h2 className="text-base font-semibold text-foreground">
-                  Bids ({pendingBids.length})
+                  Quotes ({pendingBids.length})
                 </h2>
 
                 {pendingBids.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Open a bid to chat with the handyman, ask questions, and
+                    Open a quote to chat with the professional, ask questions, and
                     decide whether to accept.
                   </p>
                 )}
@@ -1557,7 +1560,7 @@ export default function JobDetails() {
                   <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      Choosing a bid
+                      Choosing a quote
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       You can chat with a handyman before choosing. Review their
@@ -1580,7 +1583,7 @@ export default function JobDetails() {
                 <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
 
                 <h3 className="font-semibold text-foreground mb-2">
-                  No bids yet
+                  No quotes yet
                 </h3>
 
                 <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
@@ -1593,7 +1596,7 @@ export default function JobDetails() {
                   <Button asChild variant="outline" size="sm" className="mt-5">
                     <Link href={`/jobs/${jobId}/edit`}>
                       <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                      Improve Job Post
+                      Update request
                     </Link>
                   </Button>
                 )}

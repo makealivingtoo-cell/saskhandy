@@ -46,6 +46,7 @@ function parseCategories(categories?: string | null): string[] {
 
 export default function AdminPanel() {
   const { user, isAuthenticated } = useAuth();
+  const matchHealth=trpc.admin.matchingHealth.useQuery(undefined,{enabled:isAuthenticated&&user?.role==="admin",refetchInterval:60000,retry:false});
 
   const { data: stats, refetch: refetchStats } = trpc.admin.getStats.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
@@ -444,6 +445,7 @@ export default function AdminPanel() {
           ))}
         </div>
 
+        <section className="bg-white rounded-xl border border-border/60 p-5"><h2 className="font-semibold">Matching operations</h2>{matchHealth.isError?<p className="mt-2 text-sm text-destructive">Matching health could not be loaded. Check the system before assuming workflows are running.</p>:matchHealth.isLoading?<p className="mt-2 text-sm text-muted-foreground">Checking matching workflows…</p>:matchHealth.data?<div className="mt-3 space-y-3 text-sm"><p>Overdue matching runs: {matchHealth.data.overdue}</p><p>Failed invitation emails: {matchHealth.data.failedEmails}</p><p>Open jobs without a quote after matching: {matchHealth.data.unmatched.length}{matchHealth.data.unmatched.length===50?"+":""}</p>{matchHealth.data.unmatched.map(job=><p key={job.id} className="text-muted-foreground">#{job.id} · {job.title}</p>)}</div>:<p className="mt-2 text-sm text-muted-foreground">Durable matching is not enabled in this environment.</p>}</section>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <div className="flex items-start gap-2">
             <Shield className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
