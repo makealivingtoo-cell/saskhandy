@@ -43,7 +43,7 @@ const cancellationReasons = [
   },
   {
     value: "bids_too_expensive",
-    label: "Bids were too expensive",
+    label: "Quotes were too expensive",
   },
   {
     value: "no_longer_needed",
@@ -492,7 +492,7 @@ function BidChatDrawer({
             jobId={jobId}
             bidId={bid.id}
             otherPartyLabel={bid.handymanName ?? "this handyman"}
-            title="Bid Chat"
+            title="Quote conversation"
             description={`Message ${bid.handymanName ?? "this handyman"} before choosing. Ask about experience, availability, and what they need for the job.`}
             compact
             className="h-full min-h-0 mt-0"
@@ -585,7 +585,7 @@ export default function JobDetails() {
 
   const markComplete = trpc.jobs.updateStatus.useMutation({
     onSuccess: async () => {
-      toast.success("Job complete. Payment released to your handyman.");
+      toast.success("Job marked complete. Check the payment status for details.");
       setShowCompleteConfirm(false);
       await utils.jobs.getById.invalidate({ jobId });
       await utils.payments.getByJob.invalidate({ jobId });
@@ -1426,8 +1426,8 @@ export default function JobDetails() {
               <CheckCircle className="w-4 h-4 text-emerald-600" />
               <h3 className="font-semibold text-foreground">
                 {isAwaitingPayment
-                  ? "Accepted Bid — Payment Required"
-                  : "Accepted Bid"}
+                  ? "Accepted quote — payment required"
+                  : "Accepted quote"}
               </h3>
             </div>
 
@@ -1709,8 +1709,8 @@ export default function JobDetails() {
                           >
                             <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
                             {selectedBidId === bid.id
-                              ? "Bid Open"
-                              : "Review Bid"}
+                              ? "Quote open"
+                              : "Review quote"}
                           </Button>
 
                           <Link href={`/profile/${bid.handymanId}`}>

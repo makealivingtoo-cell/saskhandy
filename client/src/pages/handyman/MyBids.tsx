@@ -76,7 +76,7 @@ export default function MyBids() {
 
   if (loading || isLoading) {
     return (
-      <AppLayout title="My Bids">
+      <AppLayout title="My marketplace quotes">
         <div className="flex justify-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -85,13 +85,13 @@ export default function MyBids() {
   }
 
   return (
-    <AppLayout title="My Bids">
+    <AppLayout title="My marketplace quotes">
       {!bids || bids.length === 0 ? (
         <div className="bg-white rounded-xl border border-border/60 p-12 text-center">
           <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <h3 className="font-semibold text-foreground mb-2">No bids yet</h3>
+          <h3 className="font-semibold text-foreground mb-2">No quotes yet</h3>
           <p className="text-sm text-muted-foreground">
-            Browse available jobs and start placing bids to win work.
+            Browse available jobs and send quotes for work that fits your skills.
           </p>
         </div>
       ) : (

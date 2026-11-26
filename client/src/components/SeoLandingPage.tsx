@@ -324,7 +324,7 @@ export default function SeoLandingPage({
             asChild
             className="rounded-full bg-emerald-700 hover:bg-emerald-800"
           >
-            <Link href="/sign-up">Post a Job</Link>
+            <Link href="/post-job">Request help</Link>
           </Button>
         </div>
       </header>
@@ -520,7 +520,7 @@ export default function SeoLandingPage({
                 <div className="rounded-[28px] border border-slate-200 p-6">
                   <ShieldCheck className="h-8 w-8 text-emerald-700" />
                   <h3 className="mt-4 text-xl font-semibold text-slate-900">
-                    Compare bids and profiles
+                    Compare quotes and profiles
                   </h3>
                   <p className="mt-2 text-slate-600 leading-7">
                     Post your job once, review local bids, compare profiles, and

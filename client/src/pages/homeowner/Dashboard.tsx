@@ -50,8 +50,8 @@ function StatCard({
 
 const homeownerNotes = [
   "Small jobs are easier to handle before they turn into bigger repairs.",
-  "Clear job details and photos can help you get better bids from local handymen.",
-  "You stay in control — compare bids, review profiles, and choose who feels right.",
+  "Clear details and photos help professionals prepare accurate quotes.",
+  "Compare quotes, review profiles and choose the professional who suits your job.",
   "A quick post today can move one home task off your list this week.",
   "Local help works best when the job is clear, specific, and easy to understand.",
 ];

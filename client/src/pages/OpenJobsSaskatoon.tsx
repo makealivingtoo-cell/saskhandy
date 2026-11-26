@@ -108,7 +108,7 @@ export default function OpenJobsSaskatoonPage() {
     document.title = "Open Handyman Jobs in Saskatoon | SaskHandy";
 
     const description =
-      "See open handyman jobs in Saskatoon. Local handymen can create a profile, complete ID Name Matched, and bid on home repair, carpentry, drywall, mounting, assembly, and renovation jobs.";
+      "Find open home projects in Saskatoon. Create a professional profile and complete identity review to send quotes.";
 
     let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
 
@@ -205,7 +205,7 @@ export default function OpenJobsSaskatoonPage() {
               </div>
 
               <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-slate-950">Before you can bid</h2>
+                <h2 className="text-xl font-semibold text-slate-950">Before you send a quote</h2>
 
                 <div className="mt-5 space-y-4">
                   <div className="flex gap-3">
@@ -232,7 +232,7 @@ export default function OpenJobsSaskatoonPage() {
                   <div className="flex gap-3">
                     <Wrench className="mt-1 h-5 w-5 shrink-0 text-emerald-700" />
                     <div>
-                      <p className="font-medium text-slate-900">Bid on relevant jobs</p>
+                      <p className="font-medium text-slate-900">Send quotes for relevant jobs</p>
                       <p className="mt-1 text-sm leading-6 text-slate-600">
                         Choose jobs that match your skills, availability, tools, and service area.
                       </p>
@@ -283,7 +283,7 @@ export default function OpenJobsSaskatoonPage() {
               </div>
 
               <Button asChild variant="outline" className="rounded-full">
-                <Link href="/sign-up">Join to Bid</Link>
+                <Link href="/sign-up?role=handyman">Join as a professional</Link>
               </Button>
             </div>
 
@@ -369,7 +369,7 @@ export default function OpenJobsSaskatoonPage() {
                           asChild
                           className="mt-4 w-full rounded-full bg-emerald-700 hover:bg-emerald-800"
                         >
-                          <Link href="/sign-up">Create Profile to Bid</Link>
+                          <Link href="/sign-up?role=handyman">Create a professional profile</Link>
                         </Button>
                       </div>
                     </div>

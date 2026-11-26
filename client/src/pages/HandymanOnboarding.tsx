@@ -178,7 +178,7 @@ export default function HandymanOnboarding() {
                 Creating Profile...
               </>
             ) : (
-              "Create My Profile & Start Bidding"
+              "Create my professional profile"
             )}
           </Button>
         </form>

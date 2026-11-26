@@ -140,7 +140,7 @@ export default function BrowseJobs() {
       <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-foreground">Jobs ready for a bid</p>
+            <p className="text-sm font-semibold text-foreground">Jobs open for quotes</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Open a job, check the details, and send your price.
             </p>
@@ -361,7 +361,7 @@ export default function BrowseJobs() {
                           <MapPin className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate max-w-32">{job.location}</span>
                         </div>
-                        <p className="text-xs text-primary font-semibold mt-1.5">View & bid</p>
+                        <p className="text-xs text-primary font-semibold mt-1.5">View job and send quote</p>
                       </div>
                     </div>
                   </article>

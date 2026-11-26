@@ -183,7 +183,7 @@ export default function HandymanJobDetails() {
   const createBid = trpc.bids.create.useMutation({
     onSuccess: async () => {
       toast.success(
-        "Bid placed. The homeowner can now review it and message you.",
+        "Quote sent. The homeowner can review it and message you.",
       );
       setShowBidForm(false);
       setBidAmount("");
@@ -579,7 +579,7 @@ export default function HandymanJobDetails() {
                       type="number"
                       min="1"
                       step="10"
-                      placeholder="Enter your bid"
+                      placeholder="Enter your quote amount"
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
                       className="pl-7 h-11 text-base"
@@ -663,7 +663,7 @@ export default function HandymanJobDetails() {
                     onClick={() => {
                       if (!canPlaceBid) {
                         toast.error(
-                          "Complete your bid-ready profile before sending bids.",
+                          "Complete your professional profile before sending quotes.",
                         );
                         return;
                       }
@@ -709,7 +709,7 @@ export default function HandymanJobDetails() {
                 submitted
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Other prices stay hidden so everyone bids independently.
+                Other quotes remain private so professionals can price their own work.
               </p>
             </div>
             <Shield className="w-4 h-4 text-primary shrink-0" />
@@ -753,7 +753,7 @@ export default function HandymanJobDetails() {
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold text-sm">Your Bid</p>
+                  <p className="font-semibold text-sm">Your quote</p>
                   <StatusBadge status={myBid.status} />
                 </div>
 
@@ -813,8 +813,8 @@ export default function HandymanJobDetails() {
             jobId={jobId}
             bidId={myBid.id}
             otherPartyLabel={job.homeownerName ?? "the homeowner"}
-            title="Bid Chat"
-            description="Message the homeowner about your bid before they decide whether to accept."
+            title="Quote conversation"
+            description="Discuss your quote with the homeowner before they decide."
           />
         )}
 

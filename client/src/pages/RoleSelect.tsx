@@ -108,7 +108,7 @@ export default function RoleSelect() {
                   <Hammer className="w-6 h-6 text-primary" />
                 </div>
 
-                <h2 className="text-xl font-semibold text-foreground mb-2">For Handymen</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-2">For professionals</h2>
 
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Create your profile, view open local jobs, send bids, and get found by homeowners
@@ -189,7 +189,7 @@ export default function RoleSelect() {
             <ul className="mt-5 space-y-2">
               {[
                 "Post jobs around your home",
-                "Compare local bids",
+                "Compare local quotes",
                 "Message before choosing",
                 "Review the handyman profile first",
               ].map((item) => (
@@ -227,7 +227,7 @@ export default function RoleSelect() {
             <ul className="mt-5 space-y-2">
               {[
                 "View open jobs",
-                "Bid on jobs that fit your skills",
+                "Find jobs that fit your skills",
                 "Message homeowners through SaskHandy",
                 "Build trust with your profile",
               ].map((item) => (

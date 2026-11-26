@@ -37,7 +37,7 @@ interface NavItem {
 }
 
 const HOMEOWNER_NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Your jobs", mobileLabel: "Home", icon: LayoutDashboard },
   { href: "/post-job", label: "Request help", mobileLabel: "Request", icon: Plus },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/support", label: "Support", icon: LifeBuoy },
@@ -45,7 +45,7 @@ const HOMEOWNER_NAV: NavItem[] = [
 
 const HANDYMAN_NAV: NavItem[] = [
   { href: "/handyman/dashboard", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
-  { href: "/handyman/browse", label: "Browse Jobs", mobileLabel: "Browse", icon: Search },
+  { href: "/handyman/browse", label: "Find work", mobileLabel: "Browse", icon: Search },
   { href: "/handyman/bids", label: "My quotes", mobileLabel: "Quotes", icon: Briefcase },
   { href: "/handyman/messages", label: "Messages", icon: MessageSquare },
   { href: "/handyman/earnings", label: "Earnings", icon: DollarSign },
@@ -143,7 +143,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-border/60 shadow-sm">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:p-3 focus:rounded-lg focus:outline-primary">Skip to content</a>
+      <nav aria-label="Main navigation" className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-border/60 shadow-sm">
         <div className="container flex items-center justify-between h-14">
           <Link href={user?.userType === "handyman" ? "/handyman/dashboard" : "/dashboard"}>
             <div className="flex items-center gap-2 cursor-pointer">
@@ -159,7 +160,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
               const isActive = isActiveRoute(location, item.href);
 
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={item.href} aria-current={isActive?"page":undefined}>
                   <div
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
@@ -291,7 +292,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         </div>
       </nav>
 
-      <main
+      <main id="main-content" tabIndex={-1}
         className="pt-14 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0"
         style={{ scrollPaddingBottom: "calc(7rem + env(safe-area-inset-bottom))" }}
       >
@@ -324,7 +325,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
             const isPrimaryAction = item.href === "/post-job";
 
             return (
-              <Link key={`mobile-${item.href}`} href={item.href}>
+              <Link key={`mobile-${item.href}`} href={item.href} aria-current={isActive?"page":undefined}>
                 <div
                   className={cn(
                     "relative flex h-full flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-all active:scale-95",

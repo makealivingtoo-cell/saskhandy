@@ -68,7 +68,7 @@ const trustItems = [
   {
     title: "Chat before choosing",
     description:
-      "Ask about experience, availability, service area, and job details before accepting a bid.",
+      "Ask about experience, availability, service area and the work before accepting a quote.",
     icon: CheckCircle2,
   },
   {
@@ -106,7 +106,7 @@ export default function HomePage() {
     const siteName = "SaskHandy";
     const pageTitle = "SaskHandy | Saskatchewan Home Jobs & Handyman Services";
     const description =
-      "SaskHandy helps Saskatchewan homeowners post small home jobs, compare bids from local handymen, review profiles, message before choosing, and keep the job organized in one place.";
+      "Find local help for everyday home projects. Compare quotes, review profiles and manage your job in one place.";
 
     document.title = pageTitle;
 

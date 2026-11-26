@@ -100,7 +100,7 @@ function getJobStrength({
     return {
       score,
       label: "Strong",
-      message: "Clear and ready for handymen to bid on.",
+      message: "Your request is ready for professionals to review.",
     };
   }
 
@@ -115,7 +115,7 @@ function getJobStrength({
   return {
     score,
     label: "Needs detail",
-    message: "Add a few more details so handymen can bid accurately.",
+    message: "Add a few details so professionals can quote accurately.",
   };
 }
 
@@ -843,7 +843,7 @@ export default function PostJob() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <Label>Photos</Label>
-                      <p className="mt-1 text-xs text-muted-foreground">Optional, but photos usually help you get better bids.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Optional. Photos can help professionals prepare accurate quotes.</p>
                     </div>
                     <span className="text-xs text-muted-foreground">{photos.length}/{MAX_PHOTOS}</span>
                   </div>
@@ -954,7 +954,7 @@ export default function PostJob() {
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-semibold text-foreground">Ready to post?</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Here’s exactly what local handymen will see.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Here’s what local professionals will see.</p>
                 </div>
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                   <CheckCircle2 className="h-5 w-5" />
@@ -1010,9 +1010,9 @@ export default function PostJob() {
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
                 <div>
-                  <p className="text-sm font-semibold text-emerald-950">Free to post. Pay only after choosing a bid.</p>
+                  <p className="text-sm font-semibold text-emerald-950">Free to request help. Review and accept a quote before paying.</p>
                   <p className="mt-1 text-xs leading-relaxed text-emerald-800">
-                    Compare profiles, bids and messages first. When you accept a bid, payment is held securely and released after you mark the job complete.
+                    Compare quotes and profiles before choosing. Review payment and completion terms before paying.
                   </p>
                 </div>
               </div>

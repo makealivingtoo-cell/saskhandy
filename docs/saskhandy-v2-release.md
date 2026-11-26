@@ -40,3 +40,6 @@ Apply db:v2-booking, then enable SASKHANDY_V2_BOOKING=1 alongside appointments o
 
 ## Payment and document hardening
 Signed Stripe events and direct quote confirmation now share transactional reconciliation: exact stored intent ID, CAD amount, amount received and participant metadata are checked. Late failure events cannot reopen active/completed jobs or paid/completed quotes. Payment intent creation uses stable per-attempt idempotency keys. Quotes accepted before expiry stay payable; legacy expired or inconsistent records require reconciliation. New verification documents use authenticated Cloudinary raw assets behind an owner/admin-only download endpoint. Existing public document URLs are not migrated by this code; storage credentials and an actual migration/access test are required. No real payment or payout was sent. Integration tests simulate verified Stripe intents, concurrent slot reservations and cancellation before checkout.
+
+## Design review
+See docs/saskhandy-v2-language-design.md for shared design and wording changes, source review coverage and remaining browser acceptance gates. No legal policy changes made.

@@ -63,7 +63,7 @@ function StatCard({
 }
 
 const bidTips = [
-  "Bid on jobs that match your skills, tools, and schedule.",
+  "Find work that matches your skills, tools and schedule.",
   "Mention when you are available.",
   "Explain briefly how you would handle the job.",
   "Keep your price clear and realistic.",
@@ -648,7 +648,7 @@ export default function HandymanDashboard() {
         {!isBidReady && (
           <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><h2 className="font-semibold">Finish your profile to start bidding</h2>
+              <div><h2 className="font-semibold">Finish your profile to send quotes</h2>
                 <p className="text-sm text-muted-foreground mt-1">{bidReadyItems.filter(item => item.completed).length} of {bidReadyItems.length} required items complete</p></div>
               <Button asChild size="sm"><Link href="/handyman/profile">Complete profile</Link></Button>
             </div>
@@ -669,7 +669,7 @@ export default function HandymanDashboard() {
           />
 
           <StatCard
-            label="Open bids"
+            label="Open quotes"
             value={pendingBids.length}
             icon={Briefcase}
             color="bg-blue-50 text-blue-600"
@@ -1308,11 +1308,11 @@ setCreatedDraftId(null); } }}>Close</Button></div>
           </div>
         </section>
 
-        {/* Recent bids */}
+        {/* Recent quotes */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-base font-semibold text-foreground">Recent bids</h2>
+              <h2 className="text-base font-semibold text-foreground">Recent quotes</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Track the jobs you’ve quoted and follow up when homeowners respond.
               </p>
@@ -1329,7 +1329,7 @@ setCreatedDraftId(null); } }}>Close</Button></div>
             <div className="bg-white rounded-2xl border border-border/60 p-5 text-center">
               <Briefcase className="w-6 h-6 text-muted-foreground mx-auto mb-3" />
 
-              <h3 className="font-semibold text-foreground mb-2">No bids sent yet</h3>
+              <h3 className="font-semibold text-foreground mb-2">No marketplace quotes yet</h3>
 
               <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto leading-relaxed">
                 Browse available jobs and send a clear bid with your price, availability, and a
@@ -1367,7 +1367,7 @@ setCreatedDraftId(null); } }}>Close</Button></div>
 
                       <div className="text-right shrink-0">
                         <p className="font-bold text-foreground">${bid.bidAmount}</p>
-                        <p className="text-xs text-muted-foreground">your bid</p>
+                        <p className="text-xs text-muted-foreground">your quote</p>
                       </div>
                     </div>
                   </div>
