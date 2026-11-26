@@ -20,7 +20,10 @@ type SupportCategory =
   | "technical";
 
 export default function SupportPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated,user } = useAuth();
+  const ownerJobs=trpc.jobs.getByHomeowner.useQuery(undefined,{enabled:isAuthenticated&&user?.userType==="homeowner",retry:false});
+  const proJobs=trpc.jobs.getForHandyman.useQuery(undefined,{enabled:isAuthenticated&&user?.userType==="handyman",retry:false});
+  const activeJobs=(user?.userType==="handyman"?proJobs.data:ownerJobs.data)?.filter(j=>["awaiting_payment","in_progress","disputed"].includes(j.status)).slice(0,5)??[];
   const utils = trpc.useUtils();
 
   const { data: faqs = [] } = trpc.support.getFaqs.useQuery();
@@ -51,6 +54,7 @@ export default function SupportPage() {
       <div className="max-w-3xl mx-auto space-y-6">
         <div><h1 className="text-2xl font-semibold tracking-tight">How can we help?</h1><p className="mt-1 text-sm text-muted-foreground">Find an answer, manage a job or contact us if you need more help.</p></div>
 
+        {activeJobs.length>0&&<section className="rounded-2xl border bg-white p-5 space-y-3"><h2 className="font-semibold">Get help with a job</h2>{activeJobs.map(j=><Link key={j.id} href={(user?.userType==="handyman"?"/handyman/jobs/":"/jobs/")+j.id} className="block rounded-lg border p-3 text-sm"><strong>{j.title}</strong><p className="text-muted-foreground">{j.status==="awaiting_payment"?"Review checkout":j.status==="disputed"?"Review resolution":"Manage appointment or report a problem"}</p></Link>)}</section>}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
           <div className="flex items-center gap-2 mb-4">
             <LifeBuoy className="w-4 h-4 text-primary" />
@@ -115,6 +119,7 @@ export default function SupportPage() {
           </Button>
         </div>
 
+        {activeJobs.length>0&&<section className="rounded-2xl border bg-white p-5 space-y-3"><h2 className="font-semibold">Get help with a job</h2>{activeJobs.map(j=><Link key={j.id} href={(user?.userType==="handyman"?"/handyman/jobs/":"/jobs/")+j.id} className="block rounded-lg border p-3 text-sm"><strong>{j.title}</strong><p className="text-muted-foreground">{j.status==="awaiting_payment"?"Review checkout":j.status==="disputed"?"Review resolution":"Manage appointment or report a problem"}</p></Link>)}</section>}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="w-4 h-4 text-primary" />

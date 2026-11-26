@@ -1,3 +1,4 @@
+import {serviceWorkflowsRouter,acceptMarketplaceQuote} from "./serviceWorkflows";
 import { refundRouter,finalizeSecuredJob,openJobDispute } from "./refundRouter";
 import { ensureDirectRequest,localPriceGuidance } from "./directRequests";
 import { canSeeDirectedJob } from "../shared/requestPolicy";
@@ -2297,7 +2298,7 @@ const bidsRouter = router({
     .input(
       z.object({
         jobId: z.number(),
-        bidAmount: z.number().positive(),
+        bidAmount: z.number().min(.5).max(999999.99),
         message: z.string().optional(),
         availability: z.string().optional(),
       })
@@ -2514,27 +2515,7 @@ const bidsRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: "Job is not open" });
     }
 
-    await updateBidStatus(input.bidId, "accepted");
-    await rejectOtherBids(bid.jobId, input.bidId);
-
-    await updateJobStatus(bid.jobId, "awaiting_payment", {
-      selectedHandymanId: bid.handymanId,
-      selectedBidId: input.bidId,
-    });
-
-    const amount = parseFloat(bid.bidAmount);
-    const platformFee = parseFloat((amount * 0.2).toFixed(2));
-    const handymanPayout = parseFloat((amount * 0.8).toFixed(2));
-
-    await createPayment({
-      jobId: bid.jobId,
-      homeownerId: ctx.user.id,
-      handymanId: bid.handymanId,
-      amount: amount.toFixed(2),
-      platformFee: platformFee.toFixed(2),
-      handymanPayout: handymanPayout.toFixed(2),
-      status: "pending",
-    });
+    const {amount,platformFee,handymanPayout}=await acceptMarketplaceQuote(input.bidId,ctx.user.id);
 
     await notifyUser({
       userId: bid.handymanId,
@@ -2579,6 +2560,7 @@ const bidsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
 
+    if(job.status!=="open"||bid.status!=="pending")throw new TRPCError({code:"CONFLICT",message:"Only pending quotes can be declined."});
     await updateBidStatus(input.bidId, "rejected");
 
     if (job.status === "open") {
@@ -3950,6 +3932,9 @@ const supportRouter = router({
         answer:
           "If something goes wrong during or after the job, a dispute can be opened. Admin reviews the case and can release payment or refund the homeowner.",
       },
+      {id:"missed-appointment",title:"What if someone misses an appointment?",answer:"Open the job after the confirmed appointment time, report the missed visit or propose an agreed refund. A report does not establish fault or automatically move money."},
+      {id:"extra-work",title:"What if more work is needed?",answer:"The professional can send a separate quote for additional work from the active job. The original payment stays unchanged; review the new scope and approve payment before extra work starts."},
+      {id:"repeat-booking",title:"How can I hire the same professional again?",answer:"Open My Home to book a published appointment or request a private quote. Recurring requests can ask the same professional for a new quote on a schedule; they never charge automatically."},
       {
         id: "identity-check",
         title: "What does ID Name Matched mean?",
@@ -4140,6 +4125,7 @@ export const appRouter = router({
   proTools: proToolsRouter,
   instantBooking: instantBookingRouter,
   refunds: refundRouter,
+  serviceWorkflows: serviceWorkflowsRouter,
   referralJobs: referralJobsRouter,
   quotes: quotesRouter,
   workReviews: workReviewsRouter,

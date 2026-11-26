@@ -1,3 +1,4 @@
+import JobServiceTools from "@/components/JobServiceTools";
 import RefundSettlement from "@/components/RefundSettlement";
 import BookingHold from "@/components/BookingHold";
 import JobAppointment from "@/components/JobAppointment";
@@ -812,6 +813,7 @@ export default function JobDetails() {
         {isOwner && isAwaitingPayment && <BookingHold jobId={jobId}/>}
         {isOwner && user && job.status==="in_progress" && <JobAppointment jobId={jobId} userId={user.id}/>}
         {isOwner&&user&&["in_progress","disputed","completed","cancelled"].includes(job.status)&&<RefundSettlement jobId={jobId} userId={user.id}/>}
+        {isOwner&&user&&["in_progress","disputed","completed","cancelled"].includes(job.status)&&<JobServiceTools jobId={jobId} professional={false} active={job.status==="in_progress"}/>}
         {acceptedBid && job.status !== "cancelled" && (
           <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
             <div className="flex items-center justify-between gap-3 mb-4">

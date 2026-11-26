@@ -58,3 +58,6 @@ Apply db:v2-refunds and enable SASKHANDY_V2_RESOLUTION only after sandbox valida
 
 ## Follow-up release checks
 Fixed the directed-request type errors and added real-MySQL test cases for private access, expired Stripe intent cancellation and partial refund processing/idempotency. Test Stripe calls remain mocked. Added admin refund queue visibility, a shared locked dispute creator, and an in-process vision usage limit. Existing production accounts and payments remain unchanged.
+
+## Additional service workflows (development only)
+Apply db:v2-service-workflows after db:v2-direct; enable SASKHANDY_V2_SERVICE_WORKFLOWS after tests. Additional work is a linked, private separate quote with explicit homeowner acceptance and payment, not an edit to secured funds. Missed appointment report requires ended confirmed appointment and starts existing dispute without assuming fault. Recurring plans create private quote requests weekly/biweekly/four-weekly, never automatic charges or confirmed future slots; pause if professional eligibility changes; one active request at a time. Homeowner can pause/end future requests. Quote acceptance is now atomic with payment record and cent rounding. Admin risk review uses high-value/above-budget heuristics, not a fraud verdict. Support links to relevant active job actions. Further integration tests and production acceptance required.

@@ -668,3 +668,14 @@ export const refundCases=mysqlTable("refund_cases",{
  createdAt:timestamp("createdAt").defaultNow().notNull(),
  updatedAt:timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 },t=>[index("refund_cases_status_idx").on(t.status,t.updatedAt)]);
+
+export const recurringRequests=mysqlTable("recurring_requests",{
+ id:int("id").autoincrement().primaryKey(),homeownerId:int("homeownerId").notNull(),handymanId:int("handymanId").notNull(),
+ title:varchar("title",{length:160}).notNull(),description:text("description").notNull(),category:varchar("category",{length:100}).notNull(),location:varchar("location",{length:255}).notNull(),
+ intervalDays:int("intervalDays").notNull(),nextRunAt:timestamp("nextRunAt").notNull(),lastJobId:int("lastJobId"),
+ status:mysqlEnum("status",["active","paused","ended"]).default("active").notNull(),createdAt:timestamp("createdAt").defaultNow().notNull(),
+},t=>[index("recurring_owner_idx").on(t.homeownerId),index("recurring_due_idx").on(t.status,t.nextRunAt)]);
+export const jobAdditions=mysqlTable("job_additions",{
+ id:int("id").autoincrement().primaryKey(),parentJobId:int("parentJobId").notNull(),childJobId:int("childJobId").notNull(),
+ requestKey:varchar("requestKey",{length:36}).notNull(),createdAt:timestamp("createdAt").defaultNow().notNull(),
+},t=>[uniqueIndex("addition_key_idx").on(t.requestKey),uniqueIndex("addition_child_idx").on(t.childJobId),index("addition_parent_idx").on(t.parentJobId)]);

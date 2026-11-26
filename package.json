@@ -23,7 +23,8 @@
     "db:v2-pro": "tsx scripts/apply-v2-pro.mts",
     "db:v2-booking": "tsx scripts/apply-v2-booking.mts",
     "db:v2-direct": "tsx scripts/apply-v2-direct.mts",
-    "db:v2-refunds": "tsx scripts/apply-v2-refunds.mts"
+    "db:v2-refunds": "tsx scripts/apply-v2-refunds.mts",
+    "db:v2-service-workflows": "tsx scripts/apply-v2-service-workflows.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
