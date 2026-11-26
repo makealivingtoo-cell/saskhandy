@@ -19,7 +19,8 @@
     "db:v2-budget": "tsx scripts/apply-v2-budget.mts",
     "db:v2-matching": "tsx scripts/apply-v2-matching.mts",
     "db:v2-appointments": "tsx scripts/apply-v2-appointments.mts",
-    "db:v2-home": "tsx scripts/apply-v2-home.mts"
+    "db:v2-home": "tsx scripts/apply-v2-home.mts",
+    "db:v2-pro": "tsx scripts/apply-v2-pro.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

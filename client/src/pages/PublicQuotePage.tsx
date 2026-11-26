@@ -259,17 +259,18 @@ export default function PublicQuotePage() {
             </section>
 
             <section className="rounded-2xl border border-border/60 bg-white p-6 sm:p-8">
-              {quote.status === "paid" ? (
+              {quote.status === "paid" || quote.status === "completed" ? (
                 <div className="text-center">
                   <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
                   <h2 className="mt-3 text-lg font-semibold">Payment received</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Your handyman has been notified.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Your payment is recorded in SaskHandy.</p>
+                  <Button variant="outline" className="mt-4 print:hidden" onClick={()=>window.print()}>Print payment record</Button>
                 </div>
               ) : quote.status === "declined" ? (
                 <p className="text-center text-sm text-muted-foreground">You declined this quote.</p>
               ) : quote.status === "expired" ? (
                 <p className="text-center text-sm text-muted-foreground">This quote has expired. Contact your handyman for an updated quote.</p>
-              ) : quote.status === "sent" || quote.status === "viewed" ? (
+              ) : quote.status === "viewed" ? (
                 <div>
                   <h2 className="text-lg font-semibold">Would you like to accept this quote?</h2>
                   <p className="mt-1 text-sm text-muted-foreground">You can review the details above before choosing.</p>

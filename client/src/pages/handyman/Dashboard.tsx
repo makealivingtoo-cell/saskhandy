@@ -1,3 +1,4 @@
+import ProfessionalTools from "@/components/ProfessionalTools";
 import AppointmentSchedule from "@/components/AppointmentSchedule";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
@@ -222,6 +223,10 @@ export default function HandymanDashboard() {
   const [cancellingQuoteId, setCancellingQuoteId] = useState<number | null>(null);
   const [completingQuoteId, setCompletingQuoteId] = useState<number | null>(null);
 
+  const proTools=trpc.proTools.overview.useQuery(undefined,{enabled:isAuthenticated&&user?.userType==="handyman",retry:false});
+  const toolsUtils=trpc.useUtils();
+  const saveTemplate=trpc.proTools.saveTemplate.useMutation({onSuccess:()=>{toast.success("Quote template saved.");void toolsUtils.proTools.overview.invalidate();},onError:e=>toast.error(e.message)});
+  const deleteTemplate=trpc.proTools.deleteTemplate.useMutation({onSuccess:()=>{void toolsUtils.proTools.overview.invalidate();},onError:e=>toast.error(e.message)});
   const createQuote = trpc.quotes.create.useMutation();
   const sendQuote = trpc.quotes.send.useMutation();
   const deleteDraftQuote = trpc.quotes.deleteDraft.useMutation();
@@ -685,6 +690,7 @@ export default function HandymanDashboard() {
           />
         </div>
 
+        {user?.userType==="handyman"&&<ProfessionalTools userId={user.id}/>}
         {/* SaskHandy referrals */}
         <section className="bg-white rounded-2xl border border-border/60 p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -846,6 +852,7 @@ setCreatedDraftId(null); } }}>Close</Button></div>
             {Number.isSafeInteger(createdDraftId) && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm">Draft saved. Retry sending, or close this editor and use the draft in your quote list.</p>}
             <fieldset disabled={submitBusy || createdDraftId !== null} className="space-y-5 disabled:opacity-70">
             <legend className="text-sm font-semibold mb-3">1. Customer</legend>
+            {proTools.data?.enabled&&!quoteForm.referralJobId&&proTools.data.templates.length>0&&<div className="space-y-2 rounded-xl bg-muted/30 p-3"><label className="block text-sm font-medium">Use a saved quote template<select className="mt-1 block w-full rounded-lg border bg-white p-2" value="" onChange={e=>{const t=proTools.data?.templates.find(t=>String(t.id)===e.target.value);if(t&&window.confirm("Replace the current work details and price? Customer details will stay unchanged."))setQuoteForm(old=>({...old,title:t.title,scope:t.scope,subtotal:t.subtotal,itemizedPricing:t.items.length>0,lineItems:t.items.map(i=>({description:i.description,quantity:String(i.quantity),unitPrice:String(i.unitPrice)})),gstRate:t.gstRate??"0",pstRate:t.pstRate??"0",chargeGst:Number(t.gstRate??0)>0,smsPermissionConfirmed:false}));}}><option value="">Choose a template</option>{proTools.data.templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><details className="text-sm"><summary>Manage templates</summary>{proTools.data.templates.map(t=><div key={t.id} className="flex justify-between gap-2 py-2"><span>{t.name}</span><Button type="button" size="sm" variant="ghost" disabled={deleteTemplate.isPending} onClick={()=>{if(window.confirm("Delete this template?"))deleteTemplate.mutate({id:t.id});}}>Remove</Button></div>)}</details></div>}
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="quote-referral">
@@ -1221,6 +1228,7 @@ setCreatedDraftId(null); } }}>Close</Button></div>
                     </div>
                     <details className="mt-3 text-xs text-muted-foreground"><summary className="cursor-pointer">Your fee &amp; estimated payout</summary><div className="mt-2 space-y-1"><p>Platform fee: {money(Number(quote.platformFeeAmount))} ({quote.platformFeeRate}%)</p><p>Estimated payout: {money(Number(quote.totalAmount) - Number(quote.platformFeeAmount))}, including collected taxes.</p></div></details>
                     <div className="mt-3 flex flex-wrap gap-2">
+                      {proTools.data?.enabled&&<Button size="sm" variant="outline" disabled={saveTemplate.isPending} onClick={()=>{const name=window.prompt("Name this reusable quote template",quote.title.slice(0,100));if(name?.trim())saveTemplate.mutate({quoteId:quote.id,name:name.trim().slice(0,100)});}}>Save as template</Button>}
                       {quote.status === "draft" && (
                         <Button
                           size="sm"

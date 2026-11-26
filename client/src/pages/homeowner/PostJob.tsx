@@ -1,3 +1,4 @@
+import VoiceDescription from "@/components/VoiceDescription";
 import { readRequestStart, clearRequestStart } from "@/lib/requestDraft";
 import { readJobBudget, formatJobBudget } from "@shared/jobBudget";
 import { trackJobLead } from "@/lib/metaPixel";
@@ -595,7 +596,7 @@ export default function PostJob() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="roughIdea">Describe the job</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="roughIdea">What do you need help with?</Label><VoiceDescription onText={text=>setRoughIdea(old=>(old.trim()?old.trim()+" "+text:text).slice(0,10000))}/></div>
               <Textarea
                 id="roughIdea"
                 autoFocus

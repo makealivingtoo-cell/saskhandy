@@ -1605,6 +1605,7 @@ export default function JobDetails() {
               </div>
             ) : (
               <div className="space-y-3">
+                {pendingBids.length>1&&<section className="rounded-2xl border bg-white p-4"><h3 className="font-semibold">Compare your quotes</h3><p className="mt-1 text-sm text-muted-foreground">Compare the work offered, price and availability. The lowest quote may not include the same work.</p><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead><tr className="border-b"><th className="p-2">Professional</th><th className="p-2">Quote</th><th className="p-2">Availability</th><th className="p-2">Work details</th></tr></thead><tbody>{pendingBids.map(b=><tr key={b.id} className="border-b last:border-0"><td className="p-2 align-top font-medium"><Link href={`/profile/${b.handymanId}`} className="text-primary underline">{b.handymanName??"Professional"}</Link></td><td className="p-2 align-top whitespace-nowrap">${Number(b.bidAmount).toFixed(2)}</td><td className="p-2 align-top">{b.availability||"Not specified"}</td><td className="p-2 align-top whitespace-pre-wrap break-words">{b.message||"Not specified"}</td></tr>)}</tbody></table></div></section>}
                 {pendingBids.map((bid) => (
                   <div
                     key={bid.id}

@@ -627,3 +627,16 @@ export const homeMaintenance = mysqlTable("home_maintenance",{
  reminderSentAt:timestamp("reminderSentAt"),
  createdAt:timestamp("createdAt").defaultNow().notNull(),
 },t=>[index("home_maintenance_owner_idx").on(t.homeownerId),index("home_maintenance_due_idx").on(t.completed,t.dueDate)]);
+
+export const quoteTemplates = mysqlTable("quote_templates",{
+ id:int("id").autoincrement().primaryKey(),
+ handymanId:int("handymanId").notNull(),
+ name:varchar("name",{length:100}).notNull(),
+ title:varchar("title",{length:255}).notNull(),
+ scope:text("scope").notNull(),
+ lineItems:text("lineItems"),
+ subtotal:decimal("subtotal",{precision:10,scale:2}).notNull(),
+ gstRate:decimal("gstRate",{precision:5,scale:2}),
+ pstRate:decimal("pstRate",{precision:5,scale:2}),
+ createdAt:timestamp("createdAt").defaultNow().notNull(),
+},t=>[index("quote_templates_owner_idx").on(t.handymanId)]);

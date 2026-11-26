@@ -50,6 +50,8 @@ jobs:
       - run: pnpm db:v2-appointments
       - run: pnpm db:v2-home
       - run: pnpm db:v2-home
+      - run: pnpm db:v2-pro
+      - run: pnpm db:v2-pro
       - run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
       - run: pnpm test
       - name: Type checking
