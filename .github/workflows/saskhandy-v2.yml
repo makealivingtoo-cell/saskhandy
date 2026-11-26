@@ -54,6 +54,14 @@ jobs:
       - run: pnpm db:v2-pro
       - run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
       - run: pnpm test
+      - name: Real MySQL integration checks (isolated database)
+        env:
+          DATABASE_URL: mysql://root:testpass@127.0.0.1:3306/saskhandy_v2_integration_ci
+          SASKHANDY_V2_INTEGRATION: "1"
+        run: |
+          node --input-type=module -e 'import mysql from "mysql2/promise"; const db=await mysql.createConnection("mysql://root:testpass@127.0.0.1:3306/referral_workflow_ci"); await db.query("CREATE DATABASE saskhandy_v2_integration_ci"); await db.end()'
+          pnpm exec tsx scripts/testing/prepare-v2-integration.mts
+          pnpm exec vitest run server/v2.integration.test.ts
       - name: Type checking
         if: ${{ !cancelled() }}
         run: pnpm check
