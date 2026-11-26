@@ -303,7 +303,7 @@ export function serveStatic(app: Express) {
       return;
     }
 
-    if (isApplicationRoute(pathname)) {
+    if (isApplicationRoute(pathname) || (process.env.SASKHANDY_STAGING_PREVIEW === '1' && req.accepts('html') && !pathname.startsWith('/api/') && !path.extname(pathname))) {
       res.sendFile(indexPath, (error) => {
         if (error) next(error);
       });

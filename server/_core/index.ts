@@ -1,3 +1,4 @@
+import { installStagingPreview } from "./stagingPreview";
 import { reconcilePayment } from "../paymentReconciliation";
 import { sdk } from "./sdk";
 import { checkAppointmentReminders } from "../appointmentRouter";
@@ -567,6 +568,7 @@ function startReminderLoop() {
 
 async function startServer() {
   const app = express();
+  installStagingPreview(app);
   const server = createServer(app);
 
   app.post(
