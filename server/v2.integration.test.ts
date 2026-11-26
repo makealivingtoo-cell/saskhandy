@@ -8,6 +8,8 @@ import {checkHomeMaintenance} from "./myHomeRouter";
 import {reconcilePayment} from "./paymentReconciliation";
 import {claimBookingCheckout,reconcileExpiredBooking} from "./instantBookingRouter";
 import {checkRefundCases,finalizeSecuredJob} from "./refundRouter";
+import {checkRecurringRequests} from "./serviceWorkflows";
+import {jobAppointments,recurringRequests} from "../drizzle/schema";
 import {stripe,retrievePaymentIntent} from "./stripe";
 import type Stripe from "stripe";
 import {instantSlots} from "../drizzle/schema";
@@ -20,7 +22,7 @@ describe.skipIf(!run)("V2 real MySQL integration (isolated CI)",()=>{
  const caller=(id:number,role:"homeowner"|"handyman"|"admin"="homeowner")=>appRouter.createCaller(ctx(id,role));
  const jobData={homeownerId:1,title:"Install shelves",description:"Install two shelves in the living room.",category:"Carpentry",location:"Saskatoon, SK"};
  beforeAll(async()=>{
-  for(const flag of ["MATCHING","APPOINTMENTS","HOME","PRO","BOOKING","RESOLUTION"])vi.stubEnv("SASKHANDY_V2_"+flag,"1");
+  for(const flag of ["MATCHING","APPOINTMENTS","HOME","PRO","BOOKING","RESOLUTION","SERVICE_WORKFLOWS"])vi.stubEnv("SASKHANDY_V2_"+flag,"1");
   const db=await getDb();
   await db.insert(users).values([{id:1,openId:"ci-1",name:"CI homeowner",userType:"homeowner",emailVerified:true},{id:2,openId:"ci-2",name:"CI professional",email:"ci-pro@example.invalid",userType:"handyman",emailVerified:true},{id:3,openId:"ci-3",name:"Other homeowner",userType:"homeowner",emailVerified:true},{id:4,openId:"ci-4",name:"Other professional",userType:"handyman",emailVerified:true},{id:5,openId:"ci-5",name:"CI admin",role:"admin",userType:"homeowner",emailVerified:true}]);
   await db.insert(handymanProfiles).values([{userId:2,bio:"Experienced carpenter providing home installation services.",categories:'["Carpentry"]',serviceArea:"Saskatoon",identityVerificationStatus:"approved",profileImageUrl:"https://example.invalid/p.png"},{userId:4,bio:"Experienced carpenter providing home installation services.",categories:'["Carpentry"]',serviceArea:"Regina",identityVerificationStatus:"approved",profileImageUrl:"https://example.invalid/p.png"}]);
@@ -147,6 +149,39 @@ describe.skipIf(!run)("V2 real MySQL integration (isolated CI)",()=>{
   vi.mocked(retrievePaymentIntent).mockResolvedValueOnce(intent);vi.mocked(stripe.refunds.retrieve).mockResolvedValueOnce({id:"re_ci",amount:2500,currency:"cad",payment_intent:intent.id,status:"succeeded"} as Stripe.Response<Stripe.Refund>);
   await checkRefundCases();await checkRefundCases();
   const [p]=await db.select().from(payments).where(eq(payments.jobId,jobId));expect(p.amount).toBe("100.00");expect(p.platformFee).toBe("15.00");expect(p.handymanPayout).toBe("60.00");expect(p.status).toBe("completed");expect((await caller(1).refunds.status({jobId})).case?.status).toBe("settled");
+ });
+
+ it("keeps additional quotes separate and accepts one quote atomically",async()=>{
+  const db=await getDb(),parent=await createJob({...jobData,status:"in_progress",selectedHandymanId:2});
+  const input={jobId:parent,title:"Additional shelf",scope:"Install one additional small shelf",price:50,requestKey:"11111111-1111-4111-8111-111111111111"};
+  await expect(caller(4,"handyman").serviceWorkflows.proposeAddition(input)).rejects.toThrow();
+  const {jobId}=await caller(2,"handyman").serviceWorkflows.proposeAddition(input);
+  expect((await caller(2,"handyman").serviceWorkflows.proposeAddition(input)).jobId).toBe(jobId);
+  expect((await caller(1).serviceWorkflows.additions({jobId:parent})).items).toHaveLength(1);
+  const [bid]=await db.select().from(bids).where(eq(bids.jobId,jobId));
+  const calls=await Promise.allSettled([caller(1).bids.accept({bidId:bid.id}),caller(1).bids.accept({bidId:bid.id})]);expect(calls.filter(x=>x.status==="fulfilled")).toHaveLength(1);
+  const paymentRows=await db.select().from(payments).where(eq(payments.jobId,jobId));expect(paymentRows).toHaveLength(1);expect(paymentRows[0].amount).toBe("50.00");
+  expect((await getJobById(parent))?.status).toBe("in_progress");await expect(caller(1).bids.reject({bidId:bid.id})).rejects.toThrow();
+ });
+ it("creates one recurring private request, never a charge, and honors pause",async()=>{
+  const db=await getDb();await caller(1).myHome.save({handymanId:2,saved:true});
+  const next=new Date(Date.now()+2*86400000);
+  await caller(1).serviceWorkflows.createPlan({handymanId:2,title:"Recurring wood care",description:"Check freestanding wooden furniture.",category:"Carpentry",location:"Saskatoon",intervalDays:14,firstDate:next.toISOString().slice(0,10),consent:true});
+  const plan=(await caller(1).serviceWorkflows.recurring()).plans[0];await db.update(recurringRequests).set({nextRunAt:new Date(Date.now()-1000)}).where(eq(recurringRequests.id,plan.id));
+  await Promise.all([checkRecurringRequests(new Date()),checkRecurringRequests(new Date())]);
+  const result=(await caller(1).serviceWorkflows.recurring()).plans[0];expect(result.lastJobId).toBeTruthy();
+  expect((await getJobById(result.lastJobId!))?.requestedHandymanId).toBe(2);
+  expect(await db.select().from(payments).where(eq(payments.jobId,result.lastJobId!))).toHaveLength(0);
+  expect((await caller(3).serviceWorkflows.recurring()).plans).toHaveLength(0);
+  await caller(1).serviceWorkflows.setPlanStatus({id:plan.id,status:"paused"});await db.update(recurringRequests).set({nextRunAt:new Date(Date.now()-1000)}).where(eq(recurringRequests.id,plan.id));await checkRecurringRequests(new Date());expect((await caller(1).serviceWorkflows.recurring()).plans[0].lastJobId).toBe(result.lastJobId);
+ });
+ it("allows missed appointment reports only after an assigned appointment",async()=>{
+  const db=await getDb(),jobId=await createJob({...jobData,status:"in_progress",selectedHandymanId:2});
+  await db.insert(jobAppointments).values({jobId,homeownerId:1,handymanId:2,status:"confirmed",startAt:new Date(Date.now()-7200000),endAt:new Date(Date.now()-3600000)});
+  await expect(caller(3).serviceWorkflows.reportMissed({jobId,details:"Professional did not arrive."})).rejects.toThrow();
+  await caller(1).serviceWorkflows.reportMissed({jobId,details:"The professional did not arrive."});
+  expect((await getJobById(jobId))?.status).toBe("disputed");
+  await expect(caller(1).serviceWorkflows.reportMissed({jobId,details:"The professional did not arrive."})).rejects.toThrow();
  });
 
 });

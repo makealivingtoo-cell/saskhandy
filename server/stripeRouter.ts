@@ -65,7 +65,7 @@ export const stripeRouter = router({
       }
 
       if (bid.jobId!==job.id||bid.handymanId!==job.selectedHandymanId||bid.status!=="accepted"||payment.homeownerId!==job.homeownerId||payment.handymanId!==job.selectedHandymanId||Number(payment.amount)!==Number(bid.bidAmount)||payment.status==="completed"||payment.status==="refunded") throw new TRPCError({code:"CONFLICT",message:"Payment details need to be reviewed before checkout."});
-      if (bookingEnabled()) await claimBookingCheckout(job.id,ctx.user.id);
+      const isBooking=bookingEnabled()?await claimBookingCheckout(job.id,ctx.user.id):false;
       const amount = Number.parseFloat(payment.amount);
 
       if (!Number.isFinite(amount) || amount <= 0) {
@@ -104,6 +104,7 @@ export const stripeRouter = router({
         }
       }
 
+      if (isBooking&&payment.stripePaymentIntentId)throw new TRPCError({code:"CONFLICT",message:"This booking payment needs reconciliation. Do not create another payment."});
       if (bookingEnabled()) await claimBookingCheckout(job.id,ctx.user.id);
       const result = await createPaymentIntent({
         amount,

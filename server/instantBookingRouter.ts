@@ -82,20 +82,22 @@ export const instantBookingRouter=router({
   const [row]=await db.select({slot:instantSlots,job:jobs}).from(instantSlots).innerJoin(jobs,eq(jobs.id,instantSlots.jobId)).where(and(eq(instantSlots.jobId,input.jobId),eq(jobs.homeownerId,ctx.user.id))).limit(1);
   return row?{startAt:row.slot.startAt,endAt:row.slot.endAt,holdUntil:row.slot.holdUntil,checkoutStarted:!!row.slot.checkoutStartedAt,status:row.slot.status}:null;
  }),
+ adminExceptions:protectedProcedure.query(async({ctx})=>{if(ctx.user.role!=="admin")throw new TRPCError({code:"FORBIDDEN"});if(!bookingEnabled())return [];const db=await getDb();return db.select({jobId:jobs.id,holdUntil:instantSlots.holdUntil,checkoutStartedAt:instantSlots.checkoutStartedAt}).from(instantSlots).innerJoin(jobs,eq(jobs.id,instantSlots.jobId)).where(and(eq(jobs.status,"awaiting_payment"),eq(instantSlots.status,"reserved"),lte(instantSlots.holdUntil,new Date(Date.now()-15*60000)))).limit(100);}),
  cancelHold:protectedProcedure.input(z.object({jobId:id})).mutation(async({ctx,input})=>{
   requireEnabled();if(!await cancelUnpaidHold(input.jobId,ctx.user.id)&&!await reconcileExpiredBooking(input.jobId,ctx.user.id))throw new TRPCError({code:"CONFLICT",message:"If checkout started, wait until the hold expires so we can verify the payment. Processing or uncertain payments need review."});return {success:true};
  }),
 });
 export async function claimBookingCheckout(jobId:number,homeownerId:number){
  // Keep booking enabled until outstanding reservations are reconciled.
- const db=await getDb();await db.transaction(async tx=>{
+ const db=await getDb();return db.transaction(async tx=>{
   const [job]=await tx.select().from(jobs).where(eq(jobs.id,jobId)).for("update");
   if(!job||job.homeownerId!==homeownerId||job.status!=="awaiting_payment")throw new TRPCError({code:"BAD_REQUEST",message:"This job is not awaiting payment."});
-  if(!bookingEnabled())return;
+  if(!bookingEnabled())return false;
   const [slot]=await tx.select().from(instantSlots).where(eq(instantSlots.jobId,jobId)).for("update");
-  if(!slot)return;
+  if(!slot)return false;
   if(slot.status!=="reserved"||slot.startAt<=new Date()||(!slot.holdUntil||slot.holdUntil<=new Date()))throw unavailable();
   if(!slot.checkoutStartedAt)await tx.update(instantSlots).set({checkoutStartedAt:new Date()}).where(eq(instantSlots.id,slot.id));
+  return true;
  });
 }
 async function cancelUnpaidHold(jobId:number,owner?:number,confirmedCancelledIntent?:string){

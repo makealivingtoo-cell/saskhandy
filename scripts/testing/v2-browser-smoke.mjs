@@ -8,7 +8,7 @@ assert.equal(process.env.SASKHANDY_V2_BROWSER_TEST,"1");
 const db=new URL(process.env.DATABASE_URL??"");
 assert.equal(db.hostname,"127.0.0.1");assert.equal(db.pathname,"/saskhandy_v2_integration_ci");
 const origin="http://127.0.0.1:4179",secret="ci-only-session-key-not-for-production-2026";
-const server=spawn(process.execPath,["dist/index.js"],{env:{PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:"production",GITHUB_ACTIONS:"true",SASKHANDY_V2_BROWSER_TEST:"1",DATABASE_URL:process.env.DATABASE_URL,PORT:"4179",APP_URL:origin,JWT_SECRET:secret,STRIPE_SECRET_KEY:"sk_test_ci_placeholder_do_not_use",SASKHANDY_V2_MATCHING:"1",SASKHANDY_V2_APPOINTMENTS:"1",SASKHANDY_V2_HOME:"1",SASKHANDY_V2_PRO:"1",SASKHANDY_V2_BOOKING:"1"},stdio:"inherit"});
+const server=spawn(process.execPath,["dist/index.js"],{env:{PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:"production",GITHUB_ACTIONS:"true",SASKHANDY_V2_BROWSER_TEST:"1",DATABASE_URL:process.env.DATABASE_URL,PORT:"4179",APP_URL:origin,JWT_SECRET:secret,STRIPE_SECRET_KEY:"sk_test_ci_placeholder_do_not_use",SASKHANDY_V2_MATCHING:"1",SASKHANDY_V2_APPOINTMENTS:"1",SASKHANDY_V2_HOME:"1",SASKHANDY_V2_PRO:"1",SASKHANDY_V2_BOOKING:"1",SASKHANDY_V2_RESOLUTION:"1",SASKHANDY_V2_SERVICE_WORKFLOWS:"1"},stdio:"inherit"});
 const output="artifacts/v2-browser";await mkdir(output,{recursive:true});
 let browser;const report=[];
 try{
