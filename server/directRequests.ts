@@ -17,6 +17,6 @@ export async function ensureDirectRequest(owner:number,pro:number,input:{categor
 export async function localPriceGuidance(category:string,location:string){
  if(!/\bsaskatoon\b/i.test(location))return null;
  const db=await getDb();
- const rows=await db.select({jobId:jobs.id,amount:payments.amount,handymanId:payments.handymanId,location:jobs.location}).from(jobs).innerJoin(payments,eq(payments.jobId,jobs.id)).where(and(eq(jobs.category,category),eq(jobs.status,"completed"),eq(payments.status,"completed"),gt(jobs.updatedAt,new Date(Date.now()-365*86400000)))).orderBy(desc(jobs.updatedAt)).limit(250);
- return historicalRange(rows.filter(r=>/\bsaskatoon\b/i.test(r.location)));
+ const rows=await db.select({jobId:jobs.id,amount:payments.amount,fee:payments.platformFee,payout:payments.handymanPayout,handymanId:payments.handymanId,location:jobs.location}).from(jobs).innerJoin(payments,eq(payments.jobId,jobs.id)).where(and(eq(jobs.category,category),eq(jobs.status,"completed"),eq(payments.status,"completed"),gt(jobs.updatedAt,new Date(Date.now()-365*86400000)))).orderBy(desc(jobs.updatedAt)).limit(250);
+ return historicalRange(rows.filter(r=>/\bsaskatoon\b/i.test(r.location)).map(r=>({...r,amount:(Number(r.fee)+Number(r.payout)).toFixed(2)})));
 }

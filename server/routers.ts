@@ -1,4 +1,4 @@
-import { refundRouter,finalizeSecuredJob } from "./refundRouter";
+import { refundRouter,finalizeSecuredJob,openJobDispute } from "./refundRouter";
 import { ensureDirectRequest,localPriceGuidance } from "./directRequests";
 import { canSeeDirectedJob } from "../shared/requestPolicy";
 import { matchesIntent } from "../shared/paymentIntegrity";
@@ -1561,6 +1561,7 @@ const jobsRouter = router({
         }
       }
 
+      if (!job.selectedHandymanId) throw new TRPCError({code:"CONFLICT",message:"No professional is assigned."});
       if (input.status === "completed" && job.selectedHandymanId) {
         await releasePaymentToHandyman({
           jobId: input.jobId,
@@ -1568,8 +1569,7 @@ const jobsRouter = router({
         });
       }
 
-      await updateJobStatus(input.jobId, input.status);
-
+      // finalizeSecuredJob updates payment and job atomically.
       if (input.status === "completed" && job.selectedHandymanId) {
         await notifyUser({
           userId: job.selectedHandymanId,
@@ -2483,8 +2483,8 @@ const bidsRouter = router({
       const job = await getJobById(bid.jobId);
 
       // system_expired jobs are retained for Admin history only.
-      if (!canSeeDirectedJob(job,ctx.user)) throw new TRPCError({code:"NOT_FOUND"});
-    if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
+      if (!job || !canSeeDirectedJob(job,ctx.user)) continue;
+      if (isSystemExpiredJob(job) && ctx.user.role !== "admin") {
         continue;
       }
 
@@ -2792,13 +2792,7 @@ const disputesRouter = router({
         });
       }
 
-      await updateJobStatus(input.jobId, "disputed");
-
-      const disputeId = await createDispute({
-        jobId: input.jobId,
-        initiatedBy: ctx.user.id,
-        reason: input.reason,
-      });
+      const disputeId = await openJobDispute(input.jobId,ctx.user.id,input.reason);
 
       const otherUserId =
         job.homeownerId === ctx.user.id ? job.selectedHandymanId : job.homeownerId;
@@ -2896,7 +2890,6 @@ const disputesRouter = router({
                 fromDispute:true,
               });
 
-              await updateJobStatus(job.id, "completed");
               await resolveDispute(input.disputeId,input.resolution,input.adminNotes);
 
               await notifyUser({

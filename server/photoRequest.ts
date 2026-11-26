@@ -15,3 +15,6 @@ export async function interpretPhoto(input:z.infer<typeof photoRequestInput>){
  if(!response.ok)throw new TRPCError({code:"BAD_GATEWAY",message:"Photo assistance is temporarily unavailable. Please describe the job manually."});
  const data=await response.json();try{return resultSchema.parse(JSON.parse(data.choices[0].message.content.replace(/^\x60\x60\x60(?:json)?\s*|\s*\x60\x60\x60$/g,"")));}catch{throw new TRPCError({code:"BAD_GATEWAY",message:"The photo could not be interpreted reliably. Please describe the work yourself."});}
 }
+
+const photoLimits=new Map<number,{start:number,count:number}>();
+export function limitPhotoRequest(userId:number){const now=Date.now();for(const [key,value] of photoLimits)if(now-value.start>3600000)photoLimits.delete(key);const old=photoLimits.get(userId);if(old&&old.count>=5)throw new TRPCError({code:"TOO_MANY_REQUESTS",message:"You can review up to five photos per hour. Try again later."});if(!old&&photoLimits.size>=10000)throw new TRPCError({code:"TOO_MANY_REQUESTS",message:"Photo assistance is busy. Try again later."});photoLimits.set(userId,old?{start:old.start,count:old.count+1}:{start:now,count:1});}

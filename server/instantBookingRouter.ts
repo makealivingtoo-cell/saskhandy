@@ -128,6 +128,6 @@ export async function reconcileExpiredBooking(jobId:number,owner?:number){
 }
 export async function checkBookingHolds(now:Date){
  if(!bookingEnabled())return;const db=await getDb();
- const rows=await db.select({jobId:instantSlots.jobId}).from(instantSlots).where(and(eq(instantSlots.status,"reserved"),lte(instantSlots.holdUntil,now))).limit(50);
+ const rows=await db.select({jobId:instantSlots.jobId}).from(instantSlots).innerJoin(jobs,eq(jobs.id,instantSlots.jobId)).where(and(eq(instantSlots.status,"reserved"),eq(jobs.status,"awaiting_payment"),lte(instantSlots.holdUntil,now))).orderBy(asc(instantSlots.holdUntil)).limit(50);
  for(const row of rows)if(row.jobId)try{await reconcileExpiredBooking(row.jobId);}catch(e){console.error("[Booking] hold cleanup failed",row.jobId,e);}
 }

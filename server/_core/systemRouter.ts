@@ -1,4 +1,4 @@
-import { photoRequestInput,interpretPhoto } from "../photoRequest";
+import { photoRequestInput,interpretPhoto,limitPhotoRequest } from "../photoRequest";
 import { z } from "zod";
 import { notifyOwner } from "./notification";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./trpc";
@@ -175,7 +175,7 @@ If the user asks something unrelated to SaskHandy, politely redirect them back t
       };
     }),
 
-  interpretPhoto: protectedProcedure.input(photoRequestInput).mutation(async({ctx,input})=>{if(ctx.user.userType!=="homeowner")throw new Error("Homeowner access required");return interpretPhoto(input);}),
+  interpretPhoto: protectedProcedure.input(photoRequestInput).mutation(async({ctx,input})=>{if(ctx.user.userType!=="homeowner")throw new Error("Homeowner access required");limitPhotoRequest(ctx.user.id);return interpretPhoto(input);}),
   improveJobPost: protectedProcedure
     .input(
       z.object({

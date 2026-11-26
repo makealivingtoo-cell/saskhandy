@@ -135,7 +135,7 @@ export default function PostJob() {
   const [category, setCategory] = useState("");
   const [requestedHandymanId,setRequestedHandymanId]=useState<number|null>(()=>{const v=new URLSearchParams(window.location.search).get("professional");return v&&/^\d+$/.test(v)?Number(v):null;});
   const [location, setLocation] = useState("");
-  const guide=trpc.jobs.priceGuidance.useQuery({category:category as Parameters<typeof trpc.jobs.priceGuidance.useQuery>[0]["category"],location},{enabled:!!user&&!!category&&/saskatoon/i.test(location),retry:false});
+  const guide=trpc.jobs.priceGuidance.useQuery({category:category as (typeof JOB_CATEGORIES)[number],location},{enabled:!!user&&!!category&&/saskatoon/i.test(location),retry:false});
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [timingPreference, setTimingPreference] = useState<JobTimingPreference | "">("");

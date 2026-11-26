@@ -6,7 +6,10 @@ import {checkMatchingWorkflows} from "./jobMatchingWorker";
 import {checkAppointmentReminders} from "./appointmentRouter";
 import {checkHomeMaintenance} from "./myHomeRouter";
 import {reconcilePayment} from "./paymentReconciliation";
-import {claimBookingCheckout} from "./instantBookingRouter";
+import {claimBookingCheckout,reconcileExpiredBooking} from "./instantBookingRouter";
+import {checkRefundCases,finalizeSecuredJob} from "./refundRouter";
+import {stripe,retrievePaymentIntent} from "./stripe";
+import type Stripe from "stripe";
 import {instantSlots} from "../drizzle/schema";
 import {sendNewJobPostedEmail} from "./email";
 import {users,handymanProfiles,jobs,bids,payments,quotes,jobMatchRuns,jobMatchInvitations,notifications} from "../drizzle/schema";
@@ -17,7 +20,7 @@ describe.skipIf(!run)("V2 real MySQL integration (isolated CI)",()=>{
  const caller=(id:number,role:"homeowner"|"handyman"|"admin"="homeowner")=>appRouter.createCaller(ctx(id,role));
  const jobData={homeownerId:1,title:"Install shelves",description:"Install two shelves in the living room.",category:"Carpentry",location:"Saskatoon, SK"};
  beforeAll(async()=>{
-  for(const flag of ["MATCHING","APPOINTMENTS","HOME","PRO","BOOKING"])vi.stubEnv("SASKHANDY_V2_"+flag,"1");
+  for(const flag of ["MATCHING","APPOINTMENTS","HOME","PRO","BOOKING","RESOLUTION"])vi.stubEnv("SASKHANDY_V2_"+flag,"1");
   const db=await getDb();
   await db.insert(users).values([{id:1,openId:"ci-1",name:"CI homeowner",userType:"homeowner",emailVerified:true},{id:2,openId:"ci-2",name:"CI professional",email:"ci-pro@example.invalid",userType:"handyman",emailVerified:true},{id:3,openId:"ci-3",name:"Other homeowner",userType:"homeowner",emailVerified:true},{id:4,openId:"ci-4",name:"Other professional",userType:"handyman",emailVerified:true},{id:5,openId:"ci-5",name:"CI admin",role:"admin",userType:"homeowner",emailVerified:true}]);
   await db.insert(handymanProfiles).values([{userId:2,bio:"Experienced carpenter providing home installation services.",categories:'["Carpentry"]',serviceArea:"Saskatoon",identityVerificationStatus:"approved",profileImageUrl:"https://example.invalid/p.png"},{userId:4,bio:"Experienced carpenter providing home installation services.",categories:'["Carpentry"]',serviceArea:"Regina",identityVerificationStatus:"approved",profileImageUrl:"https://example.invalid/p.png"}]);
@@ -103,6 +106,47 @@ describe.skipIf(!run)("V2 real MySQL integration (isolated CI)",()=>{
   await expect(caller(3).instantBooking.cancelHold({jobId})).rejects.toThrow();
   await caller(1).instantBooking.cancelHold({jobId});
   expect((await getJobById(jobId))?.status).toBe("cancelled");const [payment]=await db.select().from(payments).where(eq(payments.jobId,jobId));expect(payment.stripePaymentIntentId).toBeNull();expect(payment.status).toBe("failed");
+ });
+
+ it("keeps private repeat requests out of other professionals' and guests' feeds",async()=>{
+  await caller(1).myHome.save({handymanId:2,saved:true});
+  const {jobId}=await caller(1).jobs.create({title:"Private repeat work",description:"Repair a small freestanding wooden chair.",category:"Carpentry",location:"Saskatoon, SK",requestedHandymanId:2});
+  const guest=appRouter.createCaller({...ctx(1),user:null});
+  await expect(guest.jobs.getById({jobId})).rejects.toThrow();await expect(caller(4,"handyman").jobs.getById({jobId})).rejects.toThrow();
+  expect((await caller(2,"handyman").jobs.getById({jobId})).id).toBe(jobId);
+  expect((await guest.jobs.getOpen({limit:100,offset:0})).some(j=>j.id===jobId)).toBe(false);
+  expect((await caller(2,"handyman").jobs.getOpen({limit:100,offset:0})).some(j=>j.id===jobId)).toBe(true);
+  await expect(caller(4,"handyman").bids.create({jobId,bidAmount:50})).rejects.toThrow();
+  await checkMatchingWorkflows(new Date(Date.now()+1000));
+  const db=await getDb();expect((await db.select().from(jobMatchInvitations).where(eq(jobMatchInvitations.jobId,jobId))).map(r=>r.handymanId)).toEqual([2]);
+ });
+ it("releases an expired checkout only after Stripe confirms zero collected funds",async()=>{
+  const db=await getDb(),start=new Date(Date.now()+72*3600000),end=new Date(start.getTime()+3600000);
+  await caller(2,"handyman").instantBooking.publish({service:"assembly",scope:"One small assembly kit",price:85,startAt:start.toISOString(),endAt:end.toISOString()});
+  const slot=(await caller(1).instantBooking.catalog()).slots.find(s=>Number(s.price)===85)!;
+  const {jobId}=await caller(1).instantBooking.reserve({id:slot.id,expectedPrice:85,acceptedScope:true});
+  await claimBookingCheckout(jobId,1);await db.update(instantSlots).set({holdUntil:new Date(Date.now()-1000)}).where(eq(instantSlots.jobId,jobId));
+  expect(await reconcileExpiredBooking(jobId,1)).toBe(false);
+  await db.update(payments).set({stripePaymentIntentId:"pi_expiry_ci"}).where(eq(payments.jobId,jobId));
+  const intent={id:"pi_expiry_ci",amount:8500,amount_received:0,currency:"cad",status:"requires_payment_method",metadata:{jobId:String(jobId),homeownerId:"1",handymanId:"2"}} as Stripe.PaymentIntent;
+  vi.mocked(retrievePaymentIntent).mockResolvedValueOnce({...intent,status:"processing"});expect(await reconcileExpiredBooking(jobId,1)).toBe(false);
+  vi.mocked(retrievePaymentIntent).mockResolvedValueOnce(intent);vi.mocked(stripe.paymentIntents.cancel).mockResolvedValueOnce({...intent,status:"canceled"} as Stripe.Response<Stripe.PaymentIntent>);
+  expect(await reconcileExpiredBooking(jobId,1)).toBe(true);expect((await getJobById(jobId))?.status).toBe("cancelled");
+ });
+ it("settles an agreed partial refund exactly once and rejects competing completion",async()=>{
+  const db=await getDb(),jobId=await createJob({...jobData,status:"in_progress",selectedHandymanId:2});
+  await db.insert(payments).values({jobId,homeownerId:1,handymanId:2,amount:"100.00",platformFee:"20.00",handymanPayout:"80.00",status:"pending",stripePaymentIntentId:"pi_refund_ci"});
+  await expect(caller(3).refunds.propose({jobId,amount:25,reason:"Partial settlement for work",settlementAcknowledged:true})).rejects.toThrow();
+  await caller(1).refunds.propose({jobId,amount:25,reason:"Agreed partial work settlement",settlementAcknowledged:true});
+  await expect(finalizeSecuredJob(jobId,2)).rejects.toThrow();
+  await expect(caller(1).refunds.respond({jobId,accept:true,settlementAcknowledged:true})).rejects.toThrow();
+  await caller(2,"handyman").refunds.respond({jobId,accept:true,settlementAcknowledged:true});
+  const intent={id:"pi_refund_ci",amount:10000,amount_received:10000,currency:"cad",status:"succeeded",metadata:{jobId:String(jobId),homeownerId:"1",handymanId:"2"}} as Stripe.PaymentIntent;
+  vi.mocked(retrievePaymentIntent).mockResolvedValueOnce(intent);vi.mocked(stripe.refunds.create).mockResolvedValueOnce({id:"re_ci",amount:2500,currency:"cad",payment_intent:intent.id,status:"pending"} as Stripe.Response<Stripe.Refund>);
+  await checkRefundCases();expect((await caller(1).refunds.status({jobId})).case?.status).toBe("processing");expect((await getJobById(jobId))?.status).toBe("disputed");
+  vi.mocked(retrievePaymentIntent).mockResolvedValueOnce(intent);vi.mocked(stripe.refunds.retrieve).mockResolvedValueOnce({id:"re_ci",amount:2500,currency:"cad",payment_intent:intent.id,status:"succeeded"} as Stripe.Response<Stripe.Refund>);
+  await checkRefundCases();await checkRefundCases();
+  const [p]=await db.select().from(payments).where(eq(payments.jobId,jobId));expect(p.amount).toBe("100.00");expect(p.platformFee).toBe("15.00");expect(p.handymanPayout).toBe("60.00");expect(p.status).toBe("completed");expect((await caller(1).refunds.status({jobId})).case?.status).toBe("settled");
  });
 
 });

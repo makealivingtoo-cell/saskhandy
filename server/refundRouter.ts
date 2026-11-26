@@ -101,3 +101,17 @@ export async function finalizeSecuredJob(jobId:number,handymanId:number,fromDisp
   return {released:true};
  });
 }
+
+export async function openJobDispute(jobId:number,userId:number,reason:string){
+ const db=await getDb();
+ return db.transaction(async tx=>{
+  const [job]=await tx.select().from(jobs).where(eq(jobs.id,jobId)).for("update");
+  if(!job||(job.homeownerId!==userId&&job.selectedHandymanId!==userId))throw new TRPCError({code:"NOT_FOUND"});
+  if(!["in_progress","completed"].includes(job.status))throw new TRPCError({code:"CONFLICT",message:"This job cannot open a new dispute."});
+  const [existing]=await tx.select().from(disputes).where(eq(disputes.jobId,jobId)).limit(1);
+  if(existing)throw new TRPCError({code:"CONFLICT",message:"A dispute already exists."});
+  if(enabled()){const [c]=await tx.select().from(refundCases).where(eq(refundCases.jobId,jobId)).limit(1);if(c)throw new TRPCError({code:"CONFLICT",message:"A settlement case already exists."});}
+  const [result]=await tx.insert(disputes).values({jobId,initiatedBy:userId,reason});
+  await tx.update(jobs).set({status:"disputed"}).where(eq(jobs.id,jobId));return Number(result.insertId);
+ });
+}
