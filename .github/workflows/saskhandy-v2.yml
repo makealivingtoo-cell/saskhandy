@@ -23,6 +23,8 @@ jobs:
           --health-retries=20
     env:
       DATABASE_URL: mysql://root:testpass@127.0.0.1:3306/referral_workflow_ci
+      SASKHANDY_V2_MATCHING: "0"
+      SASKHANDY_V2_APPOINTMENTS: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -48,5 +50,9 @@ jobs:
       - run: pnpm db:v2-appointments
       - run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
       - run: pnpm test
-      - run: pnpm check
-      - run: pnpm build
+      - name: Type checking
+        if: ${{ !cancelled() }}
+        run: pnpm check
+      - name: Production build
+        if: ${{ !cancelled() }}
+        run: pnpm build

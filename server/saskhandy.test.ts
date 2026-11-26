@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { createJob, getHandymanProfile } from "./db";
+import { createPaymentIntent } from "./stripe";
 
 // ─── Mock DB helpers ─────────────────────────────────────────────────────────
 vi.mock("./db", () => ({
@@ -8,7 +10,7 @@ vi.mock("./db", () => ({
   upsertUser: vi.fn(),
   getUserByOpenId: vi.fn(),
   getUserById: vi.fn().mockResolvedValue({ id: 1, name: "Test User", email: "test@example.com" }),
-  createJob: vi.fn().mockResolvedValue({ id: 1 }),
+  createJob: vi.fn().mockResolvedValue(1),
   getJobById: vi.fn().mockResolvedValue({
     id: 1,
     title: "Fix leaky faucet",
@@ -27,7 +29,7 @@ vi.mock("./db", () => ({
   getJobsByHomeowner: vi.fn().mockResolvedValue([]),
   getOpenJobs: vi.fn().mockResolvedValue([]),
   updateJobStatus: vi.fn(),
-  createBid: vi.fn().mockResolvedValue({ id: 10 }),
+  createBid: vi.fn().mockResolvedValue(10),
   getBidById: vi.fn().mockResolvedValue({
     id: 10,
     jobId: 1,
@@ -42,7 +44,9 @@ vi.mock("./db", () => ({
   getBidsForHandyman: vi.fn().mockResolvedValue([]),
   updateBidStatus: vi.fn(),
   createHandymanProfile: vi.fn(),
-  getHandymanProfile: vi.fn().mockResolvedValue(null),
+  getHandymanProfile: vi.fn().mockResolvedValue({profileImageUrl:"https://example.com/profile.jpg",bio:"An experienced professional with relevant skills.",categories:"[\"Plumbing\"]",identityVerificationStatus:"approved"}),
+  createNotification: vi.fn().mockResolvedValue(1),
+  getAllPayoutRequests: vi.fn().mockResolvedValue([]),
   getAllHandymanProfiles: vi.fn().mockResolvedValue([]),
   getHandymanProfileById: vi.fn().mockResolvedValue(null),
   updateHandymanProfile: vi.fn(),
@@ -131,7 +135,7 @@ describe("jobs.create", () => {
       budgetMin: 50,
       budgetMax: 150,
     });
-    expect(result).toMatchObject({ jobId: { id: 1 } });
+    expect(result).toMatchObject({ jobId: 1 });
   });
 
   it("throws UNAUTHORIZED if not logged in", async () => {
@@ -140,7 +144,7 @@ describe("jobs.create", () => {
     await expect(
       caller.jobs.create({
         title: "Fix faucet",
-        description: "Drips",
+        description: "Kitchen faucet drips",
         category: "Plumbing",
         location: "Regina, SK",
         budgetMin: 50,
@@ -170,7 +174,7 @@ describe("bids.create", () => {
       message: "I can fix this quickly",
       availability: "This weekend",
     });
-    expect(result).toMatchObject({ bidId: { id: 10 } });
+    expect(result).toMatchObject({ bidId: 10 });
   });
 });
 
@@ -235,4 +239,34 @@ describe("Job status lifecycle", () => {
     expect(validStatuses).not.toContain("cancelled");
     expect(validStatuses).not.toContain("pending");
   });
+});
+
+// V2 regression coverage on the same public API; no external provider calls.
+describe("v2 request and permission safeguards",()=>{
+ const input={title:"Install shelves",description:"Install two shelves in the living room.",category:"Carpentry",location:"Saskatoon"};
+ beforeEach(()=>{vi.clearAllMocks();});
+ it("allows a genuinely unknown budget",async()=>{
+  const caller=appRouter.createCaller(makeCtx());
+  expect(await caller.jobs.create({...input,budgetMin:null,budgetMax:null})).toEqual({jobId:1});
+  expect(createJob).toHaveBeenCalledWith(expect.objectContaining({budgetMin:null,budgetMax:null}),false);
+ });
+ it("rejects partial and reversed budgets",async()=>{
+  const caller=appRouter.createCaller(makeCtx());
+  await expect(caller.jobs.create({...input,budgetMin:50,budgetMax:null})).rejects.toThrow();
+  await expect(caller.jobs.create({...input,budgetMin:100,budgetMax:50})).rejects.toThrow();
+  expect(createJob).not.toHaveBeenCalled();
+ });
+ it("keeps matching progress private and admin health restricted",async()=>{
+  await expect(appRouter.createCaller(makeHandymanCtx()).jobs.matchingStatus({jobId:1})).rejects.toThrow();
+  await expect(appRouter.createCaller(makeCtx()).admin.matchingHealth()).rejects.toThrow();
+ });
+ it("blocks payment creation by another user or without a selected quote",async()=>{
+  await expect(appRouter.createCaller(makeHandymanCtx()).stripe.createPaymentIntent({jobId:1})).rejects.toThrow();
+  await expect(appRouter.createCaller(makeCtx()).stripe.createPaymentIntent({jobId:1})).rejects.toThrow();
+  expect(createPaymentIntent).not.toHaveBeenCalled();
+ });
+ it("keeps unverified professionals from submitting quotes",async()=>{
+  vi.mocked(getHandymanProfile).mockResolvedValueOnce(null);
+  await expect(appRouter.createCaller(makeHandymanCtx()).bids.create({jobId:1,bidAmount:100})).rejects.toThrow();
+ });
 });
