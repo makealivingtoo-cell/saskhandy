@@ -227,7 +227,7 @@ export default function HandymanProfile() {
 
   useEffect(() => {
     if (profile) {
-      setFullName(user?.name ?? profile.userName ?? "");
+      setFullName(user?.name ?? "");
       setBio(profile.bio ?? "");
 
       try {

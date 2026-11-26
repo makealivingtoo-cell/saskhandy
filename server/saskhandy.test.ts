@@ -270,3 +270,9 @@ describe("v2 request and permission safeguards",()=>{
   await expect(appRouter.createCaller(makeHandymanCtx()).bids.create({jobId:1,bidAmount:100})).rejects.toThrow();
  });
 });
+
+describe("V2 disabled and role boundaries",()=>{
+ it("does not expose homeowner data to a professional",async()=>{await expect(appRouter.createCaller(makeHandymanCtx()).myHome.overview()).rejects.toThrow();});
+ it("does not expose professional tools to a homeowner",async()=>{await expect(appRouter.createCaller(makeCtx()).proTools.overview()).rejects.toThrow();});
+ it("rejects anonymous calls to private home tools",async()=>{await expect(appRouter.createCaller({...makeCtx(),user:null}).myHome.overview()).rejects.toThrow();});
+});

@@ -289,21 +289,7 @@ export default function AdminSupportPage() {
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   </div>
                 ) : messages.length === 0 ? (
-                  selectedTicket.content ? (
-                    <div className="rounded-2xl px-4 py-3 max-w-[85%] bg-white border border-border/60">
-                      <p className="text-xs font-medium mb-1">
-                        {getSubmitterLabel(selectedTicket)}
-                      </p>
-                      <p className="text-sm whitespace-pre-wrap">{selectedTicket.content}</p>
-                      <p className="text-[11px] opacity-80 mt-2">
-                        {formatDistanceToNow(new Date(selectedTicket.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 text-sm text-muted-foreground">
-                      No messages yet.
-                    </div>
-                  )
+                  <div className="text-center py-10 text-sm text-muted-foreground">No messages yet.</div>
                 ) : (
                   messages.map((msg) => (
                     <div

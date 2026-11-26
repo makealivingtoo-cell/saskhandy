@@ -1,3 +1,4 @@
+import { sdk } from "./sdk";
 import { checkAppointmentReminders } from "../appointmentRouter";
 import { checkHomeMaintenance } from "../myHomeRouter";
 import { checkMatchingWorkflows } from "../jobMatchingWorker";
@@ -811,13 +812,23 @@ async function startServer() {
     limits: { fileSize: 5 * 1024 * 1024 },
   });
 
-  app.post("/api/upload", upload.single("file"), async (req: any, res) => {
+  // Authenticate before allocating upload buffers or accepting storage traffic.
+  app.post("/api/upload", async (req, res, next) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (user.userType !== "homeowner" && user.userType !== "handyman" && user.role !== "admin") return res.status(403).json({error:"Not allowed"});
+      next();
+    } catch { return res.status(401).json({error:"Sign in to upload a file."}); }
+  }, upload.single("file"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file provided" });
       }
 
-      const ext = (req.file.originalname as string).split(".").pop() ?? "bin";
+      const file = req.file.buffer as Buffer;
+      const mime = req.file.mimetype as string;
+      const ext = mime === "image/jpeg" && file.subarray(0,3).equals(Buffer.from([255,216,255])) ? "jpg" : mime === "image/png" && file.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? "png" : mime === "image/webp" && file.toString("ascii",0,4)==="RIFF" && file.toString("ascii",8,12)==="WEBP" ? "webp" : mime === "application/pdf" && file.toString("ascii",0,5)==="%PDF-" ? "pdf" : null;
+      if (!ext) return res.status(415).json({error:"Upload a JPG, PNG, WEBP or PDF file."});
       const key = `uploads/${nanoid()}.${ext}`;
 
       const { url } = await storagePut(

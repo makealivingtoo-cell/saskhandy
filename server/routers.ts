@@ -1,3 +1,4 @@
+import { publicProfessional } from "../shared/publicProfessional";
 import { appointmentRouter } from "./appointmentRouter";
 import { myHomeRouter } from "./myHomeRouter";
 import { proToolsRouter } from "./proToolsRouter";
@@ -1121,17 +1122,13 @@ const handymanProfilesRouter = router({
     const profile = await getHandymanProfile(input.userId);
     const user = await safeGetUserById(input.userId);
 
-    if (!profile || !user) return null;
+    if (!profile || !user || user.userType !== "handyman") return null;
 
-    return {
-      ...profile,
-      userName: user?.name,
-      userEmail: user?.email,
-    };
+    return { ...publicProfessional(profile), userName: user.name };
   }),
 
   getAll: publicProcedure.query(async () => {
-    return getAllHandymanProfiles();
+    return (await getAllHandymanProfiles()).map(publicProfessional);
   }),
 
   createOrUpdate: protectedProcedure
@@ -1155,6 +1152,7 @@ const handymanProfilesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (ctx.user.userType !== "handyman" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       const existing = await getHandymanProfile(ctx.user.id);
 
       if ("name" in input) {
@@ -1342,7 +1340,7 @@ const jobsRouter = router({
         if (handyman.email) {
           void safeSendEmail("sendNewJobPostedEmail", () =>
             sendNewJobPostedEmail({
-              to: handyman.email,
+              to: handyman.email!,
               handymanName: handyman.name,
               jobTitle: input.title,
               category: input.category,
@@ -1605,7 +1603,7 @@ const jobsRouter = router({
         if (handyman?.email) {
           void safeSendEmail("sendJobCompletedEmail", () =>
             sendJobCompletedEmail({
-              to: handyman.email,
+              to: handyman.email!,
               handymanName: handyman.name,
               jobTitle: job.title,
             })
@@ -2390,7 +2388,7 @@ const bidsRouter = router({
       if (homeowner?.email) {
         void safeSendEmail("sendNewBidEmail", () =>
           sendNewBidEmail({
-            to: homeowner.email,
+            to: homeowner.email!,
             homeownerName: homeowner.name,
             handymanName: ctx.user.name,
             jobTitle: job.title,
@@ -2566,7 +2564,7 @@ const bidsRouter = router({
     if (handyman?.email) {
       void safeSendEmail("sendBidAcceptedEmail", () =>
         sendBidAcceptedEmail({
-          to: handyman.email,
+          to: handyman.email!,
           handymanName: handyman.name,
           jobTitle: job.title,
           bidAmount: amount,
@@ -2725,7 +2723,7 @@ const paymentsRouter = router({
         if (handyman?.email) {
           void safeSendEmail("sendPaymentReceivedEmail", () =>
             sendPaymentReceivedEmail({
-              to: handyman.email,
+              to: handyman.email!,
               handymanName: handyman.name,
               jobTitle: job.title,
             })
@@ -2861,7 +2859,7 @@ const disputesRouter = router({
         if (otherUser?.email) {
           void safeSendEmail("sendDisputeOpenedEmail", () =>
             sendDisputeOpenedEmail({
-              to: otherUser.email,
+              to: otherUser.email!,
               recipientName: otherUser.name,
               jobTitle: job.title,
               reason: input.reason,
@@ -2967,7 +2965,7 @@ const disputesRouter = router({
               if (homeowner?.email) {
                 void safeSendEmail("sendDisputeResolvedEmail-homeowner", () =>
                   sendDisputeResolvedEmail({
-                    to: homeowner.email,
+                    to: homeowner.email!,
                     recipientName: homeowner.name,
                     jobTitle: job.title,
                     outcome: "Payment was released to the handyman.",
@@ -2979,7 +2977,7 @@ const disputesRouter = router({
               if (handyman?.email) {
                 void safeSendEmail("sendDisputeResolvedEmail-handyman", () =>
                   sendDisputeResolvedEmail({
-                    to: handyman.email,
+                    to: handyman.email!,
                     recipientName: handyman.name,
                     jobTitle: job.title,
                     outcome: "Payment was released.",
@@ -3028,7 +3026,7 @@ const disputesRouter = router({
               if (homeowner?.email) {
                 void safeSendEmail("sendDisputeResolvedEmail-homeowner", () =>
                   sendDisputeResolvedEmail({
-                    to: homeowner.email,
+                    to: homeowner.email!,
                     recipientName: homeowner.name,
                     jobTitle: job.title,
                     outcome: "Your payment was refunded.",
@@ -3040,7 +3038,7 @@ const disputesRouter = router({
               if (handyman?.email) {
                 void safeSendEmail("sendDisputeResolvedEmail-handyman", () =>
                   sendDisputeResolvedEmail({
-                    to: handyman.email,
+                    to: handyman.email!,
                     recipientName: handyman.name,
                     jobTitle: job.title,
                     outcome: "The homeowner was refunded.",
@@ -3211,7 +3209,7 @@ const messagesRouter = router({
         if (recipient?.email) {
           void safeSendEmail("sendNewMessageEmail", () =>
             sendNewMessageEmail({
-              to: recipient.email,
+              to: recipient.email!,
               recipientName: recipient.name,
               senderName: ctx.user.name,
               jobTitle: job.title,
@@ -3885,7 +3883,7 @@ const adminRouter = router({
         if (input.status === "paid") {
           void safeSendEmail("sendPayoutPaidEmail", () =>
             sendPayoutPaidEmail({
-              to: handyman.email,
+              to: handyman.email!,
               handymanName: handyman.name,
               amount: parseFloat(payoutRequest.amount),
             })
@@ -3893,7 +3891,7 @@ const adminRouter = router({
         } else {
           void safeSendEmail("sendPayoutRejectedEmail", () =>
             sendPayoutRejectedEmail({
-              to: handyman.email,
+              to: handyman.email!,
               handymanName: handyman.name,
               amount: parseFloat(payoutRequest.amount),
               adminNotes: input.adminNotes ?? null,

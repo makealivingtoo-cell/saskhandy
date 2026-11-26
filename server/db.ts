@@ -42,7 +42,7 @@ import {
 } from "../drizzle/schema";
 
 let poolInstance: Pool | null = null;
-let dbInstance: ReturnType<typeof drizzle> | null = null;
+let dbInstance: Awaited<ReturnType<typeof createDb>> | null = null;
 
 function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;

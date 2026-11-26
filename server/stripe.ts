@@ -7,7 +7,8 @@ if (!secretKey) {
 }
 
 export const stripe = new Stripe(secretKey, {
-  apiVersion: "2025-03-31.basil",
+  // Preserve the existing production API version until a dedicated Stripe upgrade is tested.
+  apiVersion: "2025-03-31.basil" as Stripe.LatestApiVersion,
 });
 
 function getAppUrl() {

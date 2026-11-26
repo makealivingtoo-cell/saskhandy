@@ -182,7 +182,7 @@ export function StripePaymentModal({
 
   const elementOptions = useMemo(
     () => ({
-      clientSecret,
+      clientSecret: clientSecret ?? undefined,
       appearance: {
         theme: "stripe" as const,
         variables: {

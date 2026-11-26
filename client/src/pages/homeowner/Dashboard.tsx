@@ -85,6 +85,7 @@ function postJobHref(idea: string) {
 
 export default function HomeownerDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
+  const homeTools = trpc.myHome.overview.useQuery(undefined,{enabled:isAuthenticated&&user?.userType==="homeowner",retry:false});
   const [, navigate] = useLocation();
 
   const { data: jobs, isLoading } = trpc.jobs.getByHomeowner.useQuery(undefined, {
@@ -180,7 +181,7 @@ export default function HomeownerDashboard() {
           )}
         </div>
 
-        <Button asChild variant="outline"><Link href="/my-home">My Home — maintenance and saved professionals</Link></Button>
+        {homeTools.data?.enabled&&<Button asChild variant="outline"><Link href="/my-home">My Home — maintenance and saved professionals</Link></Button>}
         {!hasJobs ? (
           <>
             <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-emerald-50 shadow-sm">

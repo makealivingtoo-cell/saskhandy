@@ -1,5 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { User } from "../../drizzle/schema";
+type User = Awaited<ReturnType<typeof sdk.authenticateRequest>>;
 import { sdk } from "./sdk";
 
 export type TrpcContext = {

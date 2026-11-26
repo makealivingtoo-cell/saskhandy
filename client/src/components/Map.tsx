@@ -24,9 +24,7 @@ export function MapView({
   title = "Job Location",
   heightClassName = "h-[320px]",
 }: MapViewProps) {
-  const hasLocation = !!locationQuery?.trim();
-
-  if (!hasLocation) {
+  if (!locationQuery?.trim()) {
     return (
       <div
         className={cn(
