@@ -1199,7 +1199,8 @@ export async function updateQuoteStatus(id: number, status: QuoteStatus) {
 export async function expireQuoteIfNeeded(
   quote: Pick<typeof quotes.$inferSelect, "id" | "handymanId" | "referralJobId" | "status" | "expiresAt">
 ) {
-  const terminalStatuses = new Set(["draft", "declined", "cancelled", "paid", "completed"]);
+  // Quote acceptance preserves the agreed price while payment is being reconciled.
+  const terminalStatuses = new Set(["draft", "declined", "cancelled", "paid", "completed", "approved", "payment_pending", "payment_failed"]);
   const isExpired = quote.status === "expired";
   const isPastDue =
     !!quote.expiresAt &&

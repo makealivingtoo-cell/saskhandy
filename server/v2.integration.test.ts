@@ -5,6 +5,9 @@ import {appRouter} from "./routers";
 import {checkMatchingWorkflows} from "./jobMatchingWorker";
 import {checkAppointmentReminders} from "./appointmentRouter";
 import {checkHomeMaintenance} from "./myHomeRouter";
+import {reconcilePayment} from "./paymentReconciliation";
+import {claimBookingCheckout} from "./instantBookingRouter";
+import {instantSlots} from "../drizzle/schema";
 import {sendNewJobPostedEmail} from "./email";
 import {users,handymanProfiles,jobs,bids,payments,quotes,jobMatchRuns,jobMatchInvitations,notifications} from "../drizzle/schema";
 import type {TrpcContext} from "./_core/context";
@@ -14,7 +17,7 @@ describe.skipIf(!run)("V2 real MySQL integration (isolated CI)",()=>{
  const caller=(id:number,role:"homeowner"|"handyman"|"admin"="homeowner")=>appRouter.createCaller(ctx(id,role));
  const jobData={homeownerId:1,title:"Install shelves",description:"Install two shelves in the living room.",category:"Carpentry",location:"Saskatoon, SK"};
  beforeAll(async()=>{
-  for(const flag of ["MATCHING","APPOINTMENTS","HOME","PRO"])vi.stubEnv("SASKHANDY_V2_"+flag,"1");
+  for(const flag of ["MATCHING","APPOINTMENTS","HOME","PRO","BOOKING"])vi.stubEnv("SASKHANDY_V2_"+flag,"1");
   const db=await getDb();
   await db.insert(users).values([{id:1,openId:"ci-1",name:"CI homeowner",userType:"homeowner",emailVerified:true},{id:2,openId:"ci-2",name:"CI professional",email:"ci-pro@example.invalid",userType:"handyman",emailVerified:true},{id:3,openId:"ci-3",name:"Other homeowner",userType:"homeowner",emailVerified:true},{id:4,openId:"ci-4",name:"Other professional",userType:"handyman",emailVerified:true},{id:5,openId:"ci-5",name:"CI admin",role:"admin",userType:"homeowner",emailVerified:true}]);
   await db.insert(handymanProfiles).values([{userId:2,bio:"Experienced carpenter providing home installation services.",categories:'["Carpentry"]',serviceArea:"Saskatoon",identityVerificationStatus:"approved",profileImageUrl:"https://example.invalid/p.png"},{userId:4,bio:"Experienced carpenter providing home installation services.",categories:'["Carpentry"]',serviceArea:"Regina",identityVerificationStatus:"approved",profileImageUrl:"https://example.invalid/p.png"}]);
@@ -74,4 +77,32 @@ describe.skipIf(!run)("V2 real MySQL integration (isolated CI)",()=>{
   expect(overview.templates).toHaveLength(1);expect(overview.templates[0]).not.toHaveProperty("homeownerEmail");expect(overview.templates[0]).not.toHaveProperty("publicToken");expect(overview.summary?.paidAmount).toBe(100);
   expect((await caller(4,"handyman").proTools.overview()).customers).toHaveLength(0);await expect(caller(1).proTools.overview()).rejects.toThrow();
  });
+ it("reserves one fixed-price slot and reconciles only the exact paid intent",async()=>{
+  const db=await getDb();await db.update(handymanProfiles).set({categories:'["Carpentry","General Helper"]'}).where(eq(handymanProfiles.userId,2));
+  const start=new Date(Date.now()+30*3600000),end=new Date(start.getTime()+3600000);
+  await caller(2,"handyman").instantBooking.publish({service:"assembly",scope:"One small table, instructions provided",price:100,startAt:start.toISOString(),endAt:end.toISOString()});
+  const slot=(await caller(1).instantBooking.catalog()).slots[0];expect(slot).toBeDefined();
+  const input={id:slot.id,expectedPrice:100,acceptedScope:true as const};
+  const results=await Promise.allSettled([caller(1).instantBooking.reserve(input),caller(3).instantBooking.reserve(input)]);
+  const winners=results.filter(r=>r.status==="fulfilled");expect(winners).toHaveLength(1);const jobId=(winners[0] as PromiseFulfilledResult<{jobId:number}>).value.jobId;
+  const job=await getJobById(jobId);expect(job?.status).toBe("awaiting_payment");const owner=job!.homeownerId;
+  expect((await caller(owner).instantBooking.reserve(input)).jobId).toBe(jobId);
+  await claimBookingCheckout(jobId,owner);await expect(caller(owner).instantBooking.cancelHold({jobId})).rejects.toThrow();
+  await db.update(payments).set({stripePaymentIntentId:"pi_ci_booking"}).where(eq(payments.jobId,jobId));
+  const intent={id:"pi_ci_booking",amount:10000,amount_received:10000,currency:"cad",status:"succeeded",metadata:{jobId:String(jobId),homeownerId:String(owner),handymanId:"2"}};
+  expect(await reconcilePayment({...intent,amount_received:99})).toBe("ignored");expect((await getJobById(jobId))?.status).toBe("awaiting_payment");
+  expect(await reconcilePayment(intent)).toBe("applied");expect((await getJobById(jobId))?.status).toBe("in_progress");
+  expect(await reconcilePayment({...intent,status:"requires_payment_method"})).toBe("ignored");expect(await reconcilePayment(intent)).toBe("ignored");
+  expect((await getJobById(jobId))?.status).toBe("in_progress");
+ });
+ it("cancels an unpaid reservation without moving money",async()=>{
+  const db=await getDb(),start=new Date(Date.now()+48*3600000),end=new Date(start.getTime()+3600000);
+  await caller(2,"handyman").instantBooking.publish({service:"assembly",scope:"One small shelf kit, no anchoring",price:80,startAt:start.toISOString(),endAt:end.toISOString()});
+  const slot=(await caller(1).instantBooking.catalog()).slots.find(s=>Number(s.price)===80)!;
+  const {jobId}=await caller(1).instantBooking.reserve({id:slot.id,expectedPrice:80,acceptedScope:true});
+  await expect(caller(3).instantBooking.cancelHold({jobId})).rejects.toThrow();
+  await caller(1).instantBooking.cancelHold({jobId});
+  expect((await getJobById(jobId))?.status).toBe("cancelled");const [payment]=await db.select().from(payments).where(eq(payments.jobId,jobId));expect(payment.stripePaymentIntentId).toBeNull();expect(payment.status).toBe("failed");
+ });
+
 });

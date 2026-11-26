@@ -84,7 +84,7 @@ export const instantBookingRouter=router({
  }),
 });
 export async function claimBookingCheckout(jobId:number,homeownerId:number){
- // Always enforce existing reservations if the feature was switched off after booking.
+ // Keep booking enabled until outstanding reservations are reconciled.
  const db=await getDb();await db.transaction(async tx=>{
   const [job]=await tx.select().from(jobs).where(eq(jobs.id,jobId)).for("update");
   if(!job||job.homeownerId!==homeownerId||job.status!=="awaiting_payment")throw new TRPCError({code:"BAD_REQUEST",message:"This job is not awaiting payment."});

@@ -1,3 +1,5 @@
+import { matchesIntent, acceptsQuotePayment } from "../shared/paymentIntegrity";
+import { reconcilePayment } from "./paymentReconciliation";
 import { TRPCError } from "@trpc/server";
 import { claimBookingCheckout } from "./instantBookingRouter";
 import { bookingEnabled } from "../shared/instantBooking";
@@ -75,8 +77,9 @@ export const stripeRouter = router({
 
       if (payment.stripePaymentIntentId) {
         const existingIntent = await retrievePaymentIntent(payment.stripePaymentIntentId);
-
+        if(!matchesIntent(existingIntent,{id:payment.stripePaymentIntentId,amount:payment.amount,jobId:job.id,handymanId:job.selectedHandymanId,homeownerId:job.homeownerId}))throw new TRPCError({code:"CONFLICT",message:"Payment details need review."});
         if (existingIntent.status === "succeeded") {
+          await reconcilePayment(existingIntent);
           return {
             clientSecret: null,
             paymentIntentId: existingIntent.id,
@@ -147,11 +150,9 @@ export const stripeRouter = router({
 
       if (quote.stripePaymentIntentId) {
         const existingIntent = await retrievePaymentIntent(quote.stripePaymentIntentId);
+        if(!matchesIntent(existingIntent,{id:quote.stripePaymentIntentId,amount:quote.totalAmount,quoteId:quote.id,handymanId:quote.handymanId}))throw new TRPCError({code:"CONFLICT",message:"Payment details need review."});
         if (existingIntent.status === "succeeded") {
-          await updateQuoteStatus(quote.id, "paid");
-          if (quote.referralJobId) {
-            await markReferralInProgressAfterQuotePayment(quote.referralJobId);
-          }
+          await reconcilePayment(existingIntent);
           return {
             clientSecret: null,
             paymentIntentId: existingIntent.id,
@@ -226,25 +227,22 @@ export const stripeRouter = router({
         }
         return { success: true, status: "paid" as const };
       }
+      if (!acceptsQuotePayment(quote.status)) throw new TRPCError({code:"BAD_REQUEST",message:"This quote is not awaiting payment."});
       if (!quote.stripePaymentIntentId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "No payment has been started." });
       }
 
       const paymentIntent = await retrievePaymentIntent(quote.stripePaymentIntentId);
-      if (paymentIntent.metadata.quoteId !== String(quote.id)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Payment does not match this quote." });
-      }
-
+      if (!matchesIntent(paymentIntent,{id:quote.stripePaymentIntentId,amount:quote.totalAmount,quoteId:quote.id,handymanId:quote.handymanId})) throw new TRPCError({code:"CONFLICT",message:"Payment details need review."});
       if (paymentIntent.status === "succeeded") {
-        await updateQuoteStatus(quote.id, "paid");
-        if (quote.referralJobId) {
-          await markReferralInProgressAfterQuotePayment(quote.referralJobId);
-        }
-        return { success: true, status: "paid" as const };
+        await reconcilePayment(paymentIntent);
+        const current=await getQuoteByPublicToken(input.token);
+        if(current?.status!=="paid"&&current?.status!=="completed")throw new TRPCError({code:"CONFLICT",message:"Payment needs reconciliation."});
+        return {success:true,status:"paid" as const};
       }
       if (paymentIntent.status === "requires_payment_method" || paymentIntent.status === "canceled") {
-        await updateQuoteStatus(quote.id, "payment_failed");
-        return { success: false, status: "payment_failed" as const };
+        await reconcilePayment(paymentIntent);
+        return {success:false,status:"payment_failed" as const};
       }
 
       return { success: false, status: "payment_pending" as const };

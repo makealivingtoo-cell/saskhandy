@@ -98,3 +98,20 @@ export async function storageGet(
 
   return { key, url };
 }
+export async function putVerificationFile(owner:number,id:string,ext:string,data:Buffer,mime:string){
+ ensureConfigured();
+ const key="verification/"+owner+"/"+id+"."+ext;
+ await cloudinary.uploader.upload(toDataUri(data,mime),{public_id:key,resource_type:"raw",type:"authenticated",overwrite:false,unique_filename:false});
+ return "/api/verification-file/"+owner+"/"+id+"."+ext;
+}
+export async function getVerificationFile(owner:number,name:string){
+ ensureConfigured();
+ const url=cloudinary.url("verification/"+owner+"/"+name,{secure:true,resource_type:"raw",type:"authenticated",sign_url:true});
+ const response=await fetch(url,{redirect:"error",signal:AbortSignal.timeout(15000)});
+ if(!response.ok)throw new Error("Verification document unavailable");
+ const length=Number(response.headers.get("content-length")??0);
+ if(length>5*1024*1024)throw new Error("Document too large");
+ const content=Buffer.from(await response.arrayBuffer());
+ if(content.length>5*1024*1024)throw new Error("Document too large");
+ return content;
+}

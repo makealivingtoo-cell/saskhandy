@@ -1,4 +1,4 @@
-import {and,eq,ne,lt,gt,lte,asc,isNull} from "drizzle-orm";
+import {and,eq,ne,lt,gt,lte,asc,isNull,inArray} from "drizzle-orm";
 import {z} from "zod";
 import {TRPCError} from "@trpc/server";
 import {router,protectedProcedure} from "./_core/trpc";
@@ -58,7 +58,7 @@ export const appointmentRouter=router({
    if(!appointment||!appointment.proposedStartAt||!appointment.proposedEndAt||!canRespondToProposal(ctx.user.id,appointment.proposedBy,appointment.version,input.version))throw new TRPCError({code:"CONFLICT",message:"That proposal is no longer available for you to confirm."});
    if(input.accept){
     if(!validAppointmentWindow(appointment.proposedStartAt,appointment.proposedEndAt,new Date()))throw new TRPCError({code:"BAD_REQUEST",message:"This time is no longer available. Suggest another time."});
-    const clash=await tx.select({id:jobAppointments.jobId}).from(jobAppointments).where(and(eq(jobAppointments.handymanId,job.selectedHandymanId!),ne(jobAppointments.jobId,job.id),eq(jobAppointments.status,"confirmed"),lt(jobAppointments.startAt,appointment.proposedEndAt),gt(jobAppointments.endAt,appointment.proposedStartAt))).limit(1).for("update");
+    const clash=await tx.select({id:jobAppointments.jobId}).from(jobAppointments).innerJoin(jobs,eq(jobs.id,jobAppointments.jobId)).where(and(eq(jobAppointments.handymanId,job.selectedHandymanId!),ne(jobAppointments.jobId,job.id),eq(jobAppointments.status,"confirmed"),inArray(jobs.status,["awaiting_payment","in_progress"]),lt(jobAppointments.startAt,appointment.proposedEndAt),gt(jobAppointments.endAt,appointment.proposedStartAt))).limit(1).for("update");
     if(clash.length)throw new TRPCError({code:"CONFLICT",message:"The professional already has a confirmed appointment at that time. Suggest another time."});
    }
    await tx.update(jobAppointments).set({status:input.accept?"confirmed":appointment.status==="confirmed"?"confirmed":"cancelled",...(input.accept?{startAt:appointment.proposedStartAt,endAt:appointment.proposedEndAt,reminderSentAt:null}:{}),proposedStartAt:null,proposedEndAt:null,proposedBy:null,version:appointment.version+1}).where(eq(jobAppointments.jobId,job.id));

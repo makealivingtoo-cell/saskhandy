@@ -1,3 +1,4 @@
+import { reconcilePayment } from "../paymentReconciliation";
 import { sdk } from "./sdk";
 import { checkAppointmentReminders } from "../appointmentRouter";
 import { checkBookingHolds } from "../instantBookingRouter";
@@ -42,7 +43,7 @@ import {
 } from "../db";
 import { payments, jobs, quotes } from "../../drizzle/schema";
 import { and, eq, isNull, ne, or } from "drizzle-orm";
-import { storagePut } from "../storage";
+import { storagePut,putVerificationFile,getVerificationFile } from "../storage";
 import multer from "multer";
 import { nanoid } from "nanoid";
 
@@ -66,192 +67,6 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   }
 
   throw new Error(`No available port found starting from ${startPort}`);
-}
-
-function getJobIdFromPaymentIntent(intent: any) {
-  const rawJobId = intent?.metadata?.jobId;
-  const jobId = Number.parseInt(rawJobId ?? "0", 10);
-
-  if (!Number.isFinite(jobId) || jobId <= 0) {
-    return null;
-  }
-
-  return jobId;
-}
-
-function getQuoteIdFromPaymentIntent(intent: any) {
-  const rawQuoteId = intent?.metadata?.quoteId;
-  const quoteId = Number.parseInt(rawQuoteId ?? "0", 10);
-
-  if (!Number.isFinite(quoteId) || quoteId <= 0) {
-    return null;
-  }
-
-  return quoteId;
-}
-
-async function updateQuoteFromPaymentIntent(
-  intent: any,
-  status: "paid" | "payment_failed"
-) {
-  const quoteId = getQuoteIdFromPaymentIntent(intent);
-  if (!quoteId) return false;
-
-  const db = await getDb();
-  const rows = await db
-    .select({
-      totalAmount: quotes.totalAmount,
-      stripePaymentIntentId: quotes.stripePaymentIntentId,
-      referralJobId: quotes.referralJobId,
-    })
-    .from(quotes)
-    .where(eq(quotes.id, quoteId))
-    .limit(1);
-  const quote = rows[0];
-
-  if (!quote) {
-    console.warn(`[Webhook] Quote ${quoteId} from payment intent ${intent.id} was not found.`);
-    return true;
-  }
-  if (quote.stripePaymentIntentId && quote.stripePaymentIntentId !== intent.id) {
-    console.warn(`[Webhook] Ignored stale payment intent ${intent.id} for quote ${quoteId}.`);
-    return true;
-  }
-
-  if (status === "paid") {
-    const paidAmount = Number(intent.amount_received ?? intent.amount);
-    const expectedAmount = Math.round(Number(quote.totalAmount) * 100);
-    if (!Number.isFinite(paidAmount) || paidAmount !== expectedAmount) {
-      console.error(
-        `[Webhook] Amount mismatch for quote ${quoteId}: expected ${expectedAmount}, received ${paidAmount}.`
-      );
-      return true;
-    }
-  }
-
-  const now = new Date();
-  await db
-    .update(quotes)
-    .set({
-      stripePaymentIntentId: intent.id,
-      status,
-      ...(status === "paid" ? { paidAt: now } : {}),
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(quotes.id, quoteId),
-        or(isNull(quotes.stripePaymentIntentId), eq(quotes.stripePaymentIntentId, intent.id)),
-        ...(status === "payment_failed" ? [ne(quotes.status, "paid")] : [])
-      )
-    );
-
-  if (status === "paid" && quote.referralJobId) {
-    await markReferralInProgressAfterQuotePayment(quote.referralJobId);
-  }
-
-  console.log(`[Webhook] Quote ${quoteId} payment ${status}.`);
-  return true;
-}
-
-async function markPaymentSucceeded(intent: any) {
-  if (await updateQuoteFromPaymentIntent(intent, "paid")) return;
-
-  const jobId = getJobIdFromPaymentIntent(intent);
-
-  if (!jobId) {
-    console.warn("[Webhook] payment_intent.succeeded missing valid jobId metadata:", intent.id);
-    return;
-  }
-
-  const db = await getDb();
-
-  await db
-    .update(payments)
-    .set({
-      status: "pending",
-      stripePaymentIntentId: intent.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(payments.jobId, jobId));
-
-  await db
-    .update(jobs)
-    .set({
-      status: "in_progress",
-      updatedAt: new Date(),
-    })
-    .where(eq(jobs.id, jobId));
-
-  console.log(`[Webhook] Payment succeeded for job ${jobId}. Job moved to in_progress.`);
-}
-
-async function markPaymentFailed(intent: any) {
-  if (await updateQuoteFromPaymentIntent(intent, "payment_failed")) return;
-
-  const jobId = getJobIdFromPaymentIntent(intent);
-
-  if (!jobId) {
-    console.warn("[Webhook] payment_intent.payment_failed missing valid jobId metadata:", intent.id);
-    return;
-  }
-
-  const db = await getDb();
-
-  await db
-    .update(payments)
-    .set({
-      status: "failed",
-      stripePaymentIntentId: intent.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(payments.jobId, jobId));
-
-  await db
-    .update(jobs)
-    .set({
-      status: "awaiting_payment",
-      updatedAt: new Date(),
-    })
-    .where(eq(jobs.id, jobId));
-
-  console.warn(
-    "[Webhook] Payment failed:",
-    intent.id,
-    intent.last_payment_error?.message ?? "Unknown error"
-  );
-}
-
-async function markPaymentCanceled(intent: any) {
-  if (await updateQuoteFromPaymentIntent(intent, "payment_failed")) return;
-
-  const jobId = getJobIdFromPaymentIntent(intent);
-
-  if (!jobId) {
-    console.warn("[Webhook] payment_intent.canceled missing valid jobId metadata:", intent.id);
-    return;
-  }
-
-  const db = await getDb();
-
-  await db
-    .update(payments)
-    .set({
-      status: "failed",
-      stripePaymentIntentId: intent.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(payments.jobId, jobId));
-
-  await db
-    .update(jobs)
-    .set({
-      status: "awaiting_payment",
-      updatedAt: new Date(),
-    })
-    .where(eq(jobs.id, jobId));
-
-  console.warn("[Webhook] Payment canceled:", intent.id);
 }
 
 const BID_REMINDER_CHECK_INTERVAL_MS = 15 * 60 * 1000;
@@ -774,19 +589,19 @@ async function startServer() {
         switch (event.type) {
           case "payment_intent.succeeded": {
             const intent = event.data.object as any;
-            await markPaymentSucceeded(intent);
+            await reconcilePayment(intent);
             break;
           }
 
           case "payment_intent.payment_failed": {
             const intent = event.data.object as any;
-            await markPaymentFailed(intent);
+            await reconcilePayment(intent);
             break;
           }
 
           case "payment_intent.canceled": {
             const intent = event.data.object as any;
-            await markPaymentCanceled(intent);
+            await reconcilePayment(intent);
             break;
           }
 
@@ -819,6 +634,7 @@ async function startServer() {
     try {
       const user = await sdk.authenticateRequest(req);
       if (user.userType !== "homeowner" && user.userType !== "handyman" && user.role !== "admin") return res.status(403).json({error:"Not allowed"});
+      res.locals.uploadUser=user;
       next();
     } catch { return res.status(401).json({error:"Sign in to upload a file."}); }
   }, upload.single("file"), async (req: any, res) => {
@@ -831,6 +647,12 @@ async function startServer() {
       const mime = req.file.mimetype as string;
       const ext = mime === "image/jpeg" && file.subarray(0,3).equals(Buffer.from([255,216,255])) ? "jpg" : mime === "image/png" && file.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? "png" : mime === "image/webp" && file.toString("ascii",0,4)==="RIFF" && file.toString("ascii",8,12)==="WEBP" ? "webp" : mime === "application/pdf" && file.toString("ascii",0,5)==="%PDF-" ? "pdf" : null;
       if (!ext) return res.status(415).json({error:"Upload a JPG, PNG, WEBP or PDF file."});
+      if(req.query.purpose==="verification"){
+        const owner=res.locals.uploadUser;
+        if(owner.userType!=="handyman"&&owner.role!=="admin")return res.status(403).json({error:"Not allowed"});
+        const url=await putVerificationFile(owner.id,nanoid(),ext,file,mime);return res.json({url});
+      }
+      if(ext==="pdf")return res.status(400).json({error:"PDFs must be uploaded through verification."});
       const key = `uploads/${nanoid()}.${ext}`;
 
       const { url } = await storagePut(
@@ -844,6 +666,14 @@ async function startServer() {
       console.error("[Upload] Error:", err.message);
       return res.status(500).json({ error: "Upload failed" });
     }
+  });
+
+  app.get("/api/verification-file/:owner/:name",async(req,res)=>{
+    try{
+      const user=await sdk.authenticateRequest(req),owner=Number(req.params.owner),name=req.params.name;
+      if(!Number.isSafeInteger(owner)||owner<=0||!/^[A-Za-z0-9_-]{21}\.(jpg|png|webp|pdf)$/.test(name)||(user.id!==owner&&user.role!=="admin"))return res.status(404).end();
+      const data=await getVerificationFile(owner,name);res.set({"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff","Content-Disposition":"attachment; filename=verification-document."+name.split(".").pop(),"Content-Type":"application/octet-stream"});return res.send(data);
+    }catch{return res.status(404).end();}
   });
 
   app.use(

@@ -345,11 +345,11 @@ export default function HandymanProfile() {
     }
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File, verification = false) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/api/upload", {
+    const res = await fetch(verification ? "/api/upload?purpose=verification" : "/api/upload", {
       method: "POST",
       body: formData,
       credentials: "include",
@@ -467,7 +467,7 @@ export default function HandymanProfile() {
     setUploadingInsurance(true);
 
     try {
-      const url = await uploadFile(file);
+      const url = await uploadFile(file,true);
 
       await updateProfile.mutateAsync({
         insuranceCertUrl: url,
@@ -495,7 +495,7 @@ export default function HandymanProfile() {
     setUploadingIdentity(true);
 
     try {
-      const url = await uploadFile(file);
+      const url = await uploadFile(file,true);
 
       await updateProfile.mutateAsync({
         identityDocumentUrl: url,
@@ -523,7 +523,7 @@ export default function HandymanProfile() {
     setUploadingCriminalRecord(true);
 
     try {
-      const url = await uploadFile(file);
+      const url = await uploadFile(file,true);
 
       await updateProfile.mutateAsync({
         criminalRecordCheckUrl: url,
@@ -557,7 +557,7 @@ export default function HandymanProfile() {
     setUploadingTradeLicense(true);
 
     try {
-      const url = await uploadFile(file);
+      const url = await uploadFile(file,true);
 
       await updateProfile.mutateAsync({
         tradeLicenseDocumentUrl: url,

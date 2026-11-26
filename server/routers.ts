@@ -1171,6 +1171,7 @@ const handymanProfilesRouter = router({
         });
       }
 
+      for(const key of ["insuranceCertUrl","identityDocumentUrl","criminalRecordCheckUrl","tradeLicenseDocumentUrl"] as const){const value=input[key];if(value&&value!==existing?.[key]&&!new RegExp("^/api/verification-file/"+ctx.user.id+"/[A-Za-z0-9_-]{21}\\.(jpg|png|webp|pdf)$").test(value))throw new TRPCError({code:"BAD_REQUEST",message:"Upload the verification document through your profile."});}
       const dataToSave: any = {};
 
       if ("bio" in input) {
