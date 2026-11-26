@@ -11,3 +11,5 @@ Reviewed main entry/registration, role selection, onboarding, homeowner dashboar
 
 ## Acceptance checks still required
 Browser-rendered desktop/mobile audit of every route and state; actual screenshots and accessibility testing; keyboard-only navigation, touch targets, contrast, zoom, overflow, error/loading/empty states, real user feedback. Ensure legacy referral and payment states keep their meaning. This is a source-level review, not a claim of complete visual acceptance.
+
+A Playwright desktop/mobile smoke gate and screenshot artifact are configured in CI. It verifies representative core pages with seeded synthetic users and no external browser requests. Full per-route and state review remains a release gate.

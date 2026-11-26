@@ -92,8 +92,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const [isTextInputFocused, setIsTextInputFocused] = useState(false);
 
   const navItems = user?.userType === "handyman" ? HANDYMAN_NAV : HOMEOWNER_NAV;
-  const visibleNavItems =
-    user?.role === "admin" ? navItems.filter((item) => item.href !== "/support") : navItems;
+  const visibleNavItems = !user ? [] : user.role === "admin" ? navItems.filter((item) => item.href !== "/support") : navItems;
   const bottomNavItems =
     user?.userType === "handyman" ? HANDYMAN_BOTTOM_NAV : HOMEOWNER_BOTTOM_NAV;
 
@@ -146,7 +145,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:p-3 focus:rounded-lg focus:outline-primary">Skip to content</a>
       <nav aria-label="Main navigation" className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-border/60 shadow-sm">
         <div className="container flex items-center justify-between h-14">
-          <Link href={user?.userType === "handyman" ? "/handyman/dashboard" : "/dashboard"}>
+          <Link href={!user ? "/" : user.userType === "handyman" ? "/handyman/dashboard" : "/dashboard"}>
             <div className="flex items-center gap-2 cursor-pointer">
               <div className="w-7 h-7 bg-primary rounded-md flex items-center justify-center">
                 <Hammer className="w-3.5 h-3.5 text-primary-foreground" />
@@ -211,6 +210,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </div>
 
           <div className="flex items-center gap-1">
+            {!user ? <Button asChild variant="outline" size="sm"><Link href="/sign-in">Sign in</Link></Button> : <>
             <NotificationBell />
 
             <DropdownMenu>
@@ -288,6 +288,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>}
           </div>
         </div>
       </nav>
@@ -306,7 +307,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         <div className="container py-5 md:py-8">{children}</div>
       </main>
 
-      <nav
+      {user&&<nav
         aria-label="Primary mobile navigation"
         className={cn(
           "fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-white/95 backdrop-blur transition-transform duration-150 md:hidden",
@@ -357,7 +358,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
             );
           })}
         </div>
-      </nav>
+      </nav>}
     </div>
   );
 }

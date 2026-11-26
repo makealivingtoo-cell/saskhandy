@@ -43,3 +43,6 @@ Signed Stripe events and direct quote confirmation now share transactional recon
 
 ## Design review
 See docs/saskhandy-v2-language-design.md for shared design and wording changes, source review coverage and remaining browser acceptance gates. No legal policy changes made.
+
+## Browser smoke gate
+Production static route allowlist now recognizes /book and /my-home. Browser tests use the isolated CI database with synthetic accounts and a local server, fake Stripe key, blocked external browser requests, and screenshots at 390px and 1440px. They check representative guest, homeowner, professional and admin pages, direct HTTP route loads, JS errors and horizontal overflow. This is not a substitute for full manual visual acceptance or real provider integration.

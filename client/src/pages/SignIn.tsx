@@ -1,4 +1,4 @@
-import { readRequestStart, clearRequestStart } from "@/lib/requestDraft";
+import { readRequestStart, clearRequestStart, consumeBookingReturn } from "@/lib/requestDraft";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Loader2, ShieldCheck } from "lucide-react";
@@ -26,7 +26,7 @@ export default function SignIn() {
     }
 
     if (user.userType === "homeowner") {
-      navigate(readRequestStart() !== null ? "/post-job" : "/dashboard");
+      navigate(consumeBookingReturn()?"/book":readRequestStart() !== null ? "/post-job" : "/dashboard");
       return;
     }
 

@@ -1,4 +1,4 @@
-import { readRequestStart, clearRequestStart } from "@/lib/requestDraft";
+import { readRequestStart, clearRequestStart, consumeBookingReturn } from "@/lib/requestDraft";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
@@ -55,7 +55,7 @@ export default function SignUp() {
     if (!loading && isAuthenticated) {
       if (user?.role === "admin") { clearRequestStart(); navigate("/admin"); }
       else if (user?.userType === "handyman") { clearRequestStart(); navigate("/handyman/dashboard"); }
-      else if (user?.userType === "homeowner") navigate(readRequestStart() !== null ? "/post-job" : "/dashboard");
+      else if (user?.userType === "homeowner") navigate(consumeBookingReturn()?"/book":readRequestStart() !== null ? "/post-job" : "/dashboard");
       else navigate("/role-select");
     }
   }, [loading, isAuthenticated, user, navigate]);

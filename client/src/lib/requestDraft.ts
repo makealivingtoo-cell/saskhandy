@@ -6,3 +6,7 @@ export function readRequestStart():string|null {
   return null;
 }
 export function clearRequestStart():void {try{sessionStorage.removeItem(KEY);}catch{}}
+
+const BOOK_KEY="saskhandy-book-return";
+export function rememberBookingReturn(){try{sessionStorage.setItem(BOOK_KEY,String(Date.now()));}catch{}}
+export function consumeBookingReturn(){try{const value=sessionStorage.getItem(BOOK_KEY);sessionStorage.removeItem(BOOK_KEY);return !!value&&Date.now()-Number(value)>=0&&Date.now()-Number(value)<3600000;}catch{return false;}}

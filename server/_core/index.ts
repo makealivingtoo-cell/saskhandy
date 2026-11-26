@@ -699,7 +699,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    startReminderLoop();
+    if (!(process.env.GITHUB_ACTIONS==="true" && process.env.SASKHANDY_V2_BROWSER_TEST==="1")) startReminderLoop();
   });
 }
 

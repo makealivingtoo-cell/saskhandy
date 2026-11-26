@@ -70,3 +70,15 @@ jobs:
       - name: Production build
         if: ${{ !cancelled() }}
         run: pnpm build
+      - name: Desktop and mobile browser smoke checks
+        if: ${{ success() }}
+        env:
+          DATABASE_URL: mysql://root:testpass@127.0.0.1:3306/saskhandy_v2_integration_ci
+          SASKHANDY_V2_BROWSER_TEST: "1"
+        run: node scripts/testing/v2-browser-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: v2-browser-screenshots
+          path: artifacts/v2-browser
+          if-no-files-found: ignore

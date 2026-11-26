@@ -36,6 +36,8 @@ const applicationRoutes = new Set([
   "/role-select",
   "/onboarding",
   "/dashboard",
+  "/my-home",
+  "/book",
   "/post-job",
   "/messages",
   "/support",
