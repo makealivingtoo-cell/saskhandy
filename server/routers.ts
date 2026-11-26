@@ -1,3 +1,5 @@
+import { validJobBudget } from "../shared/jobBudget";
+import { eligibleForJobInvitation } from "../shared/jobMatching";
 import { TRPCError } from "@trpc/server";
 import { stripeRouter } from "./stripeRouter";
 import { stripe } from "./stripe";
@@ -1274,12 +1276,12 @@ const jobsRouter = router({
         category: z.string(),
         location: z.string().min(2),
         photos: z.array(z.string().url()).max(8).optional(),
-        budgetMin: z.number().positive(),
-        budgetMax: z.number().positive(),
+        budgetMin: z.number().positive().nullable().optional(),
+        budgetMax: z.number().positive().nullable().optional(),
         timingPreference: z.enum(JOB_TIMING_PREFERENCE_VALUES).nullable().optional(),
         preferredStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         preferredEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-      }).superRefine(validateJobTiming)
+      }).superRefine(validateJobTiming).refine(input=>validJobBudget(input.budgetMin,input.budgetMax),{message:"Enter a valid budget range or leave both values blank.",path:["budgetMin"]})
     )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.userType !== "homeowner" && ctx.user.role !== "admin") {
@@ -1295,8 +1297,8 @@ const jobsRouter = router({
         category: input.category,
         location: input.location,
         photos: input.photos ?? [],
-        budgetMin: input.budgetMin.toFixed(2),
-        budgetMax: input.budgetMax.toFixed(2),
+        budgetMin: input.budgetMin?.toFixed(2) ?? null,
+        budgetMax: input.budgetMax?.toFixed(2) ?? null,
         timingPreference: input.timingPreference ?? null,
         preferredStartDate: input.timingPreference === "date_range" ? input.preferredStartDate ?? null : null,
         preferredEndDate: input.timingPreference === "date_range" ? input.preferredEndDate ?? null : null,
@@ -1311,21 +1313,18 @@ const jobsRouter = router({
 
       const handymanProfiles = await getAllHandymanProfiles();
 
-      const matchingProfiles = handymanProfiles.filter((profile) => {
-        const categories = parseProfileCategories(profile.categories);
-        return categories.includes(input.category);
-      });
+      const matchingProfiles = handymanProfiles.filter(profile=>eligibleForJobInvitation(profile,input));
 
       for (const profile of matchingProfiles) {
         const handyman = await safeGetUserById(profile.userId);
-        if (!handyman) continue;
+        if (!handyman || handyman.userType !== "handyman") continue;
 
         await notifyUser({
           userId: handyman.id,
           type: "system",
           title: "New job posted",
           message: `A new ${input.category} job was posted: "${input.title}".${timingLabel ? ` Requested timing: ${timingLabel}.` : ""}`,
-          link: `/jobs/${jobId}`,
+          link: `/handyman/jobs/${jobId}`,
         });
 
         if (handyman.email) {
@@ -1355,12 +1354,12 @@ const jobsRouter = router({
         category: z.string(),
         location: z.string().min(2),
         photos: z.array(z.string().url()).max(8).optional(),
-        budgetMin: z.number().positive(),
-        budgetMax: z.number().positive(),
+        budgetMin: z.number().positive().nullable().optional(),
+        budgetMax: z.number().positive().nullable().optional(),
         timingPreference: z.enum(JOB_TIMING_PREFERENCE_VALUES).nullable().optional(),
         preferredStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         preferredEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-      }).superRefine(validateJobTiming)
+      }).superRefine(validateJobTiming).refine(input=>validJobBudget(input.budgetMin,input.budgetMax),{message:"Enter a valid budget range or leave both values blank.",path:["budgetMin"]})
     )
     .mutation(async ({ ctx, input }) => {
       const job = await getJobById(input.jobId);
@@ -1384,8 +1383,8 @@ const jobsRouter = router({
         category: input.category,
         location: input.location,
         photos: input.photos ?? [],
-        budgetMin: input.budgetMin.toFixed(2),
-        budgetMax: input.budgetMax.toFixed(2),
+        budgetMin: input.budgetMin?.toFixed(2) ?? null,
+        budgetMax: input.budgetMax?.toFixed(2) ?? null,
         timingPreference: input.timingPreference ?? null,
         preferredStartDate: input.timingPreference === "date_range" ? input.preferredStartDate ?? null : null,
         preferredEndDate: input.timingPreference === "date_range" ? input.preferredEndDate ?? null : null,

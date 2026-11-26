@@ -1,3 +1,4 @@
+import { readRequestStart, clearRequestStart } from "@/lib/requestDraft";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Loader2, ShieldCheck } from "lucide-react";
@@ -19,16 +20,18 @@ export default function SignIn() {
 
   const redirectUser = (user: any) => {
     if (user.role === "admin") {
+      clearRequestStart();
       navigate("/admin");
       return;
     }
 
     if (user.userType === "homeowner") {
-      navigate("/dashboard");
+      navigate(readRequestStart() !== null ? "/post-job" : "/dashboard");
       return;
     }
 
     if (user.userType === "handyman") {
+      clearRequestStart();
       navigate("/handyman/browse");
       return;
     }

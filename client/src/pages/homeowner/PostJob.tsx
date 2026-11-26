@@ -1,3 +1,5 @@
+import { readRequestStart, clearRequestStart } from "@/lib/requestDraft";
+import { readJobBudget, formatJobBudget } from "@shared/jobBudget";
 import { trackJobLead } from "@/lib/metaPixel";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
@@ -90,7 +92,7 @@ function getJobStrength({
   if (description.trim().length >= 40) score += 25;
   if (category) score += 15;
   if (location.trim().length >= 2) score += 15;
-  if (budgetMin && budgetMax) score += 15;
+  if (readJobBudget(budgetMin, budgetMax)) score += 15;
   if (photosCount > 0) score += 15;
 
   if (score >= 85) {
@@ -151,6 +153,8 @@ export default function PostJob() {
 
   useEffect(() => {
     try {
+      const started = readRequestStart();
+      if (started !== null) { setRoughIdea(started); clearRequestStart(); setDraftHydrated(true); return; }
       const idea = new URLSearchParams(window.location.search).get("idea");
       if (idea) {
         setRoughIdea(`I need help with ${idea.toLowerCase()} at my home.`);
@@ -272,7 +276,7 @@ export default function PostJob() {
         trackJobLead();
       }
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
-      toast.success("Job posted. Local handymen can now review it and send bids.");
+      toast.success("Your request is live. You can track quotes from your dashboard.");
       navigate("/dashboard");
     },
   });
@@ -409,16 +413,8 @@ export default function PostJob() {
       return false;
     }
 
-    const min = parseFloat(budgetMin);
-    const max = parseFloat(budgetMax);
-
-    if (Number.isNaN(min) || Number.isNaN(max) || min <= 0 || max <= 0) {
-      toast.error("Enter a valid budget range.");
-      return false;
-    }
-
-    if (min > max) {
-      toast.error("Minimum budget cannot be higher than maximum.");
+    if (!readJobBudget(budgetMin, budgetMax)) {
+      toast.error("Enter a valid minimum and maximum, or leave both blank to receive quotes.");
       return false;
     }
 
@@ -477,8 +473,8 @@ export default function PostJob() {
       return;
     }
 
-    const min = parseFloat(budgetMin);
-    const max = parseFloat(budgetMax);
+    const budget = readJobBudget(budgetMin, budgetMax);
+    if (!budget) return;
 
     try {
       setUploadingPhotos(true);
@@ -492,8 +488,7 @@ export default function PostJob() {
         category,
         location: location.trim(),
         photos: uploadedPhotoUrls,
-        budgetMin: min,
-        budgetMax: max,
+        ...budget,
         timingPreference: timingPreference || null,
         preferredStartDate: timingPreference === "date_range" ? preferredStartDate : null,
         preferredEndDate: timingPreference === "date_range" ? preferredEndDate : null,
@@ -531,7 +526,7 @@ export default function PostJob() {
         </div>
 
         <div className="mb-6">
-          <h1 className="text-2xl font-serif text-foreground">Post a job</h1>
+          <h1 className="text-2xl font-serif text-foreground">Request help</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Tell us what you need. You can review everything before it goes live.
           </p>
@@ -905,7 +900,7 @@ export default function PostJob() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Budget range</Label>
+                  <Label>Do you have a budget in mind? (Optional)</Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
@@ -934,7 +929,7 @@ export default function PostJob() {
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">Handymen can still send their own price.</p>
+                  <p className="text-xs text-muted-foreground">Not sure what it costs? Leave both fields blank and compare quotes.</p>
                 </div>
               </div>
             </div>
@@ -980,7 +975,7 @@ export default function PostJob() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-muted/40 p-4">
                     <p className="text-xs text-muted-foreground">Budget</p>
-                    <p className="mt-1 font-semibold text-foreground">${budgetMin}–${budgetMax}</p>
+                    <p className="mt-1 font-semibold text-foreground">{formatJobBudget(budgetMin || null, budgetMax || null)}</p>
                   </div>
                   <div className="rounded-xl bg-muted/40 p-4">
                     <p className="text-xs text-muted-foreground">Timing</p>
@@ -1032,7 +1027,7 @@ export default function PostJob() {
                     {uploadingPhotos ? "Uploading..." : "Posting..."}
                   </>
                 ) : (
-                  "Post job & receive bids"
+                  "Publish request"
                 )}
               </Button>
             </div>

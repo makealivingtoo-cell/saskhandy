@@ -1,3 +1,4 @@
+import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -88,8 +89,8 @@ export default function BrowseJobs() {
         !locationText || job.location.toLowerCase().includes(locationText);
       const matchesCategory = category === "all" || job.category === category;
 
-      const jobMin = parseFloat(job.budgetMin);
-      const jobMax = parseFloat(job.budgetMax);
+      const jobMin = parseFloat(job.budgetMin ?? "");
+      const jobMax = parseFloat(job.budgetMax ?? "");
       const matchesBudgetMin = minBudget === null || jobMax >= minBudget;
       const matchesBudgetMax = maxBudget === null || jobMin <= maxBudget;
 
@@ -104,11 +105,11 @@ export default function BrowseJobs() {
 
     return list.sort((a, b) => {
       if (sortBy === "highest_budget") {
-        return parseFloat(b.budgetMax) - parseFloat(a.budgetMax);
+        return Number(b.budgetMax ?? -1) - Number(a.budgetMax ?? -1);
       }
 
       if (sortBy === "lowest_budget") {
-        return parseFloat(a.budgetMin) - parseFloat(b.budgetMin);
+        return Number(a.budgetMin ?? Number.MAX_VALUE) - Number(b.budgetMin ?? Number.MAX_VALUE);
       }
 
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -351,7 +352,7 @@ export default function BrowseJobs() {
                       <div className="min-w-0">
                         <p className="text-[11px] text-muted-foreground">Homeowner budget</p>
                         <p className="text-lg font-bold text-foreground leading-tight">
-                          ${job.budgetMin}–${job.budgetMax}
+                          {formatJobBudget(job.budgetMin, job.budgetMax)}
                         </p>
                       </div>
 

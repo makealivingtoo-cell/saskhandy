@@ -1,3 +1,4 @@
+import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -339,7 +340,7 @@ export default function HomeownerDashboard() {
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <div className="text-sm font-semibold text-foreground">${job.budgetMin}–${job.budgetMax}</div>
+                        <div className="text-sm font-semibold text-foreground">{formatJobBudget(job.budgetMin, job.budgetMax)}</div>
                         <div className="mt-0.5 text-xs text-muted-foreground">budget</div>
 
                         {job.status === "open" && (

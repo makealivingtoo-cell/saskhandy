@@ -50,7 +50,7 @@ function formatBudget(job: any) {
   if (min && max) return `${min}–${max}`;
   if (min) return `From ${min}`;
   if (max) return `Up to ${max}`;
-  return "Budget listed in job";
+  return "Open to quotes";
 }
 
 function formatPostedDate(value: unknown) {

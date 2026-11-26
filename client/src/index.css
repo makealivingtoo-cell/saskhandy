@@ -45,10 +45,10 @@
 
 :root {
   /* SaskHandy Premium Palette — Forest Green + Warm Amber */
-  --primary: oklch(0.38 0.12 155);
+  --primary: #164b35;
   --primary-foreground: oklch(0.98 0.005 155);
-  --radius: 0.65rem;
-  --background: oklch(0.985 0.004 75);
+  --radius: 0.8rem;
+  --background: #f7f8f6;
   --foreground: oklch(0.18 0.02 60);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.02 60);
@@ -186,3 +186,4 @@
     }
   }
 }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }

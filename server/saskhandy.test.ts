@@ -43,6 +43,7 @@ vi.mock("./db", () => ({
   updateBidStatus: vi.fn(),
   createHandymanProfile: vi.fn(),
   getHandymanProfile: vi.fn().mockResolvedValue(null),
+  getAllHandymanProfiles: vi.fn().mockResolvedValue([]),
   getHandymanProfileById: vi.fn().mockResolvedValue(null),
   updateHandymanProfile: vi.fn(),
   createPayment: vi.fn().mockResolvedValue({ id: 5 }),

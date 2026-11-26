@@ -1,0 +1,45 @@
+name: SaskHandy 2.0 release checks
+on:
+  push:
+    branches: [saskhandy-2.0]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpass
+          MYSQL_DATABASE: saskhandy_v2_ci
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ptestpass"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:testpass@127.0.0.1:3306/saskhandy_v2_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify budget migration twice against legacy rows
+        run: |
+          node --input-type=module -e 'import mysql from "mysql2/promise"; const db=await mysql.createConnection(process.env.DATABASE_URL); await db.query("CREATE TABLE jobs (id INT PRIMARY KEY, budgetMin DECIMAL(10,2) NOT NULL, budgetMax DECIMAL(10,2) NOT NULL)"); await db.query("INSERT INTO jobs VALUES (1,50,150)"); await db.end()'
+          pnpm db:v2-budget
+          pnpm db:v2-budget
+          node --input-type=module -e 'import mysql from "mysql2/promise"; import assert from "node:assert/strict"; const db=await mysql.createConnection(process.env.DATABASE_URL); await db.query("INSERT INTO jobs VALUES (2,NULL,NULL)"); const [rows]=await db.query("SELECT * FROM jobs ORDER BY id"); assert.equal(rows[0].budgetMin,"50.00"); assert.equal(rows[0].budgetMax,"150.00"); assert.equal(rows[1].budgetMin,null); await db.query("DROP TABLE jobs"); await db.end()'
+      - run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
+      - run: pnpm test
+      - run: pnpm check
+      - run: pnpm build

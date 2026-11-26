@@ -1,3 +1,4 @@
+import { readRequestStart, clearRequestStart } from "@/lib/requestDraft";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
@@ -36,7 +37,7 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [userType, setUserType] = useState<UserType>("homeowner");
+  const [userType, setUserType] = useState<UserType>(() => new URLSearchParams(window.location.search).get("role") === "handyman" ? "handyman" : "homeowner");
   const [selectedSkills, setSelectedSkills] = useState<HandymanSkill[]>([]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -52,7 +53,7 @@ export default function SignUp() {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate("/dashboard");
+      navigate(readRequestStart() !== null ? "/post-job" : "/dashboard");
     }
   }, [loading, isAuthenticated, navigate]);
 
@@ -66,6 +67,7 @@ export default function SignUp() {
 
   const signUp = trpc.auth.signUp.useMutation({
     onSuccess: (data: any) => {
+      if (userType === "handyman") clearRequestStart();
       trackCompleteRegistration("website", userType);
 
       if (data?.emailSent === false) {

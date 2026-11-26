@@ -1,3 +1,4 @@
+import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { StripePaymentModal } from "@/components/StripePaymentModal";
 import { JobChat } from "@/components/JobChat";
@@ -788,7 +789,7 @@ export default function JobDetails() {
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
               <p className="text-sm font-medium">
-                ${job.budgetMin}–${job.budgetMax}
+                {formatJobBudget(job.budgetMin, job.budgetMax)}
               </p>
             </div>
 

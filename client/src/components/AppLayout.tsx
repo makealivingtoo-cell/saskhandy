@@ -38,7 +38,7 @@ interface NavItem {
 
 const HOMEOWNER_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
-  { href: "/post-job", label: "Post a Job", mobileLabel: "Post", icon: Plus },
+  { href: "/post-job", label: "Request help", mobileLabel: "Request", icon: Plus },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
@@ -46,7 +46,7 @@ const HOMEOWNER_NAV: NavItem[] = [
 const HANDYMAN_NAV: NavItem[] = [
   { href: "/handyman/dashboard", label: "Dashboard", mobileLabel: "Home", icon: LayoutDashboard },
   { href: "/handyman/browse", label: "Browse Jobs", mobileLabel: "Browse", icon: Search },
-  { href: "/handyman/bids", label: "My Bids", mobileLabel: "Bids", icon: Briefcase },
+  { href: "/handyman/bids", label: "My quotes", mobileLabel: "Quotes", icon: Briefcase },
   { href: "/handyman/messages", label: "Messages", icon: MessageSquare },
   { href: "/handyman/earnings", label: "Earnings", icon: DollarSign },
   { href: "/handyman/profile", label: "Profile", icon: User },

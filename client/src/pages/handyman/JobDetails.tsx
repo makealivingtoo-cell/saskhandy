@@ -1,3 +1,4 @@
+import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { JobChat } from "@/components/JobChat";
@@ -248,8 +249,8 @@ export default function HandymanJobDetails() {
       ? (parsedBidAmount * 0.8).toFixed(2)
       : null;
 
-  const budgetMin = parseFloat(job.budgetMin);
-  const budgetMax = parseFloat(job.budgetMax);
+  const budgetMin = parseFloat(job.budgetMin ?? "");
+  const budgetMax = parseFloat(job.budgetMax ?? "");
   const budgetMidpoint = Math.round((budgetMin + budgetMax) / 2);
   const suggestedBidAmounts = Array.from(
     new Set([Math.round(budgetMin), budgetMidpoint, Math.round(budgetMax)]),
@@ -326,7 +327,7 @@ export default function HandymanJobDetails() {
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
               <p className="text-sm font-medium">
-                ${job.budgetMin}–${job.budgetMax}
+                {formatJobBudget(job.budgetMin, job.budgetMax)}
               </p>
             </div>
 

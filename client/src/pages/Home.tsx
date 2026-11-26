@@ -7,11 +7,11 @@ import {
   Hammer,
   MapPin,
   ShieldCheck,
-  Star,
   UserCheck,
   Wrench,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { saveRequestStart, readRequestStart } from "@/lib/requestDraft";
 import { Link, useLocation } from "wouter";
 
 const categories = [
@@ -59,7 +59,7 @@ const categories = [
 
 const trustItems = [
   {
-    title: "Review trust signals",
+    title: "Check professional profiles",
     description:
       "Look for ID Name Matched, Gold Shield, insurance, licence, reviews, and external review links before choosing.",
     icon: UserCheck,
@@ -78,37 +78,17 @@ const trustItems = [
   },
 ];
 
-const testimonials = [
-  {
-    quote:
-      "I posted a fence repair job and got responses faster than I expected. The whole process felt simple.",
-    name: "Sarah M.",
-    role: "Homeowner, Saskatoon",
-  },
-  {
-    quote:
-      "Much better than chasing people in Facebook groups. I could compare bids and pick the one that made sense.",
-    name: "Jason T.",
-    role: "Homeowner, Regina",
-  },
-  {
-    quote:
-      "As a handyman, I like being able to see local jobs and send bids without wasting time going back and forth.",
-    name: "Chris P.",
-    role: "Handyman, Saskatchewan",
-  },
-];
-
 const facebookPageUrl = "https://www.facebook.com/profile.php?id=61568009153964";
 
 export default function HomePage() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const [requestIdea, setRequestIdea] = useState("");
 
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.userType === "homeowner") {
-        navigate("/dashboard");
+        navigate(readRequestStart() !== null ? "/post-job" : "/dashboard");
         return;
       }
 
@@ -267,39 +247,24 @@ export default function HomePage() {
               <div className="max-w-2xl">
                 <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800">
                   <MapPin className="h-4 w-4" />
-                  Saskatchewan homeowners meet local, profile-reviewed handymen
+                  Local help across Saskatchewan
                 </div>
 
-                <h1 className="max-w-xl text-5xl font-bold leading-tight tracking-tight text-slate-950 md:text-6xl">
-                  Hire local help with more confidence
+                <h1 className="max-w-xl text-4xl font-semibold leading-tight tracking-tight text-slate-950 md:text-5xl">
+                  Home projects. Made simple.
                 </h1>
 
                 <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
-                  Post a job, compare bids, review handyman profiles, message before choosing, and
-                  pay securely in one place.
+                  Tell us what needs doing. Get quotes from local professionals, compare your options and manage your job in one place.
                 </p>
 
-                <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                  <Button
-                    asChild
-                    size="lg"
-                    className="rounded-full bg-emerald-700 px-8 text-base hover:bg-emerald-800"
-                  >
-                    <Link href="/sign-up">
-                      Post a Job
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="outline"
-                    className="rounded-full border-slate-300 bg-white px-8 text-base text-slate-900 hover:bg-slate-50"
-                  >
-                    <Link href="/sign-up">Become a Handyman</Link>
-                  </Button>
-                </div>
+                <form onSubmit={event=>{event.preventDefault();saveRequestStart(requestIdea);navigate("/sign-up");}} className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <label htmlFor="home-request" className="block text-base font-semibold">What do you need help with?</label>
+                  <textarea id="home-request" value={requestIdea} onChange={event=>setRequestIdea(event.target.value)} maxLength={2000} rows={3} placeholder="e.g. I need someone to mount my TV this weekend" className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-base focus-visible:outline-2 focus-visible:outline-emerald-700" />
+                  <Button type="submit" size="lg" className="mt-3 w-full rounded-xl bg-emerald-800 hover:bg-emerald-900">Find local help <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  <p className="mt-2 text-sm text-slate-600">Free to start. Create or sign in to your account before publishing.</p>
+                </form>
+                <Link href="/sign-up?role=handyman" className="mt-5 inline-block text-sm font-medium text-emerald-800 underline underline-offset-4">Find work as a professional</Link>
               </div>
 
               <div>
@@ -444,7 +409,7 @@ export default function HomePage() {
 
                   <div>
                     <div className="text-lg font-semibold text-slate-900">
-                      2. Compare bids
+                      2. Compare quotes
                     </div>
                     <p className="mt-2 text-slate-600">
                       Review pricing, availability, service areas, reviews, and trust badges before
@@ -510,33 +475,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="container py-10 md:py-14">
-            <div className="grid gap-5 md:grid-cols-3">
-              {testimonials.map((item) => (
-                <div
-                  key={item.name}
-                  className="rounded-[28px] border border-slate-200 bg-slate-50 p-6"
-                >
-                  <div className="mb-4 flex items-center gap-1 text-yellow-500">
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                  </div>
-
-                  <p className="text-base leading-7 text-slate-700">“{item.quote}”</p>
-
-                  <div className="mt-5">
-                    <div className="font-semibold text-slate-900">{item.name}</div>
-                    <div className="text-sm text-slate-500">{item.role}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
         <section className="border-t border-slate-200 bg-[#f7faf8]">
           <div className="container py-12 md:py-14">
@@ -588,7 +526,7 @@ export default function HomePage() {
                   className="rounded-full bg-white px-8 text-base text-emerald-800 hover:bg-emerald-50"
                 >
                   <Link href="/sign-up">
-                    Post a Job
+                    Request help
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -599,7 +537,7 @@ export default function HomePage() {
                   variant="outline"
                   className="rounded-full border-white/30 bg-transparent px-8 text-base text-white hover:bg-white/10"
                 >
-                  <Link href="/sign-up">Join as a Handyman</Link>
+                  <Link href="/sign-up">Join as a professional</Link>
                 </Button>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import { readJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -106,18 +107,8 @@ export default function EditJob() {
       return;
     }
 
-    const min = parseFloat(budgetMin);
-    const max = parseFloat(budgetMax);
-
-    if (isNaN(min) || isNaN(max) || min <= 0 || max <= 0) {
-      toast.error("Please enter a valid budget range.");
-      return;
-    }
-
-    if (min > max) {
-      toast.error("Minimum budget cannot exceed maximum.");
-      return;
-    }
+    const budget=readJobBudget(budgetMin,budgetMax);
+    if(!budget){toast.error("Enter a valid minimum and maximum, or leave both blank to receive quotes.");return;}
 
     if (timingPreference === "date_range") {
       if (!preferredStartDate || !preferredEndDate) {
@@ -142,8 +133,7 @@ export default function EditJob() {
       description,
       category,
       location,
-      budgetMin: min,
-      budgetMax: max,
+      ...budget,
       timingPreference: timingPreference || null,
       preferredStartDate: timingPreference === "date_range" ? preferredStartDate : null,
       preferredEndDate: timingPreference === "date_range" ? preferredEndDate : null,
@@ -261,7 +251,7 @@ export default function EditJob() {
           </div>
 
           <div className="space-y-2">
-            <Label>Budget Range</Label>
+            <Label>Budget range (optional)</Label>
             <div className="grid grid-cols-2 gap-3">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>

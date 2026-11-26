@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "db:referral-workflow": "tsx scripts/apply-referral-workflow.mts"
+    "db:referral-workflow": "tsx scripts/apply-referral-workflow.mts",
+    "db:v2-budget": "tsx scripts/apply-v2-budget.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
