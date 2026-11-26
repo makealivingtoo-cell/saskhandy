@@ -14,7 +14,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: testpass
-          MYSQL_DATABASE: saskhandy_v2_ci
+          MYSQL_DATABASE: referral_workflow_ci
         ports: ["3306:3306"]
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -ptestpass"
@@ -22,7 +22,7 @@ jobs:
           --health-timeout=5s
           --health-retries=20
     env:
-      DATABASE_URL: mysql://root:testpass@127.0.0.1:3306/saskhandy_v2_ci
+      DATABASE_URL: mysql://root:testpass@127.0.0.1:3306/referral_workflow_ci
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -38,7 +38,7 @@ jobs:
           node --input-type=module -e 'import mysql from "mysql2/promise"; const db=await mysql.createConnection(process.env.DATABASE_URL); await db.query("CREATE TABLE jobs (id INT PRIMARY KEY, budgetMin DECIMAL(10,2) NOT NULL, budgetMax DECIMAL(10,2) NOT NULL)"); await db.query("INSERT INTO jobs VALUES (1,50,150)"); await db.end()'
           pnpm db:v2-budget
           pnpm db:v2-budget
-          node --input-type=module -e 'import mysql from "mysql2/promise"; import assert from "node:assert/strict"; const db=await mysql.createConnection(process.env.DATABASE_URL); await db.query("INSERT INTO jobs VALUES (2,NULL,NULL)"); const [rows]=await db.query("SELECT * FROM jobs ORDER BY id"); assert.equal(rows[0].budgetMin,"50.00"); assert.equal(rows[0].budgetMax,"150.00"); assert.equal(rows[1].budgetMin,null); await db.query("DROP TABLE jobs"); await db.end()'
+          node --input-type=module -e 'import mysql from "mysql2/promise"; import assert from "node:assert/strict"; const db=await mysql.createConnection(process.env.DATABASE_URL); await db.query("INSERT INTO jobs VALUES (2,NULL,NULL)"); const [rows]=await db.query("SELECT * FROM jobs ORDER BY id"); assert.equal(rows[0].budgetMin,"50.00"); assert.equal(rows[0].budgetMax,"150.00"); assert.equal(rows[1].budgetMin,null); await db.end()'
       - run: pnpm db:v2-matching
       - run: pnpm db:v2-matching
       - name: Check invitation uniqueness and preserved runs
