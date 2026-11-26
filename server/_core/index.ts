@@ -1,4 +1,5 @@
 import { checkAppointmentReminders } from "../appointmentRouter";
+import { checkHomeMaintenance } from "../myHomeRouter";
 import { checkMatchingWorkflows } from "../jobMatchingWorker";
 import "dotenv/config";
 
@@ -719,6 +720,7 @@ async function checkJobReminders() {
     await checkStaleOpenJobs(now);
     await checkMatchingWorkflows(now);
     await checkAppointmentReminders(now);
+    await checkHomeMaintenance(now);
   } catch (err: any) {
     console.error("[Reminder] Check failed:", err?.message ?? err);
   } finally {

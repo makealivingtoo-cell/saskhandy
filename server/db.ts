@@ -88,11 +88,10 @@ async function createDb() {
 }
 
 export async function getDb() {
-  if (!dbInstance) {
-    dbInstance = await createDb();
-  }
-
-  return dbInstance;
+  if (dbInstance) return dbInstance;
+  const instance = await createDb();
+  dbInstance = instance;
+  return instance;
 }
 
 export async function closeDb() {

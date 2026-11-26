@@ -173,13 +173,14 @@ export default function HomeownerDashboard() {
               <Button asChild>
                 <Link href="/post-job">
                   <Plus className="mr-2 h-4 w-4" />
-                  Post a Job
+                  Request help
                 </Link>
               </Button>
             </div>
           )}
         </div>
 
+        <Button asChild variant="outline"><Link href="/my-home">My Home — maintenance and saved professionals</Link></Button>
         {!hasJobs ? (
           <>
             <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-emerald-50 shadow-sm">

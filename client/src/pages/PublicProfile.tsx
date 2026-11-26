@@ -1,3 +1,4 @@
+import SaveProfessional from "@/components/SaveProfessional";
 import { AppLayout } from "@/components/AppLayout";
 import { StarRatingDisplay } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
@@ -224,6 +225,7 @@ export default function PublicProfile() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-serif text-foreground">{displayName}</h1>
+                  <SaveProfessional handymanId={uid}/>
                   {goldShieldVerified && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
                       <Shield className="w-3.5 h-3.5" />

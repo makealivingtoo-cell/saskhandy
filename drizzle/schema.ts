@@ -603,3 +603,27 @@ export const professionalAvailability = mysqlTable("professional_availability",{
   acceptingJobs:boolean("acceptingJobs").default(true).notNull(),
   updatedAt:timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export const savedProfessionals = mysqlTable("saved_professionals",{
+ id:int("id").autoincrement().primaryKey(),
+ homeownerId:int("homeownerId").notNull(),
+ handymanId:int("handymanId").notNull(),
+ createdAt:timestamp("createdAt").defaultNow().notNull(),
+},t=>[uniqueIndex("saved_professional_unique").on(t.homeownerId,t.handymanId)]);
+export const homeProperties = mysqlTable("home_properties",{
+ id:int("id").autoincrement().primaryKey(),
+ homeownerId:int("homeownerId").notNull(),
+ label:varchar("label",{length:100}).notNull(),
+ city:varchar("city",{length:100}).notNull(),
+ createdAt:timestamp("createdAt").defaultNow().notNull(),
+},t=>[index("home_properties_owner_idx").on(t.homeownerId)]);
+export const homeMaintenance = mysqlTable("home_maintenance",{
+ id:int("id").autoincrement().primaryKey(),
+ homeownerId:int("homeownerId").notNull(),
+ propertyId:int("propertyId").notNull(),
+ title:varchar("title",{length:160}).notNull(),
+ dueDate:date("dueDate",{mode:"string"}).notNull(),
+ completed:boolean("completed").default(false).notNull(),
+ reminderSentAt:timestamp("reminderSentAt"),
+ createdAt:timestamp("createdAt").defaultNow().notNull(),
+},t=>[index("home_maintenance_owner_idx").on(t.homeownerId),index("home_maintenance_due_idx").on(t.completed,t.dueDate)]);

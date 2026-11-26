@@ -1,4 +1,5 @@
 import { appointmentRouter } from "./appointmentRouter";
+import { myHomeRouter } from "./myHomeRouter";
 import { matchingEnabled, getMatchingStatus, getMatchingHealth } from "./jobMatchingWorker";
 import { validJobBudget } from "../shared/jobBudget";
 import { eligibleForJobInvitation } from "../shared/jobMatching";
@@ -4189,6 +4190,7 @@ export const appRouter = router({
   handymanProfiles: handymanProfilesRouter,
   jobs: jobsRouter,
   appointments: appointmentRouter,
+  myHome: myHomeRouter,
   referralJobs: referralJobsRouter,
   quotes: quotesRouter,
   workReviews: workReviewsRouter,

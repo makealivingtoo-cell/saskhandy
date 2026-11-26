@@ -82,6 +82,7 @@ import PublicQuotePage from "./pages/PublicQuotePage";
 
 // Homeowner
 import HomeownerDashboard from "./pages/homeowner/Dashboard";
+import MyHome from "./pages/homeowner/MyHome";
 import PostJob from "./pages/homeowner/PostJob";
 import JobDetails from "./pages/homeowner/JobDetails";
 import EditJob from "./pages/homeowner/EditJob";
@@ -252,6 +253,7 @@ function Router() {
       <Route path="/onboarding" component={HandymanOnboarding} />
 
       <Route path="/dashboard" component={HomeownerDashboard} />
+      <Route path="/my-home" component={MyHome} />
       <Route path="/post-job" component={PostJob} />
       <Route path="/jobs/:id" component={JobDetails} />
       <Route path="/jobs/:id/edit" component={EditJob} />
