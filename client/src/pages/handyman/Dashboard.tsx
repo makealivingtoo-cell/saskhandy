@@ -1,3 +1,4 @@
+import PublishBookingSlots from "@/components/PublishBookingSlots";
 import ProfessionalTools from "@/components/ProfessionalTools";
 import AppointmentSchedule from "@/components/AppointmentSchedule";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -691,6 +692,7 @@ export default function HandymanDashboard() {
         </div>
 
         {user?.userType==="handyman"&&<ProfessionalTools userId={user.id}/>}
+        {user?.userType==="handyman"&&<PublishBookingSlots/>}
         {/* SaskHandy referrals */}
         <section className="bg-white rounded-2xl border border-border/60 p-6">
           <div className="flex items-start justify-between gap-4 mb-4">

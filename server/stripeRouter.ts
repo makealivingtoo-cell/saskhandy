@@ -1,4 +1,6 @@
 import { TRPCError } from "@trpc/server";
+import { claimBookingCheckout } from "./instantBookingRouter";
+import { bookingEnabled } from "../shared/instantBooking";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { createPaymentIntent, retrievePaymentIntent, stripe } from "./stripe";
@@ -34,6 +36,7 @@ export const stripeRouter = router({
         });
       }
 
+      if (job.status !== "awaiting_payment") throw new TRPCError({code:"BAD_REQUEST",message:"This job is not awaiting payment."});
       if (!job.selectedBidId || !job.selectedHandymanId) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -59,6 +62,8 @@ export const stripeRouter = router({
         });
       }
 
+      if (bid.jobId!==job.id||bid.handymanId!==job.selectedHandymanId||bid.status!=="accepted"||payment.homeownerId!==job.homeownerId||payment.handymanId!==job.selectedHandymanId||Number(payment.amount)!==Number(bid.bidAmount)||payment.status==="completed"||payment.status==="refunded") throw new TRPCError({code:"CONFLICT",message:"Payment details need to be reviewed before checkout."});
+      if (bookingEnabled()) await claimBookingCheckout(job.id,ctx.user.id);
       const amount = Number.parseFloat(payment.amount);
 
       if (!Number.isFinite(amount) || amount <= 0) {
@@ -104,6 +109,7 @@ export const stripeRouter = router({
         homeownerId: ctx.user.id,
         handymanId: job.selectedHandymanId,
         jobTitle: job.title,
+        idempotencyKey: `job_${job.id}_payment_${payment.id}_${payment.stripePaymentIntentId??"initial"}`,
       });
 
       await updatePayment(payment.id, {
@@ -189,7 +195,7 @@ export const stripeRouter = router({
             referralJobId: quote.referralJobId ? String(quote.referralJobId) : "",
           },
         },
-        { idempotencyKey: `quote_${quote.id}_${Math.floor(Date.now() / 1000)}` }
+        { idempotencyKey: `quote_${quote.id}_${quote.stripePaymentIntentId??"initial"}` }
       );
 
       if (!paymentIntent.client_secret) {

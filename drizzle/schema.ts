@@ -640,3 +640,18 @@ export const quoteTemplates = mysqlTable("quote_templates",{
  pstRate:decimal("pstRate",{precision:5,scale:2}),
  createdAt:timestamp("createdAt").defaultNow().notNull(),
 },t=>[index("quote_templates_owner_idx").on(t.handymanId)]);
+
+export const instantSlots = mysqlTable("instant_slots",{
+ id:int("id").autoincrement().primaryKey(),
+ handymanId:int("handymanId").notNull(),
+ service:varchar("service",{length:64}).notNull(),
+ scope:text("scope").notNull(),
+ price:decimal("price",{precision:10,scale:2}).notNull(),
+ startAt:timestamp("startAt").notNull(),
+ endAt:timestamp("endAt").notNull(),
+ status:mysqlEnum("status",["available","reserved","withdrawn"]).default("available").notNull(),
+ jobId:int("jobId"),
+ holdUntil:timestamp("holdUntil"),
+ checkoutStartedAt:timestamp("checkoutStartedAt"),
+ createdAt:timestamp("createdAt").defaultNow().notNull(),
+},t=>[uniqueIndex("instant_slot_job_unique").on(t.jobId),index("instant_slot_provider_idx").on(t.handymanId,t.status,t.startAt)]);

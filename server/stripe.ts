@@ -8,7 +8,7 @@ if (!secretKey) {
 
 export const stripe = new Stripe(secretKey, {
   // Preserve the existing production API version until a dedicated Stripe upgrade is tested.
-  apiVersion: "2025-03-31.basil" as Stripe.LatestApiVersion,
+  apiVersion: "2025-03-31.basil" as NonNullable<ConstructorParameters<typeof Stripe>[1]>["apiVersion"],
 });
 
 function getAppUrl() {
@@ -23,6 +23,7 @@ export async function createPaymentIntent(params: {
   homeownerId: number;
   handymanId: number;
   jobTitle: string;
+  idempotencyKey?: string;
 }) {
   const paymentIntent = await stripe.paymentIntents.create({
     amount: Math.round(params.amount * 100),
@@ -37,7 +38,7 @@ export async function createPaymentIntent(params: {
       handymanId: String(params.handymanId),
       jobTitle: params.jobTitle,
     },
-  });
+  }, params.idempotencyKey ? {idempotencyKey:params.idempotencyKey} : undefined);
 
   return {
     clientSecret: paymentIntent.client_secret,

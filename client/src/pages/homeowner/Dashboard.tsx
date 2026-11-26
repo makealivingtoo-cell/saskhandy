@@ -182,6 +182,7 @@ export default function HomeownerDashboard() {
         </div>
 
         {homeTools.data?.enabled&&<Button asChild variant="outline"><Link href="/my-home">My Home — maintenance and saved professionals</Link></Button>}
+        <Button asChild variant="outline"><Link href="/book">Book a fixed-price service</Link></Button>
         {!hasJobs ? (
           <>
             <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-emerald-50 shadow-sm">

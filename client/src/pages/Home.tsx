@@ -264,6 +264,7 @@ export default function HomePage() {
                   <textarea id="home-request" value={requestIdea} onChange={event=>setRequestIdea(event.target.value)} maxLength={2000} rows={3} placeholder="e.g. I need someone to mount my TV this weekend" className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-base focus-visible:outline-2 focus-visible:outline-emerald-700" />
                   <Button type="submit" size="lg" className="mt-3 w-full rounded-xl bg-emerald-800 hover:bg-emerald-900">Find local help <ArrowRight className="ml-2 h-4 w-4" /></Button>
                   <p className="mt-2 text-sm text-slate-600">Free to start. Create or sign in to your account before publishing.</p>
+                  <Link href="/book" className="mt-3 inline-block text-sm font-medium text-emerald-800 underline">See available fixed-price services</Link>
                 </form>
                 <Link href="/sign-up?role=handyman" className="mt-5 inline-block text-sm font-medium text-emerald-800 underline underline-offset-4">Find work as a professional</Link>
               </div>

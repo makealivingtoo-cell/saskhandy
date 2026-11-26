@@ -52,6 +52,8 @@ jobs:
       - run: pnpm db:v2-home
       - run: pnpm db:v2-pro
       - run: pnpm db:v2-pro
+      - run: pnpm db:v2-booking
+      - run: pnpm db:v2-booking
       - run: pnpm exec tsx scripts/testing/verify-referral-migration.mts
       - run: pnpm test
       - name: Real MySQL integration checks (isolated database)

@@ -1,3 +1,4 @@
+import BookingHold from "@/components/BookingHold";
 import JobAppointment from "@/components/JobAppointment";
 import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -807,6 +808,7 @@ export default function JobDetails() {
           </div>
         </div>
 
+        {isOwner && isAwaitingPayment && <BookingHold jobId={jobId}/>}
         {isOwner && user && job.status==="in_progress" && <JobAppointment jobId={jobId} userId={user.id}/>}
         {acceptedBid && job.status !== "cancelled" && (
           <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5 mb-6">

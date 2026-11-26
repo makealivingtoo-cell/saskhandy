@@ -2,6 +2,7 @@ import { publicProfessional } from "../shared/publicProfessional";
 import { appointmentRouter } from "./appointmentRouter";
 import { myHomeRouter } from "./myHomeRouter";
 import { proToolsRouter } from "./proToolsRouter";
+import { instantBookingRouter } from "./instantBookingRouter";
 import { matchingEnabled, getMatchingStatus, getMatchingHealth } from "./jobMatchingWorker";
 import { validJobBudget } from "../shared/jobBudget";
 import { eligibleForJobInvitation } from "../shared/jobMatching";
@@ -799,7 +800,7 @@ const authRouter = router({
       if (user.email) {
         await safeSyncBrevo("signUp", () =>
           syncUserToBrevo({
-            email: user.email,
+            email: user.email!,
             name: user.name,
             userType: input.userType,
             marketingOptIn: input.marketingOptIn,
@@ -1101,7 +1102,7 @@ const authRouter = router({
       if (ctx.user.email) {
         await safeSyncBrevo("setUserType", () =>
           syncUserToBrevo({
-            email: ctx.user.email,
+            email: ctx.user.email!,
             name: ctx.user.name,
             userType: input.userType,
             marketingOptIn: (ctx.user as any).marketingOptIn ?? false,
@@ -1521,6 +1522,7 @@ const jobsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Job not found." });
       }
 
+      if(job.status!=="open"&&ctx.user?.id!==job.homeownerId&&ctx.user?.id!==job.selectedHandymanId&&ctx.user?.role!=="admin")throw new TRPCError({code:"NOT_FOUND"});
       const homeowner = await safeGetUserById(job.homeownerId);
       return { ...job, homeownerName: homeowner?.name };
     }),
@@ -4191,6 +4193,7 @@ export const appRouter = router({
   appointments: appointmentRouter,
   myHome: myHomeRouter,
   proTools: proToolsRouter,
+  instantBooking: instantBookingRouter,
   referralJobs: referralJobsRouter,
   quotes: quotesRouter,
   workReviews: workReviewsRouter,
