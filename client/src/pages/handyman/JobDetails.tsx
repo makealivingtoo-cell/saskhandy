@@ -1,3 +1,4 @@
+import RefundSettlement from "@/components/RefundSettlement";
 import JobAppointment from "@/components/JobAppointment";
 import { formatJobBudget } from "@shared/jobBudget";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -344,6 +345,7 @@ export default function HandymanJobDetails() {
         </div>
 
         {isAssignedHandyman && user && job.status==="in_progress" && <JobAppointment jobId={jobId} userId={user.id}/>}
+        {isAssignedHandyman&&user&&["in_progress","disputed","completed","cancelled"].includes(job.status)&&<RefundSettlement jobId={jobId} userId={user.id}/>}
         {isAssignedHandyman && job.status === "awaiting_payment" && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 shadow-sm">
             <div className="flex items-start gap-3">

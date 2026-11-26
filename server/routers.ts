@@ -1,3 +1,4 @@
+import { refundRouter,finalizeSecuredJob } from "./refundRouter";
 import { ensureDirectRequest,localPriceGuidance } from "./directRequests";
 import { canSeeDirectedJob } from "../shared/requestPolicy";
 import { matchesIntent } from "../shared/paymentIntegrity";
@@ -697,43 +698,7 @@ async function notifyUser(params: {
   });
 }
 
-async function releasePaymentToHandyman(params: {
-  jobId: number;
-  handymanId: number;
-}) {
-  const payment = await getPaymentByJob(params.jobId);
-
-  if (!payment) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Payment record not found.",
-    });
-  }
-
-  if (payment.status !== "pending") {
-    return { released: false, reason: "Payment is not pending." };
-  }
-
-  await updatePayment(payment.id, {
-    status: "completed",
-    stripeTransferStatus: "not_started",
-  } as any);
-
-  const profile = await getHandymanProfile(params.handymanId);
-
-  if (profile) {
-    const newEarnings = (
-      parseFloat(profile.totalEarnings ?? "0") + parseFloat(payment.handymanPayout)
-    ).toFixed(2);
-
-    await updateHandymanProfile(params.handymanId, {
-      totalJobs: (profile.totalJobs ?? 0) + 1,
-      totalEarnings: newEarnings,
-    });
-  }
-
-  return { released: true };
-}
+async function releasePaymentToHandyman(params:{jobId:number;handymanId:number;fromDispute?:boolean}){return finalizeSecuredJob(params.jobId,params.handymanId,params.fromDispute);}
 
 const authRouter = router({
   me: publicProcedure.query((opts) => opts.ctx.user),
@@ -2928,6 +2893,7 @@ const disputesRouter = router({
               await releasePaymentToHandyman({
                 jobId: job.id,
                 handymanId: job.selectedHandymanId,
+                fromDispute:true,
               });
 
               await updateJobStatus(job.id, "completed");
@@ -4180,6 +4146,7 @@ export const appRouter = router({
   myHome: myHomeRouter,
   proTools: proToolsRouter,
   instantBooking: instantBookingRouter,
+  refunds: refundRouter,
   referralJobs: referralJobsRouter,
   quotes: quotesRouter,
   workReviews: workReviewsRouter,

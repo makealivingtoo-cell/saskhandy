@@ -656,3 +656,15 @@ export const instantSlots = mysqlTable("instant_slots",{
  checkoutStartedAt:timestamp("checkoutStartedAt"),
  createdAt:timestamp("createdAt").defaultNow().notNull(),
 },t=>[uniqueIndex("instant_slot_job_unique").on(t.jobId),index("instant_slot_provider_idx").on(t.handymanId,t.status,t.startAt)]);
+
+export const refundCases=mysqlTable("refund_cases",{
+ jobId:int("jobId").primaryKey(),
+ proposerId:int("proposerId").notNull(),
+ amount:decimal("amount",{precision:10,scale:2}).notNull(),
+ reason:text("reason").notNull(),
+ status:mysqlEnum("status",["proposed","approved","processing","settled","escalated","needs_review"]).default("proposed").notNull(),
+ stripeRefundId:varchar("stripeRefundId",{length:255}),
+ approvedAt:timestamp("approvedAt"),
+ createdAt:timestamp("createdAt").defaultNow().notNull(),
+ updatedAt:timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+},t=>[index("refund_cases_status_idx").on(t.status,t.updatedAt)]);

@@ -2,6 +2,7 @@ import { reconcilePayment } from "../paymentReconciliation";
 import { sdk } from "./sdk";
 import { checkAppointmentReminders } from "../appointmentRouter";
 import { checkBookingHolds } from "../instantBookingRouter";
+import { checkRefundCases } from "../refundRouter";
 import { checkHomeMaintenance } from "../myHomeRouter";
 import { checkMatchingWorkflows } from "../jobMatchingWorker";
 import "dotenv/config";
@@ -528,6 +529,7 @@ async function checkJobReminders() {
     const now = new Date();
 
     await checkBookingHolds(now);
+    await checkRefundCases();
     if (isQuietHour(now)) {
       console.log("[Reminder] Skipping check during quiet hours.");
       return;
